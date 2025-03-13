@@ -1,32 +1,25 @@
-version: "3.9"
-
 services:
   traefik:
     image: "traefik:v3.0"
     restart: unless-stopped
     command:
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.insecure=true"  # Povolení Traefik dashboardu (přístupný na :8080)
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
+      - "8080:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - sesplan
 
-  backend:
-    image: "ghcr.io/novakpetr/sesplan-backend:latest"
+  watchtower:
+    image: containrrr/watchtower
     restart: unless-stopped
-    networks:
-      - sesplan
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
-    deploy:
-      replicas: 2
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: --interval 30 --rolling-restart
 
 networks:
   sesplan:
