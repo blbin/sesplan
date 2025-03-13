@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "backend/**"
+  workflow_dispatch:  # ✅ Přidává možnost ručního spuštění
 
 jobs:
   deploy:
@@ -22,5 +23,4 @@ jobs:
         run: |
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
-
 
