@@ -30,6 +30,3 @@ jobs:
           script: |
             docker pull ghcr.io/blbin/sesplan-backend:latest
             docker-compose -f /srv/sesplan/docker-compose.yml up -d
-
-
-
