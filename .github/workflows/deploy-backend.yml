@@ -21,13 +21,15 @@ jobs:
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
 
-      - name: SSH and deploy to server
-        uses: appleboy/ssh-action@v0.1.5
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull ghcr.io/blbin/sesplan-backend:latest
-            docker-compose -f /srv/sesplan/docker-compose.yml up -d
+            cd /srv/sesplan
+            docker pull ghcr.io/myuser/sesplan-backend:latest
+            docker compose up -d --remove-orphans
+            docker image prune -af
 
