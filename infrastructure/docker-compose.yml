@@ -1,26 +1,21 @@
+version: "3.9"
+
 services:
   traefik:
-    image: "traefik:v3.0"
+    image: traefik:v3.0
     restart: unless-stopped
     command:
-      - "--api.insecure=true"  # Povolení Traefik dashboardu (přístupný na :8080)
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
+      - "--api.insecure=true"        # Povolit dashboard (jen pro testování!)
+      - "--providers.docker=true"    # Automatická detekce Docker kontejnerů
+      - "--entrypoints.web.address=:80"  # HTTP na portu 80
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "80:80"  # Otevření HTTP portu
+      - "8080:8080"  # Dashboard Traefiku (přístupné na http://SERVER_IP:8080)
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"  # Přístup k Docker socketu
     networks:
-      - sesplan
-
-  watchtower:
-    image: containrrr/watchtower
-    restart: unless-stopped
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-    command: --interval 30 --rolling-restart
+      - proxy
 
 networks:
-  sesplan:
+  proxy:
     driver: bridge
