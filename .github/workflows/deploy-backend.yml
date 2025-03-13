@@ -15,19 +15,12 @@ jobs:
       - name: Checkout kódu
         uses: actions/checkout@v4
 
+      - name: Přihlášení do GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u blbin --password-stdin
+
       - name: Build and Push to GitHub Container Registry
         run: |
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
 
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /srv/sesplan
-            docker pull ghcr.io/novakpetr/sesplan-backend:latest
-            docker compose up -d --remove-orphans
-            docker image prune -af
