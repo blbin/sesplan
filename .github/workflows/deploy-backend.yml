@@ -3,18 +3,14 @@ name: Deploy
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:  # ✅ Přidává možnost ručního spuštění
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+      - main  # Tento workflow se spustí při pushi na větev 'main'
 
-    permissions:
-      contents: read
-      packages: write  # Přidává oprávnění k zápisu do GHCR
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Toto je virtuální stroj pro běh GitHub Actions
 
     steps:
-      - name: Checkout repository
+      - name: Check out the repository
         uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry
@@ -24,5 +20,16 @@ jobs:
         run: |
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
+
+      - name: SSH and deploy to server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/blbin/sesplan-backend:latest
+            docker-compose -f /srv/sesplan/docker-compose.yml up -d
+
 
 
