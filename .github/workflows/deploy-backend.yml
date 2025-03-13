@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout kódu
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Přihlášení do GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u blbin --password-stdin
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u blbin --password-stdin
 
-      - name: Build and Push to GitHub Container Registry
+      - name: Build and Push Docker Image
         run: |
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
+
 
