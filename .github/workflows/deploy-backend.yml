@@ -1,26 +1,28 @@
-name: Deploy Backend
+name: Deploy
 
 on:
   push:
     branches:
       - main
-    paths:
-      - "backend/**"
   workflow_dispatch:  # ✅ Přidává možnost ručního spuštění
-
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write  # Přidává oprávnění k zápisu do GHCR
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u blbin --password-stdin
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build and Push Docker Image
+      - name: Build and push Docker image
         run: |
           docker build -t ghcr.io/blbin/sesplan-backend:latest ./backend
           docker push ghcr.io/blbin/sesplan-backend:latest
+
 
