@@ -64,4 +64,3 @@ volumes:
 networks:
   proxy:
     driver: bridge
-

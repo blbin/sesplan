@@ -6,6 +6,7 @@ on:
       - main  # Spustí se při každém pushi do main
     paths:
       - 'docker-compose.yml'
+
 jobs:
   update-infra:
     runs-on: ubuntu-latest
@@ -47,12 +48,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /srv/sesplan
-            try {
-              docker compose pull
-              docker compose up -d --remove-orphans
-              docker image prune -af
-            } catch (e) {
-              echo "❌ ERROR: Deployment failed"
-              echo "$e"
-              exit 1
-            }
+            echo "🚀 Pulling latest images..."
+            docker compose pull || { echo "❌ ERROR: Failed to pull images"; exit 1; }
+
+            echo "🔄 Updating stack with .env file..."
+            docker compose --env-file .env up -d --remove-orphans || { echo "❌ ERROR: Deployment failed"; exit 1; }
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af || { echo "⚠️ WARNING: Failed to clean up images"; }
