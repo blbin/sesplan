@@ -43,7 +43,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`) && PathPrefix(`/api`)"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
       # Podmíněné HTTPS pouze v produkci
       - "traefik.http.routers.backend-secure.rule=Host(`api.${DOMAIN}`)"
