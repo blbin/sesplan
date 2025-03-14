@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "docker-compose.yml"  # Sledujeme jen změny v tomto souboruss
-      - "infrastructure/**"
 jobs:
   update-infra:
     runs-on: ubuntu-latest
