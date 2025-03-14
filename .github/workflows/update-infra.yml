@@ -12,12 +12,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Zajistí, že všechny soubory a historie jsou stažené
 
       - name: Debug - Print working directory
         run: pwd
 
       - name: Debug - List all files
-        run: ls -lah .
+        run: ls -lah
 
       - name: Ensure docker-compose.yml exists
         run: |
@@ -32,9 +34,9 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "./docker-compose.yml"  # Použití absolutní cesty
+          source: "./docker-compose.yml"
           target: "/srv/sesplan/"
-          debug: true  # Přidáme debug, aby GitHub Action ukázal více informací
+          debug: true
 
       - name: Deploy new stack with zero-downtime
         uses: appleboy/ssh-action@master
