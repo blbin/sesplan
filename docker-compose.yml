@@ -34,7 +34,7 @@ services:
       - proxy
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/username/repository:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/blbin/sesplan:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
