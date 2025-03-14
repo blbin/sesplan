@@ -5,8 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "docker-compose.yml"
-      - "infrastructure/**"
+      - "docker-compose.yml"  # Sledujeme jen změny v tomto souboru
 
 jobs:
   update-infra:
@@ -16,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Upload docker-compose.yml to server
+      - name: Upload updated docker-compose.yml to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -25,7 +24,7 @@ jobs:
           source: "docker-compose.yml"
           target: "/srv/sesplan/"
 
-      - name: Deploy new infrastructure
+      - name: Deploy new stack with zero-downtime
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -36,3 +35,4 @@ jobs:
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -af
+
