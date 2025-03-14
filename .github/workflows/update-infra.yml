@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "docker-compose.yml"  # Sledujeme jen změny v tomto souboruss
-
+      - "infrastructure/**"
 jobs:
   update-infra:
     runs-on: ubuntu-latest
@@ -33,6 +33,6 @@ jobs:
           script: |
             cd /srv/sesplan
             docker compose pull
-            docker compose up -d 
+            docker compose up -d --remove-orphans
             docker image prune -af
 
