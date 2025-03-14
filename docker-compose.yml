@@ -5,17 +5,63 @@ services:
     image: traefik:v3.0
     restart: unless-stopped
     command:
-      - "--api.insecure=true"        # Povolit dashboard (jen pro testování!)
-      - "--providers.docker=true"    # Automatická detekce Docker kontejnerů
-      - "--entrypoints.web.address=:80"  # HTTP na portu 80
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
     ports:
-      - "80:80"  # Otevření HTTP portu
-      - "8080:8080"  # Dashboard Traefiku (přístupné na http://SERVER_IP:8080)
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"  # Přístup k Docker socketu
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
     networks:
       - proxy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - proxy
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      APP_HOST: ${APP_HOST}
+      APP_PORT: ${APP_PORT}
+      DEBUG: ${DEBUG}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      # Podmíněné HTTPS (povoleno jen v produkci)
+      - "traefik.http.routers.backend-secure.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.backend-secure.entrypoints=websecure"
+      - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-secure.tls=true"
+      - "traefik.http.routers.backend-secure.middlewares=${ENABLE_HTTPS:-false}"
+    depends_on:
+      - postgres
+    networks:
+      - proxy
+
+volumes:
+  postgres-data:
 
 networks:
   proxy:
     driver: bridge
+

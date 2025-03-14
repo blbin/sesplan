@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main  # Spustí se při každém pushi do main
-
+    paths:
+      - 'docker-compose.yml'
 jobs:
   update-infra:
     runs-on: ubuntu-latest
@@ -46,6 +47,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /srv/sesplan
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -af
+            try {
+              docker compose pull
+              docker compose up -d --remove-orphans
+              docker image prune -af
+            } catch (e) {
+              echo "❌ ERROR: Deployment failed"
+              echo "$e"
+              exit 1
+            }
