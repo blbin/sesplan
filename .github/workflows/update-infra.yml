@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "docker-compose.yml"  # Sledujeme jen změny v tomto souboru
+      - "docker-compose.yml"  # Sledujeme jen změny v tomto souboruss
 
 jobs:
   update-infra:
