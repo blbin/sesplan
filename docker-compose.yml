@@ -56,7 +56,7 @@ services:
       - proxy
 
   frontend:
-    image: ghcr.io/${GITHUB_USER}/sesplan-frontend:latest
+    image: ghcr.io/blbin/sesplan-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
