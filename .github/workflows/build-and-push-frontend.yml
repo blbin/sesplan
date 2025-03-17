@@ -1,10 +1,10 @@
-name: build-and-push
+name: build-and-push-backend
 on:
   push:
     branches:
       - main
     paths:
-      - 'backend/**'
+      - 'frontend/**'
 
 jobs:
   build-and-push:
@@ -19,7 +19,6 @@ jobs:
 
       - uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ./frontend
           push: true
-          tags: ghcr.io/${{ github.actor }}/sesplan:latest
-
+          tags: ghcr.io/${{ github.actor }}/sesplan-frontend:latest

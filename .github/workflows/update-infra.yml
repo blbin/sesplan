@@ -2,7 +2,7 @@ name: Update Infrastructure
 
 on:
   workflow_run:
-    workflows: ["build-and-push"]
+    workflows: ["build-and-push-backend", "build-and-push-frontend"]
     types:
       - completed
     branches:
