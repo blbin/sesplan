@@ -44,12 +44,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.middlewares=redirect-to-https"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
-      # Podmíněné HTTPS pouze v produkci
       - "traefik.http.routers.backend-secure.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.backend-secure.entrypoints=websecure"
       - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend-secure.tls=${ENABLE_HTTPS}"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     depends_on:
       - postgres
     networks:
@@ -65,9 +66,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.middlewares=redirect-to-https"
       - "traefik.http.routers.frontend-secure.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.frontend-secure.entrypoints=websecure"
       - "traefik.http.routers.frontend-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
       - proxy
 
@@ -77,3 +80,4 @@ volumes:
 networks:
   proxy:
     driver: bridge
+

@@ -1,6 +1,9 @@
 name: Update Infrastructure
 
 on:
+  push:
+    paths:
+      - 'docker-compose.yml'
   workflow_run:
     workflows: ["build-and-push-backend", "build-and-push-frontend"]
     types:
