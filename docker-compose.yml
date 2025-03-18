@@ -51,6 +51,13 @@ services:
       - "traefik.http.routers.backend-secure.entrypoints=websecure"
       - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      # HSTS Middleware
+      - "traefik.http.middlewares.hsts.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.hsts.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.hsts.headers.stsPreload=true"
+      - "traefik.http.routers.backend-secure.middlewares=hsts"
+
     depends_on:
       - postgres
     networks:
@@ -71,6 +78,13 @@ services:
       - "traefik.http.routers.frontend-secure.entrypoints=websecure"
       - "traefik.http.routers.frontend-secure.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      # HSTS Middleware
+      - "traefik.http.middlewares.hsts.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.hsts.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.hsts.headers.stsPreload=true"
+      - "traefik.http.routers.frontend-secure.middlewares=hsts"
+
     networks:
       - proxy
 
