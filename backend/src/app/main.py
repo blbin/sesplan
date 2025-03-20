@@ -15,4 +15,3 @@ app.include_router(api_router, prefix="/V1")
 async def root():
     return {"message": "Hello from FastAPI!"}
 
-
