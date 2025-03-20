@@ -1,12 +1,22 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg[binary]
-alembic
-pydantic-settings
-pydantic[email]
-passlib>=1.7.4
+# Web framework and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.23.2
+
+# Database
+sqlalchemy>=2.0.21
 psycopg2-binary>=2.9.5
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
+psycopg[binary]>=3.1.12
+alembic>=1.12.0
+
+# Authentication and security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
+
+# Data validation
+pydantic>=2.4.2
+pydantic-settings>=2.0.3
+pydantic[email]>=2.4.2
+
+# Utilities
+python-multipart>=0.0.6

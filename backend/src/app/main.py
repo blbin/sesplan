@@ -9,7 +9,7 @@ Base.metadata.create_all(bind=engine)
 print("Dostupné tabulky po vytvoření:", Base.metadata.tables.keys())
 
 app = FastAPI(title="Sesplan API")
-app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="/V1")
 
 @app.get("/")
 async def root():
