@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.sesplan.space';
 
 export interface LoginCredentials {
   username: string;
@@ -18,7 +19,7 @@ export class AuthService {
     params.append('username', credentials.username);
     params.append('password', credentials.password);
 
-    const baseUrl = API_URL?.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+     const baseUrl = API_URL?.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
 
     // Úplná URL s endpointem
     const response = await axios.post(`${baseUrl}/V1/auth/token`, params, {
