@@ -18,7 +18,10 @@ export class AuthService {
     params.append('username', credentials.username);
     params.append('password', credentials.password);
 
-    const response = await axios.post(`${API_URL}/V1/auth/token`, params, {
+    const baseUrl = API_URL?.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
+    // Úplná URL s endpointem
+    const response = await axios.post(`${baseUrl}/V1/auth/token`, params, {
       withCredentials: true,
       headers: {
         'Accept': 'application/json'
