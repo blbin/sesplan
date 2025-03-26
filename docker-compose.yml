@@ -46,6 +46,7 @@ services:
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       SECRET_KEY: ${SECRET_KEY}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      DOMAIN: ${DOMAIN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
@@ -58,11 +59,11 @@ services:
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       # Add this middleware to handle CORS preflight
       - "traefik.http.middlewares.cors.headers.accessControlAllowMethods=GET,POST,PUT,DELETE,OPTIONS"
-      - "traefik.http.middlewares.cors.headers.accessControlAllowOriginList=*"
       - "traefik.http.middlewares.cors.headers.accessControlAllowCredentials=true"
       - "traefik.http.middlewares.cors.headers.accessControlAllowHeaders=*"
       - "traefik.http.middlewares.cors.headers.accessControlMaxAge=600"
       - "traefik.http.routers.backend.middlewares=cors@docker"
+      - "traefik.http.middlewares.cors.headers.accessControlAllowOriginList=http://${DOMAIN},https://${DOMAIN},https://localhost:5173,https://api.localhost:5173,http://api.${DOMAIN}"
     depends_on:
       - postgres
     networks:

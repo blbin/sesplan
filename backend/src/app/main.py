@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router as api_router
 from app.core.config import settings
 from app.db.session import Base, engine
@@ -9,6 +10,22 @@ Base.metadata.create_all(bind=engine)
 print("Dostupné tabulky po vytvoření:", Base.metadata.tables.keys())
 
 app = FastAPI(title="Sesplan API")
+
+# Přidání CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        f"http://{settings.DOMAIN}",
+        f"https://{settings.DOMAIN}",
+        "http://localhost:5173",
+        "https://localhost:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.include_router(api_router, prefix="/V1")
 
 @app.get("/")
