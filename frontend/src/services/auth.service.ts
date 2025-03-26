@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://api.localhost';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export interface LoginCredentials {
   username: string;
