@@ -8,3 +8,4 @@ class Settings(BaseSettings):
     DOMAIN: str
 
 settings = Settings()
+
