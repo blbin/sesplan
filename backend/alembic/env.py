@@ -8,9 +8,14 @@ from alembic import context
 
 # Import Base and all models
 import sys
+import os # Přidáno pro os.path
 
-# Add the 'src' directory to the Python path
-sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+# Přidáme kořenový adresář /app do sys.path, aby bylo možné importovat 'app'
+APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, APP_ROOT)
+
+# Odstraníme původní úpravu sys.path, která cílila na 'src'
+# sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from app.db.session import Base
 from app import models # This imports __init__.py which imports all models
