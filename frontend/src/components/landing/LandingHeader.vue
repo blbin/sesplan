@@ -3,7 +3,7 @@
     <div class="container">
       <div class="logo">
         <div class="logo-placeholder">RPG</div>
-        <h1>RPGMaster</h1>
+        <h1>SesPlan</h1>
       </div>
       <nav class="nav-desktop">
         <ul>
