@@ -13,5 +13,5 @@ class WorldInvite(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships will be added later
-    # world = relationship("World", back_populates="world_invites") 
+    # Relationships
+    world = relationship("World", back_populates="world_invites") 

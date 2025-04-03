@@ -13,9 +13,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
-    # characters = relationship("Character", back_populates="user")
-    # world_associations = relationship("WorldUser", back_populates="user")
-    # campaign_associations = relationship("UserCampaign", back_populates="user")
-    # availabilities = relationship("Availability", back_populates="user")
-    # images = relationship("Image", back_populates="user")
+    characters = relationship("Character", back_populates="user")
+    world_associations = relationship("WorldUser", back_populates="user")
+    campaign_associations = relationship("UserCampaign", back_populates="user")
+    availabilities = relationship("Availability", back_populates="user")
+    images = relationship("Image", back_populates="user")
 

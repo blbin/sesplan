@@ -19,6 +19,6 @@ class WorldUser(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships will be added later
-    # user = relationship("User", back_populates="world_associations")
-    # world = relationship("World", back_populates="user_associations") 
+    # Relationships
+    user = relationship("User", back_populates="world_associations")
+    world = relationship("World", back_populates="user_associations") 

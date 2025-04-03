@@ -6,12 +6,12 @@ class Journal(Base):
     __tablename__ = "journals"
 
     id = Column(Integer, primary_key=True, index=True)
-    character_id = Column(Integer, ForeignKey("characters.id"), unique=True, nullable=False, index=True)
+    character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships will be added later
-    # character = relationship("Character", back_populates="journal")
-    # entries = relationship("JournalEntry", back_populates="journal") 
+    # Relationships
+    character = relationship("Character", back_populates="journal")
+    entries = relationship("JournalEntry", back_populates="journal", cascade="all, delete-orphan") 

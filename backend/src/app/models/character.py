@@ -13,6 +13,15 @@ class Character(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Relationships
+    user = relationship("User", back_populates="characters")
+    world = relationship("World", back_populates="characters")
+    journal = relationship("Journal", back_populates="character", uselist=False, cascade="all, delete-orphan")
+    organization_associations = relationship("CharacterOrganization", back_populates="character", cascade="all, delete-orphan")
+    tags = relationship("CharacterTag", back_populates="character", cascade="all, delete-orphan")
+    items = relationship("Item", back_populates="character") # Item might exist without character? Decide on cascade
+    session_associations = relationship("SessionCharacter", back_populates="character", cascade="all, delete-orphan")
+
     # Relationships will be added later
     # user = relationship("User", back_populates="characters")
     # world = relationship("World", back_populates="characters")
