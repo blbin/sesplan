@@ -17,12 +17,14 @@
         <i class="icon">🔔</i>
       </div>
       <div class="user-profile">
-        <div class="user-avatar" @click="toggleDropdown">U</div>
-        <div class="user-name">User</div>
+        <div class="user-avatar" @click="toggleDropdown">
+          {{ username ? username.charAt(0).toUpperCase() : 'U' }}
+        </div>
+        <div class="user-name">{{ username || 'User' }}</div>
         <div class="dropdown-menu" v-show="isDropdownOpen">
           <div class="dropdown-item">Profile</div>
           <div class="dropdown-item">Settings</div>
-          <div class="dropdown-item" @click="$emit('logout')">Logout</div>
+          <div class="dropdown-item" @click="handleLogout">Logout</div>
         </div>
       </div>
     </div>
@@ -30,7 +32,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../store/auth.store';
 
 export default defineComponent({
   name: 'DashboardHeader',
@@ -41,13 +45,23 @@ export default defineComponent({
     }
   },
   setup() {
+    const router = useRouter();
+    const authStore = useAuthStore();
     const isDropdownOpen = ref(false);
+    
+    const username = computed(() => {
+      return authStore.currentUser?.username || '';
+    });
     
     const toggleDropdown = () => {
       isDropdownOpen.value = !isDropdownOpen.value;
     };
     
-    // Close dropdown when clicking outside
+    const handleLogout = () => {
+      authStore.logout();
+      router.push({ name: 'login' });
+    };
+    
     const closeDropdown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.user-profile')) {
@@ -55,17 +69,18 @@ export default defineComponent({
       }
     };
     
-    // Add event listener on component mount
     if (typeof window !== 'undefined') {
       window.addEventListener('click', closeDropdown);
     }
     
     return {
       isDropdownOpen,
-      toggleDropdown
+      toggleDropdown,
+      handleLogout,
+      username,
     };
   },
-  emits: ['toggle-sidebar', 'logout']
+  emits: ['toggle-sidebar']
 });
 </script>
 

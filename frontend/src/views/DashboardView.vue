@@ -8,7 +8,6 @@
     <main class="main-content" :class="{ 'expanded': isSidebarCollapsed }">
       <DashboardHeader 
         @toggle-sidebar="toggleSidebar" 
-        @logout="logout"
         :isSidebarCollapsed="isSidebarCollapsed"
       />
       <div class="dashboard-content">
@@ -24,8 +23,6 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import { authService } from '../services/auth.service';
-import { useRouter } from 'vue-router';
 import Sidebar from '../components/dashboard/Sidebar.vue';
 import DashboardHeader from '../components/dashboard/DashboardHeader.vue';
 import MetricsSection from '../components/dashboard/MetricsSection.vue';
@@ -42,20 +39,13 @@ export default defineComponent({
     DeadlineWidget
   },
   setup() {
-    const router = useRouter();
     const isSidebarCollapsed = ref(false);
 
     const toggleSidebar = () => {
       isSidebarCollapsed.value = !isSidebarCollapsed.value;
     };
 
-    const logout = () => {
-      authService.logout();
-      router.push('/login');
-    };
-
     return { 
-      logout,
       isSidebarCollapsed,
       toggleSidebar
     };

@@ -3,8 +3,8 @@
     <div class="login-card">
       <h1 class="login-title">Login</h1>
 
-      <div v-if="message" :class="['alert', success ? 'alert-success' : 'alert-error']">
-        {{ message }}
+      <div v-if="authError || message" :class="['alert', success ? 'alert-success' : 'alert-error']">
+        {{ authError || message }}
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -34,8 +34,8 @@
           <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
         </div>
 
-        <button type="submit" class="login-button" :disabled="loading">
-          <span v-if="loading" class="spinner"></span>
+        <button type="submit" class="login-button" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner"></span>
           <span v-else>Login</span>
         </button>
       </form>
@@ -44,23 +44,26 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { authService } from '../services/auth.service';
+import { useAuthStore } from '../store/auth.store';
 
 export default defineComponent({
   name: 'LoginForm',
   setup() {
     const router = useRouter();
+    const authStore = useAuthStore();
     const username = ref('');
     const password = ref('');
-    const loading = ref(false);
     const message = ref('');
     const success = ref(false);
     const errors = ref({
       username: '',
       password: ''
     });
+
+    const isLoading = computed(() => authStore.isLoading);
+    const authError = computed(() => authStore.authError);
 
     const validateForm = (): boolean => {
       errors.value = {
@@ -78,9 +81,6 @@ export default defineComponent({
       if (!password.value) {
         errors.value.password = 'Password is required';
         isValid = false;
-      } else if (password.value.length < 6) {
-        errors.value.password = 'Password must be at least 6 characters';
-        isValid = false;
       }
 
       return isValid;
@@ -89,11 +89,11 @@ export default defineComponent({
     const handleLogin = async () => {
       if (!validateForm()) return;
 
-      loading.value = true;
       message.value = '';
+      success.value = false;
 
       try {
-        await authService.login({
+        await authStore.login({
           username: username.value,
           password: password.value
         });
@@ -106,26 +106,15 @@ export default defineComponent({
         }, 1500);
       } catch (error: any) {
         success.value = false;
-
-        if (error.response) {
-          // Handle specific error responses
-          if (error.response.status === 401) {
-            message.value = 'Invalid username or password';
-          } else {
-            message.value = error.response.data?.detail || 'Login failed. Please try again.';
-          }
-        } else {
-          message.value = 'Login failed. Please check your connection.';
-        }
-      } finally {
-        loading.value = false;
+        console.error("Login component error catcher:", error);
       }
     };
 
     return {
       username,
       password,
-      loading,
+      isLoading,
+      authError,
       message,
       success,
       errors,

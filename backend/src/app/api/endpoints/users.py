@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.user import UserCreate, User
 from app.crud.user import create_user, get_user, get_users, get_user_by_username
+from app.models.user import User as UserModel
 from app.core.security import get_current_active_user
 
 # Use prefix but WITHOUT duplicating in the route paths
@@ -22,6 +23,12 @@ def create_user_endpoint(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     return create_user(db=db, user=user)
+
+
+@router.get("/me", response_model=User)
+def read_users_me(current_user: UserModel = Depends(get_current_active_user)):
+    """Get current user"""
+    return current_user
 
 
 @router.get("/", response_model=list[User])

@@ -8,17 +8,18 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.config import settings
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT settings
-SECRET_KEY = "your-secret-key-change-in-production"  # Change this in production!
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # OAuth2 scheme for JWT token handling
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/V1/auth/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -57,12 +58,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
 
     try:
-        # Decode token
+        # Decode token - nyní používá klíč a algoritmus z settings
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError:
+        # Není potřeba vytvářet TokenData, pokud ho dále nepoužíváme
+        # token_data = TokenData(username=username)
+    except JWTError as e:
+        print(f"JWT Error: {e}") # Přidáme logování chyby
         raise credentials_exception
 
     # Get user from database

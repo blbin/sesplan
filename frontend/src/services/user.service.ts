@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.sesplan.space';
+import { api } from './auth.service';
+import type { User } from './auth.service';
 
 export interface UserRegistrationData {
   username: string;
@@ -8,47 +7,18 @@ export interface UserRegistrationData {
   password: string;
 }
 
-export interface UserResponse {
-  id: number;
-  username: string;
-  email: string;
-}
-
 export class UserService {
-  async register(userData: UserRegistrationData): Promise<UserResponse> {
-    const baseUrl = API_URL?.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-    
-    const response = await axios.post(`${baseUrl}/V1/users/`, userData, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-
+  async register(userData: UserRegistrationData): Promise<User> {
+    const response = await api.post<User>('/V1/users/', userData);
     return response.data;
   }
 
-  async getCurrentUser(): Promise<UserResponse | null> {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      return null;
-    }
-
-    const baseUrl = API_URL?.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-    
+  async getCurrentUser(): Promise<User | null> {
     try {
-      const response = await axios.get(`${baseUrl}/V1/users/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      
+      const response = await api.get<User>('/V1/users/me');
       return response.data;
-    } catch (error) {
-      // Token is invalid or expired
-      localStorage.removeItem('token');
+    } catch (error: any) {
+      console.error('Failed to fetch current user:', error);
       return null;
     }
   }
