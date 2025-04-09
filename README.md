@@ -20,7 +20,7 @@ Webová aplikace pro správu a plánování RPG kampaní (např. Dungeons & Drag
 *   **Infrastruktura:**
     *   Kontejnerizace: [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
     *   Reverzní proxy & HTTPS: [Traefik](https://traefik.io/traefik/) (s automatickými certifikáty Let's Encrypt)
-*   **CI/CD:** [GitHub Actions](https://github.com/features/actions) (plánováno)
+*   **CI/CD:** [GitHub Actions](https://github.com/features/actions)
 
 ## Předpoklady
 

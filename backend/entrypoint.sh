@@ -4,7 +4,7 @@
 set -e
 
 # --- Wait for DB --- #
-MAX_TRIES=30
+MAX_TRIES=60
 COUNT=0
 echo "Waiting for database to be ready..."
 while ! alembic -c /app/alembic.ini current > /dev/null 2>&1;

@@ -20,9 +20,4 @@ class Location(Base):
     items = relationship("Item", back_populates="location") # Items can exist without location?
     tags = relationship("LocationTag", back_populates="location", cascade="all, delete-orphan")
 
-    # Relationships will be added later
-    # world = relationship("World", back_populates="locations")
-    # parent_location = relationship("Location", remote_side=[id], back_populates="child_locations")
-    # child_locations = relationship("Location", back_populates="parent_location")
-    # items = relationship("Item", back_populates="location")
-    # tags = relationship("LocationTag", back_populates="location") 
+   
