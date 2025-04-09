@@ -70,6 +70,7 @@ export default defineComponent({
   background-color: #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 100;
+  width: 100%;
 }
 
 .container {
@@ -81,11 +82,13 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
   height: 80px;
+  box-sizing: border-box;
 }
 
 .logo {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .logo-placeholder {
@@ -99,12 +102,14 @@ export default defineComponent({
   font-weight: bold;
   border-radius: 8px;
   margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .logo h1 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #7851a9;
+  margin: 0;
 }
 
 .nav-desktop ul {
@@ -222,6 +227,22 @@ export default defineComponent({
 
   .nav-mobile {
     display: block;
+  }
+}
+
+@media (max-width: 576px) {
+  .container {
+    padding: 0 15px;
+    height: 70px;
+  }
+  
+  .logo h1 {
+    font-size: 1.2rem;
+  }
+  
+  .logo-placeholder {
+    height: 34px;
+    width: 34px;
   }
 }
 </style>

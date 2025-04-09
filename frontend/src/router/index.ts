@@ -3,8 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import LandingPage from '../views/LandingPage.vue'
-// import { useAuthStore } from '@/store/auth.store'; // Starý import
-import { useAuthStore } from '../store/auth.store'; // Zkusíme relativní cestu
+import { useAuthStore } from '../store/auth.store'; 
 
 const routes: RouteRecordRaw[] = [
   {

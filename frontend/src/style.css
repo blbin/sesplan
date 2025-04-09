@@ -27,6 +27,18 @@ body {
   padding: 0;
   min-width: 100%;
   min-height: 100vh;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 h1 {
@@ -61,6 +73,7 @@ button:focus-visible {
   width: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 @media (prefers-color-scheme: light) {
@@ -73,5 +86,39 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  body {
+    font-weight: 500;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  p, span, div, a, button, li {
+    font-weight: 500;
+    max-width: 100%;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  h1 {
+    font-size: 2.4em;
+  }
+  
+  h2 {
+    font-size: 2em;
+  }
+  
+  .container, section, div {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }

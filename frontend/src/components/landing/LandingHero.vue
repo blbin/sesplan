@@ -46,6 +46,7 @@ export default defineComponent({
   background: linear-gradient(to right, #f8f9fa, #e9ecef);
   overflow: hidden;
   position: relative;
+  width: 100%;
 }
 
 .container {
@@ -56,6 +57,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 40px;
+  box-sizing: border-box;
 }
 
 .hero-content {
@@ -69,6 +71,7 @@ export default defineComponent({
   margin-bottom: 20px;
   color: #2c3e50;
   line-height: 1.2;
+  word-wrap: break-word;
 }
 
 .hero-content p {
@@ -176,6 +179,8 @@ export default defineComponent({
 
   .hero-content h1 {
     font-size: 2.5rem;
+    width: 100%;
+    max-width: 100%;
   }
 
   .feature-points {
@@ -189,23 +194,37 @@ export default defineComponent({
 
 @media (max-width: 768px) {
   .hero {
-    padding: 60px 0;
+    padding: 40px 0;
   }
 
   .hero-content h1 {
     font-size: 2rem;
+    width: 100%;
+    max-width: 100%;
+    word-break: break-word;
+    hyphens: auto;
   }
 
   .hero-content p {
     font-size: 1.1rem;
+    width: 100%;
   }
 
   .btn {
     padding: 12px 24px;
+    width: auto;
   }
 }
 
 @media (max-width: 576px) {
+  .hero {
+    padding: 30px 0;
+  }
+  
+  .container {
+    padding: 0 15px;
+  }
+
   .cta-buttons {
     flex-direction: column;
     width: 100%;
@@ -220,7 +239,12 @@ export default defineComponent({
   }
 
   .hero-content h1 {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+    hyphens: auto;
+  }
+  
+  .hero-placeholder {
+    height: 200px;
   }
 }
 </style>
