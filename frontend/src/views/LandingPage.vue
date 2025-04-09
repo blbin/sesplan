@@ -37,5 +37,18 @@ export default defineComponent({
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
   color: #333;
+  padding-top: 80px; /* Přidáno pro vytvoření místa pro fixed header */
+}
+
+@media (max-width: 768px) {
+  .landing-page {
+    padding-top: 70px;
+  }
+}
+
+@media (max-width: 576px) {
+  .landing-page {
+    padding-top: 60px;
+  }
 }
 </style>

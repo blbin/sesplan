@@ -42,7 +42,7 @@ export default defineComponent({
 
 <style scoped>
 .hero {
-  padding: 80px 0;
+  padding: 40px 0;
   background: linear-gradient(to right, #f8f9fa, #e9ecef);
   overflow: hidden;
   position: relative;
@@ -194,7 +194,7 @@ export default defineComponent({
 
 @media (max-width: 768px) {
   .hero {
-    padding: 40px 0;
+    padding: 30px 0;
   }
 
   .hero-content h1 {
@@ -218,7 +218,7 @@ export default defineComponent({
 
 @media (max-width: 576px) {
   .hero {
-    padding: 30px 0;
+    padding: 20px 0;
   }
   
   .container {
