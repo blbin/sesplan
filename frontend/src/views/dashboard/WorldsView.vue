@@ -35,7 +35,6 @@
           </div>
           <div class="world-actions">
             <button @click="openEditModal(world)" class="btn btn-secondary btn-sm">Edit</button>
-            <router-link :to="`/dashboard/worlds/${world.id}/campaigns`" class="btn btn-info btn-sm">Campaigns</router-link>
             <button @click="confirmDelete(world)" class="btn btn-danger btn-sm">Delete</button>
           </div>
         </li>
@@ -343,7 +342,6 @@ export default defineComponent({
 .world-actions {
   display: flex;
   gap: 0.5rem;
-  align-items: center; /* Zarovnání tlačítek na střed */
 }
 
 .world-campaigns {
@@ -444,15 +442,6 @@ export default defineComponent({
   font-size: 0.9rem;
   margin-top: 1rem;
   text-align: center; /* Centrování chybové hlášky v modalu */
-}
-
-/* Přidáme styl pro nové tlačítko, pokud nemáte obecný .btn-info */
-.btn-info {
-  background-color: #17a2b8;
-  color: white;
-}
-.btn-info:hover {
-   background-color: #138496;
 }
 
 </style> 
