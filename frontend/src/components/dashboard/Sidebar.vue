@@ -19,20 +19,16 @@
         <span v-show="!isSidebarCollapsed">Calendar</span>
       </div>
       <div class="nav-item">
-        <i class="icon">📋</i>
-        <span v-show="!isSidebarCollapsed">Tasks</span>
-      </div>
-      <div class="nav-item">
-        <i class="icon">👥</i>
-        <span v-show="!isSidebarCollapsed">Team</span>
-      </div>
-      <div class="nav-item">
         <i class="icon">⚙️</i>
         <span v-show="!isSidebarCollapsed">Settings</span>
       </div>
       <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
         <i class="icon">🌍</i>
         <span v-show="!isSidebarCollapsed">Worlds</span>
+      </router-link>
+      <router-link to="/dashboard/campaigns" class="nav-item" active-class="active">
+        <i class="icon">🗺️</i>
+        <span v-show="!isSidebarCollapsed">Campaigns</span>
       </router-link>
     </nav>
   </aside>

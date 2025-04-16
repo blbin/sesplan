@@ -41,6 +41,13 @@ const routes: RouteRecordRaw[] = [
         name: 'dashboard-worlds',
         component: () => import('../views/dashboard/WorldsView.vue'),
         meta: { requiresAuth: true } // Zajistíme, že i podstránka vyžaduje přihlášení
+      },
+      // Nová routa pro kampaně
+      {
+        path: 'campaigns',
+        name: 'dashboard-campaigns',
+        component: () => import('../views/dashboard/CampaignsView.vue'),
+        meta: { requiresAuth: true }
       }
       // Zde mohou být další podstránky dashboardu
     ]

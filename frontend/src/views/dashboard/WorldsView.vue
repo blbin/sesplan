@@ -24,8 +24,9 @@
               <strong>Campaigns:</strong>
               <ul>
                 <li v-for="campaign in world.campaigns" :key="campaign.id">
-                  {{ campaign.name }}
-                  <!-- Zde by mohl být odkaz na detail kampaně -->
+                  <router-link :to="`/dashboard/campaigns/${campaign.id}`" class="campaign-link">
+                    {{ campaign.name }}
+                  </router-link>
                 </li>
               </ul>
             </div>
@@ -442,6 +443,17 @@ export default defineComponent({
   font-size: 0.9rem;
   margin-top: 1rem;
   text-align: center; /* Centrování chybové hlášky v modalu */
+}
+
+/* Přidáme styl pro odkazy kampaní */
+.campaign-link {
+  color: #7851a9; /* Barva odkazu */
+  text-decoration: none;
+  font-weight: 500;
+}
+.campaign-link:hover {
+  text-decoration: underline;
+  color: #5f3f87;
 }
 
 </style> 
