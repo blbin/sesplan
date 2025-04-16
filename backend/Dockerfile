@@ -16,8 +16,8 @@ RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
-# Nastav entrypoint skript
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Nastav entrypoint skript (Dočasně zakomentováno)
+# ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Původní příkaz, který se předá entrypoint skriptu
 # Uvicorn nyní najde app.main v /app/app/main.py

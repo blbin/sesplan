@@ -27,4 +27,4 @@ def update_world(db: Session, db_world: World, world_in: WorldUpdate):
 def delete_world(db: Session, db_world: World):
     db.delete(db_world)
     db.commit()
-    return db_world 
+    return db_world

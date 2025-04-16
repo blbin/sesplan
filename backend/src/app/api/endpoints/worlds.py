@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from ... import crud, models, schemas
-# from ..deps import get_db, get_current_active_user # Ověřte si cestu k závislostem
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 

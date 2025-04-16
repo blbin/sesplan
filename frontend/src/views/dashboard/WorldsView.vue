@@ -19,6 +19,19 @@
           <div class="world-info">
             <h2>{{ world.name }}</h2>
             <p>{{ world.description || 'No description' }}</p>
+            <!-- Zobrazení kampaní -->
+            <div v-if="world.campaigns && world.campaigns.length > 0" class="world-campaigns">
+              <strong>Campaigns:</strong>
+              <ul>
+                <li v-for="campaign in world.campaigns" :key="campaign.id">
+                  {{ campaign.name }}
+                  <!-- Zde by mohl být odkaz na detail kampaně -->
+                </li>
+              </ul>
+            </div>
+            <div v-else class="world-campaigns-empty">
+              No campaigns in this world yet.
+            </div>
           </div>
           <div class="world-actions">
             <button @click="openEditModal(world)" class="btn btn-secondary btn-sm">Edit</button>
@@ -323,6 +336,7 @@ export default defineComponent({
   margin: 0;
   font-size: 0.9rem;
   color: #6c757d;
+  margin-bottom: 0.5rem; /* Přidáme mezeru pod popisem */
 }
 
 .world-actions {
@@ -330,6 +344,31 @@ export default defineComponent({
   gap: 0.5rem;
 }
 
+.world-campaigns {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.world-campaigns strong {
+  color: #495057;
+}
+
+.world-campaigns ul {
+  list-style: disc;
+  margin: 0.25rem 0 0 1.2rem; /* Odsazení seznamu */
+  padding: 0;
+}
+
+.world-campaigns li {
+   color: #6c757d;
+}
+
+.world-campaigns-empty {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #adb5bd; /* Světlejší barva pro prázdnou zprávu */
+    font-style: italic;
+}
 
 /* Styly pro modál - zjednodušené, použijte vaše existující nebo knihovnu */
 .modal-backdrop {

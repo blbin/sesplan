@@ -60,7 +60,7 @@ services:
       # Add this middleware to handle CORS preflight
       - "traefik.http.middlewares.cors.headers.accessControlAllowMethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors.headers.accessControlAllowCredentials=true"
-      - "traefik.http.middlewares.cors.headers.accessControlAllowHeaders=*"
+      - "traefik.http.middlewares.cors.headers.accessControlAllowHeaders=Content-Type, Authorization"
       - "traefik.http.middlewares.cors.headers.accessControlMaxAge=600"
       - "traefik.http.routers.backend.middlewares=cors@docker"
       - "traefik.http.middlewares.cors.headers.accessControlAllowOriginList=http://${DOMAIN},https://${DOMAIN},https://localhost:5173,https://api.localhost:5173,http://api.${DOMAIN},https://api.${DOMAIN}"
