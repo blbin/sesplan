@@ -6,13 +6,13 @@ from app.core.config import settings
 from app.db.session import engine, Base # Zajistíme import Base
 from app import models  # Import the models package
 
-print("Importované modely:", models.__all__)
+#print("Importované modely:", models.__all__)
 
 # Ensure all models are imported before creating tables
-# print("Dostupné tabulky před vytvořením:", Base.metadata.tables.keys())
+print("Dostupné tabulky před vytvořením:", Base.metadata.tables.keys())
 Base.metadata.create_all(bind=engine) # Odkomentováno pro synchronizaci DB
 print("DB sync: Tables created/checked based on models.") # Přidáme log pro potvrzení
-# print("Dostupné tabulky po vytvoření:", Base.metadata.tables.keys())
+print("Dostupné tabulky po vytvoření:", Base.metadata.tables.keys())
 
 app = FastAPI(title="Sesplan API")
 
@@ -20,7 +20,6 @@ app = FastAPI(title="Sesplan API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        f"http://{settings.DOMAIN}",
         f"https://{settings.DOMAIN}",
         "http://localhost:5173",
         "https://localhost:5173",
@@ -38,4 +37,5 @@ app.include_router(api_router, prefix="/V1")
 @app.get("/")
 async def root():
     return {"message": "Hello from FastAPI!"}
+
 
