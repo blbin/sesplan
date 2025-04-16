@@ -11,11 +11,7 @@
         :isSidebarCollapsed="isSidebarCollapsed"
       />
       <div class="dashboard-content">
-        <MetricsSection />
-        <div class="dashboard-widgets">
-          <ActivityWidget />
-          <DeadlineWidget />
-        </div>
+        <router-view></router-view>
       </div>
     </main>
   </div>
@@ -25,18 +21,12 @@
 import { defineComponent, ref } from 'vue';
 import Sidebar from '../components/dashboard/Sidebar.vue';
 import DashboardHeader from '../components/dashboard/DashboardHeader.vue';
-import MetricsSection from '../components/dashboard/MetricsSection.vue';
-import ActivityWidget from '../components/dashboard/ActivityWidget.vue';
-import DeadlineWidget from '../components/dashboard/DeadlineWidget.vue';
 
 export default defineComponent({
   name: 'DashboardView',
   components: {
     Sidebar,
     DashboardHeader,
-    MetricsSection,
-    ActivityWidget,
-    DeadlineWidget
   },
   setup() {
     const isSidebarCollapsed = ref(false);
@@ -73,21 +63,8 @@ export default defineComponent({
   margin-left: 0;
 }
 
-.dashboard-widgets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
-}
-
 .dashboard-content {
   padding-bottom: 20px;
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .dashboard-widgets {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 768px) {

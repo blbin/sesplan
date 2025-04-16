@@ -26,7 +26,24 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('../views/DashboardView.vue'),
-    meta: { requiresAuth: true } // Tato trasa vyžaduje přihlášení
+    meta: { requiresAuth: true }, // Tato trasa vyžaduje přihlášení
+    children: [
+      // Přidáváme defaultní view pro /dashboard
+      {
+        path: '', // Prázdná cesta znamená, že se načte pro /dashboard
+        name: 'dashboard-home',
+        component: () => import('../views/dashboard/DashboardHomeView.vue'), // Naše nová komponenta
+        meta: { requiresAuth: true }
+      },
+      // Nová routa pro světy
+      {
+        path: 'worlds',
+        name: 'dashboard-worlds',
+        component: () => import('../views/dashboard/WorldsView.vue'),
+        meta: { requiresAuth: true } // Zajistíme, že i podstránka vyžaduje přihlášení
+      }
+      // Zde mohou být další podstránky dashboardu
+    ]
   },
   {
     path: '/landing',

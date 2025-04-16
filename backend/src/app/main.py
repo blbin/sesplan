@@ -22,7 +22,9 @@ app.add_middleware(
         f"http://{settings.DOMAIN}",
         f"https://{settings.DOMAIN}",
         "http://localhost:5173",
-        "https://localhost:5173"
+        "https://localhost:5173",
+        "http://localhost",
+        "https://localhost"
     ],
     allow_credentials=True,
     allow_methods=["*"],

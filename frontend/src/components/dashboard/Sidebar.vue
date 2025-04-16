@@ -10,10 +10,10 @@
       </button>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-item active">
+      <router-link to="/dashboard" class="nav-item" active-class="active">
         <i class="icon">📊</i>
         <span v-show="!isSidebarCollapsed">Dashboard</span>
-      </div>
+      </router-link>
       <div class="nav-item">
         <i class="icon">📅</i>
         <span v-show="!isSidebarCollapsed">Calendar</span>
@@ -30,6 +30,10 @@
         <i class="icon">⚙️</i>
         <span v-show="!isSidebarCollapsed">Settings</span>
       </div>
+      <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
+        <i class="icon">🌍</i>
+        <span v-show="!isSidebarCollapsed">Worlds</span>
+      </router-link>
     </nav>
   </aside>
 </template>
@@ -131,6 +135,7 @@ export default defineComponent({
   cursor: pointer;
   transition: all 0.2s ease;
   border-left: 3px solid transparent;
+  text-decoration: none;
 }
 
 .nav-item:hover {

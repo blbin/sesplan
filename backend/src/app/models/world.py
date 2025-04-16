@@ -6,9 +6,10 @@ class World(Base):
     __tablename__ = "worlds"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, index=True)
-    description = Column(Text)
+    name = Column(String, index=True, nullable=False)
+    description = Column(Text, nullable=True)
     is_private = Column(Boolean, default=True, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -16,7 +17,7 @@ class World(Base):
     characters = relationship("Character", back_populates="world")
     user_associations = relationship("WorldUser", back_populates="world")
     images = relationship("Image", back_populates="world")
-    campaigns = relationship("Campaign", back_populates="world")
+    campaigns = relationship("Campaign", back_populates="world", cascade="all, delete-orphan")
     events = relationship("Event", back_populates="world")
     locations = relationship("Location", back_populates="world")
     organizations = relationship("Organization", back_populates="world")
@@ -25,6 +26,8 @@ class World(Base):
     location_tag_types = relationship("LocationTagType", back_populates="world")
     organization_tag_types = relationship("OrganizationTagType", back_populates="world")
     world_invites = relationship("WorldInvite", back_populates="world")
+
+    owner = relationship("User") # Backref se přidá do User modelu později
 
     # Relationships will be added later
     # characters = relationship("Character", back_populates="world")

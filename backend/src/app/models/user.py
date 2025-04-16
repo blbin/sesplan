@@ -19,3 +19,7 @@ class User(Base):
     availabilities = relationship("Availability", back_populates="user")
     images = relationship("Image", back_populates="user")
 
+    # Nové relace pro vlastnictví
+    owned_worlds = relationship("World", back_populates="owner")
+    owned_campaigns = relationship("Campaign", back_populates="owner")
+

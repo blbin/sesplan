@@ -1,11 +1,20 @@
 from fastapi import APIRouter
-from .auth import router as auth_router
-from .users import router as users_router
+
+# Importujte zde jednotlivé routery z tohoto adresáře
+from . import auth
+from . import base
+from . import users
+from . import worlds
+from . import campaigns
 
 router = APIRouter()
-router.include_router(auth_router, prefix="/auth", tags=["auth"])
-router.include_router(users_router, prefix="/users", tags=["users"])
 
+# Zahrňte routery do hlavního routeru
+router.include_router(auth.router, prefix="/auth", tags=["auth"])
+router.include_router(base.router, tags=["base"])
+router.include_router(users.router, prefix="/users", tags=["users"])
+router.include_router(worlds.router, prefix="/worlds", tags=["worlds"])
+router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
 
 # Přidejte další endpointy z původního endpoints.py
 @router.get("/healthcheck")
