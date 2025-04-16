@@ -48,6 +48,14 @@ const routes: RouteRecordRaw[] = [
         name: 'dashboard-campaigns',
         component: () => import('../views/dashboard/CampaignsView.vue'),
         meta: { requiresAuth: true }
+      },
+      // Nová routa pro detail kampaně
+      {
+        path: 'campaigns/:campaignId', // Dynamický segment pro ID
+        name: 'dashboard-campaign-detail',
+        component: () => import('../views/dashboard/CampaignDetailView.vue'),
+        props: true, // Umožní předat campaignId jako prop komponentě
+        meta: { requiresAuth: true }
       }
       // Zde mohou být další podstránky dashboardu
     ]

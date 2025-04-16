@@ -17,7 +17,11 @@
       <ul v-else class="item-list">
         <li v-for="campaign in campaigns" :key="campaign.id" class="item-list-item">
           <div class="item-info">
-            <h2>{{ campaign.name }}</h2>
+            <h2>
+              <router-link :to="`/dashboard/campaigns/${campaign.id}`" class="item-link">
+                {{ campaign.name }}
+              </router-link>
+            </h2>
             <p>{{ campaign.description || 'No description' }}</p>
             <small class="world-info">World: {{ getWorldName(campaign.world_id) }}</small>
           </div>
@@ -402,5 +406,15 @@ export default defineComponent({
 }
 .confirmation-modal p { margin-bottom: 1.5rem; color: #495057; }
 .error-message { color: #dc3545; font-size: 0.9rem; margin-top: 1rem; text-align: center; }
+
+/* Přidáme styl pro odkazy v seznamu */
+.item-link {
+  color: inherit; /* Dědí barvu z h2 */
+  text-decoration: none;
+}
+.item-link:hover {
+  color: #7851a9; /* Zvýraznění při hover */
+  text-decoration: underline;
+}
 
 </style> 
