@@ -52,17 +52,15 @@ services:
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.routers.backend.middlewares=redirect-to-https"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
       - "traefik.http.routers.backend-secure.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.backend-secure.entrypoints=websecure"
       - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-secure.middlewares=cors@docker"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # Add this middleware to handle CORS preflight
       - "traefik.http.middlewares.cors.headers.accessControlAllowMethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors.headers.accessControlAllowCredentials=true"
       - "traefik.http.middlewares.cors.headers.accessControlAllowHeaders=Content-Type, Authorization"
       - "traefik.http.middlewares.cors.headers.accessControlMaxAge=600"
-      - "traefik.http.routers.backend.middlewares=cors@docker"
       - "traefik.http.middlewares.cors.headers.accessControlAllowOriginList=http://${DOMAIN},https://${DOMAIN},https://localhost:5173,https://api.localhost:5173,http://api.${DOMAIN},https://api.${DOMAIN}"
     depends_on:
       - postgres
