@@ -6,7 +6,7 @@ from ... import crud, models, schemas
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(tags=["worlds"])
 
 @router.post("/", response_model=schemas.World)
 def create_world(
