@@ -6,7 +6,7 @@ import type { World, WorldCreate, WorldUpdate, Campaign } from '../../types/worl
 
 // Získání všech světů aktuálního uživatele
 export const getWorlds = async (): Promise<World[]> => {
-    const response = await api.get<World[]>('/V1/worlds'); // Použijeme 'api'
+    const response = await api.get<World[]>('/V1/worlds/'); // Použijeme 'api'
     return response.data;
 };
 
@@ -18,7 +18,7 @@ export const getWorldById = async (id: number): Promise<World> => {
 
 // Vytvoření nového světa
 export const createWorld = async (worldData: WorldCreate): Promise<World> => {
-    const response = await api.post<World>('/V1/worlds', worldData); // Použijeme 'api'
+    const response = await api.post<World>('/V1/worlds/', worldData); // Použijeme 'api'
     return response.data;
 };
 
