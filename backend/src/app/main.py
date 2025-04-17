@@ -21,6 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         f"https://{settings.DOMAIN}",
+        "https://sesplan.space",
         "http://localhost:5173",
         "https://localhost:5173",
         "http://localhost",
