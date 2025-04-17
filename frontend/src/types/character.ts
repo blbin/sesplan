@@ -1,5 +1,6 @@
 // src/types/character.ts
 // import type { User } from './user'; // Assuming User type exists
+import type { Journal } from './journal'; // Import Journal type
 
 export interface CharacterBase {
     name: string;
@@ -23,6 +24,7 @@ export interface Character extends CharacterBase {
     user_id: number; // ID of the user who owns/created the character
     created_at: string; // ISO Date string
     updated_at: string; // ISO Date string
+    journal: Journal | null;
     // Optional: Include user details if backend sends them (check API response)
     // user?: User;
 } 

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+from .journal import Journal
 
 # Base properties
 class CharacterBase(BaseModel):
@@ -24,6 +25,7 @@ class Character(CharacterBase):
     user_id: int # User who created the character
     created_at: datetime
     updated_at: datetime
+    journal: Optional[Journal] = None
 
     class Config:
         from_attributes = True 

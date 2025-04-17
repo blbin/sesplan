@@ -8,6 +8,8 @@ from . import worlds
 from . import campaigns
 from . import characters
 from . import campaign_invites
+from . import journals
+from . import journal_entries
 
 router = APIRouter()
 
@@ -18,6 +20,8 @@ router.include_router(users.router, prefix="/users", tags=["users"])
 router.include_router(worlds.router, prefix="/worlds", tags=["worlds"])
 router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
 router.include_router(characters.router, prefix="/characters", tags=["characters"])
+router.include_router(journals.router, prefix="/journals", tags=["journals"])
+router.include_router(journal_entries.router)
 
 # Registrace obecného routeru pro pozvánky (přijetí/smazání)
 router.include_router(

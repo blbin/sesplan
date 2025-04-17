@@ -4,3 +4,7 @@ from .campaign import Campaign, CampaignCreate, CampaignUpdate
 from .character import Character, CharacterCreate, CharacterUpdate
 from .campaign_invite import CampaignInvite, CampaignInviteCreate, CampaignInviteAcceptResponse
 from .user_campaign import UserCampaignRead, UserCampaignUpdate
+# Import Journal schemas
+from .journal import Journal, JournalUpdate
+# Import JournalEntry schemas
+from .journal_entry import JournalEntry, JournalEntryCreate, JournalEntryUpdate

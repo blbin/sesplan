@@ -1,16 +1,17 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from ..db.session import Base
 
 class Journal(Base):
     __tablename__ = "journals"
 
     id = Column(Integer, primary_key=True, index=True)
-    character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
-    name = Column(String, nullable=False)
-    description = Column(Text)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+    name = Column(String, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+    character_id = Column(Integer, ForeignKey("characters.id"), unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
 
     # Relationships
     character = relationship("Character", back_populates="journal")
