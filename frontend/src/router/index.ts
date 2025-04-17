@@ -7,10 +7,6 @@ import { useAuthStore } from '../store/auth.store';
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    redirect: '/landing' // Nebo '/dashboard' pokud je uživatel přihlášen?
-  },
-  {
     path: '/login',
     name: 'login',
     component: LoginView,
