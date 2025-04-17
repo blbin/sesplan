@@ -7,12 +7,12 @@ const INVITE_BASE_URL = '/V1/invites';
 // --- Campaign Specific Invites --- 
 
 export const getCampaignInvites = async (campaignId: number): Promise<CampaignInvite[]> => {
-    const response = await api.get(`${CAMPAIGN_BASE_URL}/${campaignId}/invites`);
+    const response = await api.get(`${CAMPAIGN_BASE_URL}/${campaignId}/invites/`);
     return response.data;
 };
 
 export const createCampaignInvite = async (campaignId: number, inviteData: CampaignInviteCreate): Promise<CampaignInvite> => {
-    const response = await api.post(`${CAMPAIGN_BASE_URL}/${campaignId}/invites`, inviteData);
+    const response = await api.post(`${CAMPAIGN_BASE_URL}/${campaignId}/invites/`, inviteData);
     return response.data;
 };
 
