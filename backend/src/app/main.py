@@ -14,7 +14,7 @@ Base.metadata.create_all(bind=engine) # Odkomentováno pro synchronizaci DB
 #print("DB sync: Tables created/checked based on models.") # Přidáme log pro potvrzení
 #print("Dostupné tabulky po vytvoření:", Base.metadata.tables.keys())
 
-app = FastAPI(title="Sesplan API")
+app = FastAPI(title="Sesplan API", redirect_slashes=False)
 
 # Přidání CORS middleware
 app.add_middleware(
