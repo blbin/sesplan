@@ -49,30 +49,38 @@ const routes: RouteRecordRaw[] = [
       // Nová routa pro kampaně
       {
         path: 'campaigns',
-        name: 'dashboard-campaigns',
-        component: () => import('../views/dashboard/CampaignsView.vue'),
-        meta: { requiresAuth: true }
+        name: 'CampaignList',
+        component: () => import('@/views/dashboard/CampaignsView.vue'),
+        meta: { requiresAuth: true },
       },
       // Nová routa pro detail kampaně
       {
         path: 'campaigns/:campaignId',
-        name: 'dashboard-campaign-detail',
-        component: () => import('../views/dashboard/CampaignDetailView.vue'),
-        props: true,
-        meta: { requiresAuth: true }
+        name: 'CampaignDetail',
+        component: () => import('@/views/dashboard/CampaignDetailView.vue'),
+        props: true, // Pass route params as props
+        meta: { requiresAuth: true },
+      },
+      // Session Detail Route (now top-level under dashboard)
+      {
+        path: 'campaigns/:campaignId/sessions/:sessionId', // Full path
+        name: 'SessionDetail',
+        component: () => import('@/views/dashboard/SessionDetailView.vue'),
+        props: true, // Pass campaignId and sessionId as props
+        meta: { requiresAuth: true },
       },
       // Nová routa pro postavy
       {
         path: 'characters',
-        name: 'dashboard-characters',
-        component: () => import('../views/dashboard/CharactersView.vue'),
+        name: 'CharacterList',
+        component: () => import('@/views/dashboard/CharactersView.vue'),
         meta: { requiresAuth: true }
       },
       // Nová routa pro detail postavy
       {
         path: 'characters/:characterId',
-        name: 'dashboard-character-detail',
-        component: () => import('../views/dashboard/CharacterDetailView.vue'),
+        name: 'CharacterDetail',
+        component: () => import('@/views/dashboard/CharacterDetailView.vue'),
         props: true,
         meta: { requiresAuth: true }
       }

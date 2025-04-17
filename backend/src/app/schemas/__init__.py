@@ -8,3 +8,5 @@ from .user_campaign import UserCampaignRead, UserCampaignUpdate
 from .journal import Journal, JournalUpdate
 # Import JournalEntry schemas
 from .journal_entry import JournalEntry, JournalEntryCreate, JournalEntryUpdate
+# Import Session schemas
+from .session import Session, SessionCreate, SessionUpdate

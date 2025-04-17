@@ -1,21 +1,21 @@
 <template>
-  <div class="create-invite-section detail-section">
-    <h2>Create New Invite</h2>
-    <form @submit.prevent="createInvite" class="invite-form">
-      <div class="form-group">
-        <label for="max-uses">Max Uses (optional, 0 or empty for unlimited):</label>
-        <input type="number" id="max-uses" v-model.number="inviteData.max_uses" min="0">
-      </div>
-      <div class="form-group">
-        <label for="expires-at">Expires At (optional):</label>
-        <input type="datetime-local" id="expires-at" v-model="inviteData.expires_at">
-      </div>
+  <form @submit.prevent="createInvite" class="invite-form">
+    <div class="form-group">
+      <label for="max-uses">Max Uses (optional, 0 or empty for unlimited):</label>
+      <input type="number" id="max-uses" v-model.number="inviteData.max_uses" min="0">
+    </div>
+    <div class="form-group">
+      <label for="expires-at">Expires At (optional):</label>
+      <input type="datetime-local" id="expires-at" v-model="inviteData.expires_at">
+    </div>
+    <div v-if="error" class="error-message form-error">{{ error }}</div>
+    <div class="modal-actions">
+      <button type="button" @click="cancelInvite" class="btn btn-secondary">Cancel</button>
       <button type="submit" :disabled="isSubmitting" class="btn btn-primary">
         {{ isSubmitting ? 'Creating...' : 'Create Invite Link' }}
       </button>
-      <div v-if="error" class="error-message form-error">{{ error }}</div>
-    </form>
-  </div>
+    </div>
+  </form>
 </template>
 
 <script lang="ts">
@@ -31,10 +31,10 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['invites-updated'], // Emit event when invites list changes
+  emits: ['invite-sent', 'cancel'],
   setup(props, { emit }) {
-    const inviteData = reactive<CampaignInviteCreate>({
-      max_uses: 1, // Default to 1 use
+    const inviteData = reactive<Partial<CampaignInviteCreate>>({
+      max_uses: 1,
       expires_at: null,
     });
     const isSubmitting = ref(false);
@@ -44,23 +44,23 @@ export default defineComponent({
       isSubmitting.value = true;
       error.value = null;
       try {
-        // Convert empty string or 0 for max_uses to null for the API
         const payload: CampaignInviteCreate = {
-          max_uses: inviteData.max_uses === 0 || inviteData.max_uses === null ? null : inviteData.max_uses,
+          max_uses: inviteData.max_uses === 0 || !inviteData.max_uses ? null : Number(inviteData.max_uses),
           expires_at: inviteData.expires_at ? new Date(inviteData.expires_at).toISOString() : null,
         };
         await campaignInvitesApi.createCampaignInvite(props.campaignId, payload);
-        alert('Invite created successfully!');
-        // Reset form
         inviteData.max_uses = 1;
         inviteData.expires_at = null;
-        emit('invites-updated'); // Notify parent to refresh list
+        emit('invite-sent');
       } catch (err: any) {
         error.value = `Error creating invite: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        alert(error.value);
       } finally {
         isSubmitting.value = false;
       }
+    };
+
+    const cancelInvite = () => {
+      emit('cancel');
     };
 
     return {
@@ -68,23 +68,17 @@ export default defineComponent({
       isSubmitting,
       error,
       createInvite,
+      cancelInvite,
     };
   },
 });
 </script>
 
 <style scoped>
-.create-invite-section {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #dee2e6;
-}
-
 .invite-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-width: 400px; /* Limit form width */
 }
 
 .form-group {
@@ -105,23 +99,27 @@ export default defineComponent({
   font-size: 0.95rem;
 }
 
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 0.3rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-.btn-primary:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: #0056b3;
+.btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
 }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-primary:hover:not(:disabled) { background-color: #0056b3; }
+.btn-primary:disabled { background-color: #adb5bd; cursor: not-allowed; }
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
 
 .form-error {
     margin-top: 0.5rem;

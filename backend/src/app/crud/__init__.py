@@ -8,3 +8,5 @@ from .crud_user_campaign import get_campaign_members, update_campaign_member_rol
 from .crud_journal import get_journal, update_journal
 # Import JournalEntry CRUD
 from .crud_journal_entry import get_journal_entry, get_entries_by_journal, create_journal_entry, update_journal_entry, delete_journal_entry
+# Import Session CRUD
+from .crud_session import get_session, get_sessions_by_campaign, create_session, update_session, delete_session
