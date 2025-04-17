@@ -16,4 +16,4 @@ class Availability(Base):
 
     # Relationships
     user = relationship("User", back_populates="availabilities")
-    session = relationship("Session", back_populates="availabilities") 
+    session = relationship("Session", back_populates="availabilities")
