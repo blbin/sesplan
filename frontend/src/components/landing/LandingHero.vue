@@ -2,25 +2,25 @@
   <section class="hero">
     <div class="container">
       <div class="hero-content">
-        <h1>Plánování RPG her jednoduše a efektivně</h1>
-        <p>Optimalizujte svou hru s moderním nástrojem pro Game Mastery i hráče</p>
+        <h1>Plan RPG games simply and effectively</h1>
+        <p>Optimize your game with a modern tool for Game Masters and players</p>
         <div class="feature-points">
           <div class="feature-point">
             <span class="icon">✨</span>
-            <span>AI generování herního obsahu</span>
+            <span>AI game content generation</span>
           </div>
           <div class="feature-point">
             <span class="icon">🧙</span>
-            <span>Správa postav a NPC</span>
+            <span>Character and NPC management</span>
           </div>
           <div class="feature-point">
             <span class="icon">🗺️</span>
-            <span>Tvorba světů a kampaní</span>
+            <span>World and campaign creation</span>
           </div>
         </div>
         <div class="cta-buttons">
-          <router-link to="/login" class="btn btn-primary">Přihlásit se</router-link>
-          <router-link to="/register" class="btn btn-secondary">Začít zdarma</router-link>
+          <router-link to="/login" class="btn btn-primary">Log in</router-link>
+          <router-link to="/register" class="btn btn-secondary">Start for free</router-link>
         </div>
       </div>
       <div class="hero-image">

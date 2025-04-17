@@ -30,6 +30,10 @@
         <i class="icon">🗺️</i>
         <span v-show="!isSidebarCollapsed">Campaigns</span>
       </router-link>
+      <router-link to="/dashboard/characters" class="nav-item" active-class="active">
+        <i class="icon">👤</i>
+        <span v-show="!isSidebarCollapsed">Characters</span>
+      </router-link>
     </nav>
   </aside>
 </template>

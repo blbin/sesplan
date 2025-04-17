@@ -4,52 +4,52 @@
       <div class="footer-top">
         <div class="footer-logo">
           <div class="logo-placeholder">RPG</div>
-          <span>RPGMaster</span>
+          <span>Sesplan</span>
         </div>
 
         <div class="newsletter">
-          <h3>Odebírejte novinky</h3>
-          <p>Získejte informace o nových funkcích, tipech a aktualizacích</p>
+          <h3>Subscribe to newsletter</h3>
+          <p>Get information about new features, tips, and updates</p>
           <form @submit.prevent="subscribeNewsletter">
-            <input type="email" v-model="newsletter" placeholder="Váš email" required />
-            <button type="submit">Přihlásit se</button>
+            <input type="email" v-model="newsletter" placeholder="Your email" required />
+            <button type="submit">Subscribe</button>
           </form>
         </div>
       </div>
 
       <div class="footer-content">
         <div class="footer-column">
-          <h4>Aplikace</h4>
+          <h4>Application</h4>
           <ul>
-            <li><router-link to="/features">Funkce</router-link></li>
-            <li><router-link to="/pricing">Ceník</router-link></li>
-            <li><router-link to="/faq">Časté dotazy</router-link></li>
-            <li><router-link to="/support">Podpora</router-link></li>
+            <li><router-link to="/features">Features</router-link></li>
+            <li><router-link to="/pricing">Pricing</router-link></li>
+            <li><router-link to="/faq">FAQ</router-link></li>
+            <li><router-link to="/support">Support</router-link></li>
           </ul>
         </div>
 
         <div class="footer-column">
-          <h4>RPG Zdroje</h4>
+          <h4>RPG Resources</h4>
           <ul>
-            <li><a href="#">Generátor NPC</a></li>
-            <li><a href="#">Mapy a lokace</a></li>
-            <li><a href="#">Nástroje pro DM</a></li>
-            <li><a href="#">Bestiář</a></li>
+            <li><a href="#">NPC Generator</a></li>
+            <li><a href="#">Maps & Locations</a></li>
+            <li><a href="#">DM Tools</a></li>
+            <li><a href="#">Bestiary</a></li>
           </ul>
         </div>
 
         <div class="footer-column">
-          <h4>Společnost</h4>
+          <h4>Company</h4>
           <ul>
-            <li><router-link to="/about">O nás</router-link></li>
+            <li><router-link to="/about">About Us</router-link></li>
             <li><router-link to="/blog">Blog</router-link></li>
-            <li><router-link to="/privacy">Ochrana soukromí</router-link></li>
-            <li><router-link to="/terms">Podmínky použití</router-link></li>
+            <li><router-link to="/privacy">Privacy Policy</router-link></li>
+            <li><router-link to="/terms">Terms of Use</router-link></li>
           </ul>
         </div>
 
         <div class="footer-column">
-          <h4>Sledujte nás</h4>
+          <h4>Follow Us</h4>
           <div class="social-links">
             <a href="#" aria-label="Discord">
               <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z"/></svg>
@@ -66,7 +66,7 @@
           </div>
 
           <div class="app-badges">
-            <p>Mobilní aplikace:</p>
+            <p>Mobile App:</p>
             <div class="badges">
               <a href="#" class="app-badge">
                 <div class="badge-placeholder">Google Play</div>
@@ -81,11 +81,11 @@
 
       <div class="footer-bottom">
         <p class="copyright">
-          &copy; {{ new Date().getFullYear() }} RPGMaster. Všechna práva vyhrazena.
+          &copy; {{ new Date().getFullYear() }} Sesplan. All rights reserved.
         </p>
         <div class="small-links">
           <router-link to="/cookies">Cookies</router-link>
-          <router-link to="/sitemap">Mapa stránek</router-link>
+          <router-link to="/sitemap">Sitemap</router-link>
         </div>
       </div>
 
@@ -105,8 +105,8 @@ export default defineComponent({
     const newsletter = ref('');
 
     const subscribeNewsletter = () => {
-      // Implementace přihlášení k newsletteru
-      alert(`Email ${newsletter.value} byl přihlášen k odběru novinek`);
+      // Implement newsletter subscription logic
+      alert(`Email ${newsletter.value} has been subscribed to the newsletter`);
       newsletter.value = '';
     };
 

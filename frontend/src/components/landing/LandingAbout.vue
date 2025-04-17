@@ -3,30 +3,30 @@
     <div class="container">
       <div class="about-content">
         <div class="about-text">
-          <h2>O RPGMaster</h2>
-          <p class="lead">Moderní nástroj pro podporu her na hrdiny</p>
+          <h2>About Sesplan</h2>
+          <p class="lead">A modern tool to support role-playing games</p>
           <p>
-            Sesplan je komplexní platforma určená pro správu a podporu tabletop RPG her jako jsou
-            Dungeons & Dragons, Dračí Doupě a Pathfinder. Naše aplikace poskytuje Game Masterům i hráčům
-            nástroje pro plánování, organizaci a běh herních sessions.
+            Sesplan is a comprehensive platform designed for managing and supporting tabletop RPGs like
+            Dungeons & Dragons, Dračí Doupě, and Pathfinder. Our application provides Game Masters and players
+            with tools for planning, organizing, and running game sessions.
           </p>
           <p>
-            Klíčovou výhodou je integrace umělé inteligence, která pomáhá generovat herní obsah
-            jako města, NPC postavy, události a souhrny deníků postav. Tím usnadňujeme přípravu
-            na hru a umožňujeme GM více se soustředit na samotný příběh a zábavu.
+            A key advantage is the integration of artificial intelligence, which helps generate game content
+            such as cities, NPCs, events, and character journal summaries. This simplifies game preparation
+            and allows GMs to focus more on the story and fun itself.
           </p>
           <div class="stats">
             <div class="stat-item">
               <div class="stat-number">1000+</div>
-              <div class="stat-label">Aktivních uživatelů</div>
+              <div class="stat-label">Active Users</div>
             </div>
             <div class="stat-item">
               <div class="stat-number">30+</div>
-              <div class="stat-label">RPG systémů</div>
+              <div class="stat-label">RPG Systems</div>
             </div>
             <div class="stat-item">
               <div class="stat-number">500+</div>
-              <div class="stat-label">Kampaní</div>
+              <div class="stat-label">Campaigns</div>
             </div>
           </div>
         </div>

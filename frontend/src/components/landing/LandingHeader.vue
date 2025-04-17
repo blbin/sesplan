@@ -8,19 +8,19 @@
         </div>
         <nav class="nav-desktop">
           <ul>
-            <li><a href="#features">Funkce</a></li>
-            <li><a href="#about">O aplikaci</a></li>
-            <li><a href="#contact">Kontakt</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
           </ul>
         </nav>
         <div class="auth-buttons desktop-auth">
-          <router-link to="/login" class="login-btn">Přihlášení</router-link>
-          <router-link to="/register" class="register-btn">Registrace</router-link>
+          <router-link to="/login" class="login-btn">Login</router-link>
+          <router-link to="/register" class="register-btn">Register</router-link>
         </div>
         <div class="mobile-header-actions">
           <div class="mobile-auth-buttons">
-            <router-link to="/login" class="mobile-login-btn">Přihlášení</router-link>
-            <router-link to="/register" class="mobile-register-btn">Registrace</router-link>
+            <router-link to="/login" class="mobile-login-btn">Login</router-link>
+            <router-link to="/register" class="mobile-register-btn">Register</router-link>
           </div>
           <button class="menu-toggle" @click="toggleMenu">
             <span></span>
@@ -32,9 +32,9 @@
     </header>
     <nav class="nav-mobile" :class="{ active: menuOpen }">
       <ul>
-        <li><a href="#features" @click="closeMenu">Funkce</a></li>
-        <li><a href="#about" @click="closeMenu">O aplikaci</a></li>
-        <li><a href="#contact" @click="closeMenu">Kontakt</a></li>
+        <li><a href="#features" @click="closeMenu">Features</a></li>
+        <li><a href="#about" @click="closeMenu">About</a></li>
+        <li><a href="#contact" @click="closeMenu">Contact</a></li>
       </ul>
     </nav>
   </div>

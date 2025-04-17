@@ -2,44 +2,44 @@
 <template>
   <section id="features" class="features">
     <div class="container">
-      <h2>Klíčové funkce</h2>
-      <p class="subtitle">Vše, co potřebujete pro své RPG dobrodružství</p>
+      <h2>Key Features</h2>
+      <p class="subtitle">Everything you need for your RPG adventure</p>
 
       <div class="features-grid">
         <div class="feature-card">
           <div class="icon ai-icon">🤖</div>
-          <h3>AI generování obsahu</h3>
-          <p>Automaticky generujte NPC postavy, lokace, zápletky a další herní prvky pomocí umělé inteligence.</p>
+          <h3>AI Content Generation</h3>
+          <p>Automatically generate NPCs, locations, plot hooks, and other game elements using artificial intelligence.</p>
         </div>
 
         <div class="feature-card">
           <div class="icon">📝</div>
-          <h3>Správa postav</h3>
-          <p>Vytvářejte, upravujte a organizujte své postavy s přehledným systémem charakteristik a inventáře.</p>
+          <h3>Character Management</h3>
+          <p>Create, edit, and organize your characters with a clear system for stats and inventory.</p>
         </div>
 
         <div class="feature-card">
           <div class="icon">🗺️</div>
-          <h3>Tvorba světů</h3>
-          <p>Budujte bohaté světy s vlastní geografií, historií a kulturami pro vaše kampaně.</p>
+          <h3>World Building</h3>
+          <p>Build rich worlds with unique geography, history, and cultures for your campaigns.</p>
         </div>
 
         <div class="feature-card">
           <div class="icon">📅</div>
-          <h3>Plánování sessions</h3>
-          <p>Synchronizujte termíny s hráči a udržujte přehled o plánovaných herních setkáních.</p>
+          <h3>Session Scheduling</h3>
+          <p>Synchronize schedules with players and keep track of planned game sessions.</p>
         </div>
 
         <div class="feature-card">
           <div class="icon">📊</div>
-          <h3>Sledování průběhu</h3>
-          <p>Zaznamenávejte události kampaně a sledujte vývoj postav i příběhu v průběhu času.</p>
+          <h3>Progress Tracking</h3>
+          <p>Record campaign events and track character and story development over time.</p>
         </div>
 
         <div class="feature-card">
           <div class="icon">🎲</div>
-          <h3>Herní nástroje</h3>
-          <p>Využívejte virtuální kostky, generátory náhodných setkání a další pomocné nástroje pro hladký průběh hry.</p>
+          <h3>Game Tools</h3>
+          <p>Utilize virtual dice, random encounter generators, and other helper tools for smooth gameplay.</p>
         </div>
       </div>
     </div>

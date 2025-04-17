@@ -1,28 +1,28 @@
 <template>
   <section id="contact" class="contact">
     <div class="container">
-      <h2>Kontaktujte nás</h2>
-      <p class="contact-intro">Máte dotaz nebo nápad na vylepšení? Napište nám!</p>
+      <h2>Contact Us</h2>
+      <p class="contact-intro">Have a question or an idea for improvement? Let us know!</p>
 
       <div class="contact-content">
         <div class="contact-info">
           <div class="info-item">
             <div class="icon">📧</div>
             <h3>Email</h3>
-            <p>info@rpgmaster.cz</p>
+            <p>info@sesplan.app</p>
           </div>
 
           <div class="info-item">
             <div class="icon">💬</div>
             <h3>Discord</h3>
-            <p>Připojte se do naší komunity</p>
-            <a href="https://discord.gg/rpgmaster" class="discord-link" target="_blank">
-              discord.gg/rpgmaster
+            <p>Join our community</p>
+            <a href="https://discord.gg/sesplan" class="discord-link" target="_blank">
+              discord.gg/sesplan
             </a>
           </div>
 
           <div class="faq">
-            <h3>Často kladené dotazy</h3>
+            <h3>Frequently Asked Questions (FAQ)</h3>
             <div class="faq-item" v-for="(item, index) in faqItems" :key="index">
               <div class="faq-question" @click="toggleFaq(index)">
                 {{ item.question }}
@@ -37,7 +37,7 @@
 
         <form class="contact-form" @submit.prevent="submitContact">
           <div class="form-group">
-            <label for="name">Jméno</label>
+            <label for="name">Name</label>
             <input type="text" id="name" v-model="contactForm.name" required />
           </div>
 
@@ -47,27 +47,27 @@
           </div>
 
           <div class="form-group">
-            <label for="subject">Předmět</label>
+            <label for="subject">Subject</label>
             <select id="subject" v-model="contactForm.subject" required>
-              <option value="">Vyberte předmět</option>
-              <option value="general">Obecný dotaz</option>
-              <option value="support">Technická podpora</option>
-              <option value="feedback">Zpětná vazba</option>
-              <option value="feature">Návrh funkce</option>
+              <option value="">Select subject</option>
+              <option value="general">General Inquiry</option>
+              <option value="support">Technical Support</option>
+              <option value="feedback">Feedback</option>
+              <option value="feature">Feature Suggestion</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="message">Zpráva</label>
+            <label for="message">Message</label>
             <textarea id="message" v-model="contactForm.message" rows="6" required></textarea>
           </div>
 
           <button type="submit" class="submit-btn" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Odesílání...' : 'Odeslat zprávu' }}
+            {{ isSubmitting ? 'Sending...' : 'Send Message' }}
           </button>
 
           <div v-if="submitStatus" class="submit-status" :class="{ 'status-success': submitStatus === 'success' }">
-            {{ submitStatus === 'success' ? 'Zpráva byla úspěšně odeslána!' : 'Došlo k chybě při odesílání. Zkuste to prosím znovu.' }}
+            {{ submitStatus === 'success' ? 'Message sent successfully!' : 'An error occurred while sending. Please try again.' }}
           </div>
         </form>
       </div>
@@ -93,18 +93,18 @@ export default defineComponent({
 
     const faqItems = reactive([
       {
-        question: 'Je aplikace RPGMaster zdarma?',
-        answer: 'Základní verze aplikace je zcela zdarma. Pro pokročilé funkce nabízíme prémiové předplatné.',
+        question: 'Is the Sesplan app free?',
+        answer: 'The basic version of the app is completely free. We offer a premium subscription for advanced features.',
         isOpen: false
       },
       {
-        question: 'Jaké RPG systémy jsou podporovány?',
-        answer: 'Podporujeme většinu populárních systémů včetně D&D 5e, Pathfinder, Dračí Doupě a mnoho dalších. Neustále přidáváme nové.',
+        question: 'Which RPG systems are supported?',
+        answer: 'We support most popular systems including D&D 5e, Pathfinder, Dračí Doupě, and many others. We are constantly adding new ones.',
         isOpen: false
       },
       {
-        question: 'Můžu používat vlastní pravidla a systémy?',
-        answer: 'Ano! Aplikace je navržena tak, aby byla flexibilní a umožňovala přizpůsobení pro jakýkoliv RPG systém nebo vlastní pravidla.',
+        question: 'Can I use custom rules and systems?',
+        answer: 'Yes! The application is designed to be flexible and allow customization for any RPG system or custom rules.',
         isOpen: false
       }
     ]);
