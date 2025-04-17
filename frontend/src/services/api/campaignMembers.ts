@@ -5,7 +5,7 @@ import type { CampaignRoleEnum } from '@/types/campaign_role';
 const BASE_URL = '/V1/campaigns';
 
 export const getCampaignMembers = async (campaignId: number): Promise<UserCampaignRead[]> => {
-    const response = await api.get(`${BASE_URL}/${campaignId}/members`);
+    const response = await api.get(`${BASE_URL}/${campaignId}/members/`);
     return response.data;
 };
 
