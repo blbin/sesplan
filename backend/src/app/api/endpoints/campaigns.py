@@ -135,18 +135,9 @@ async def read_campaign_members(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    # Verify membership instead of GM role
-    current_user: models.User = Depends(get_current_user) 
+    gm_membership: models.UserCampaign = Depends(verify_gm_permission)
 ):
-    """Retrieve members of a campaign. Requires campaign membership."""
-    # Check if the current user is a member of the campaign
-    membership = crud.get_campaign_membership(db, campaign_id=campaign_id, user_id=current_user.id)
-    if not membership:
-        # Optional: Check if campaign/world is public?
-        # For listing members, requiring membership seems reasonable.
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
-        
-    # If user is a member, fetch all members
+    """Retrieve members of a campaign. Only GMs can view the full list."""
     members = crud.get_campaign_members(db, campaign_id=campaign_id, skip=skip, limit=limit)
     return members
 
