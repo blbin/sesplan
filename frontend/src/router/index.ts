@@ -42,6 +42,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/dashboard/WorldsView.vue'),
         meta: { requiresAuth: true } // Zajistíme, že i podstránka vyžaduje přihlášení
       },
+      // Nová routa pro DETAIL světa
+      {
+        path: 'worlds/:worldId',
+        name: 'dashboard-world-detail',
+        component: () => import('../views/dashboard/WorldDetailView.vue'),
+        props: true,
+        meta: { requiresAuth: true }
+      },
       // Nová routa pro kampaně
       {
         path: 'campaigns',
@@ -51,20 +59,42 @@ const routes: RouteRecordRaw[] = [
       },
       // Nová routa pro detail kampaně
       {
-        path: 'campaigns/:campaignId', // Dynamický segment pro ID
+        path: 'campaigns/:campaignId',
         name: 'dashboard-campaign-detail',
         component: () => import('../views/dashboard/CampaignDetailView.vue'),
-        props: true, // Umožní předat campaignId jako prop komponentě
+        props: true,
+        meta: { requiresAuth: true }
+      },
+      // Nová routa pro postavy
+      {
+        path: 'characters',
+        name: 'dashboard-characters',
+        component: () => import('../views/dashboard/CharactersView.vue'),
+        meta: { requiresAuth: true }
+      },
+      // Nová routa pro detail postavy
+      {
+        path: 'characters/:characterId',
+        name: 'dashboard-character-detail',
+        component: () => import('../views/dashboard/CharacterDetailView.vue'),
+        props: true,
         meta: { requiresAuth: true }
       }
       // Zde mohou být další podstránky dashboardu
     ]
   },
   {
-    path: '/landing',
+    path: '/',
     name: 'landing',
     component: LandingPage
     // meta: { guestOnly: true } // Landing page může být dostupná všem
+  },
+  // Add route for accepting invites
+  {
+    path: '/invite/:token',
+    name: 'accept-invite',
+    component: () => import('../views/AcceptInviteView.vue'),
+    meta: { requiresAuth: true } // User must be logged in to accept
   }
 ]
 

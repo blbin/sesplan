@@ -6,7 +6,6 @@ export interface Campaign {
   name: string;
   description: string | null;
   world_id: number;
-  owner_id: number;
   created_at: string; // Datum jako string (ISO formát)
   updated_at: string; // Datum jako string (ISO formát)
   // Zde můžeme přidat další pole, pokud API vrací např. info o světě

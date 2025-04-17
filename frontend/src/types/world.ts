@@ -1,35 +1,30 @@
 // src/types/world.ts
+import type { Campaign } from './campaign'; // Import Campaign type
 
-// Typ pro kampaň - nyní odpovídá backendovému schématu Campaign
-export interface Campaign { // Přejmenováno z CampaignSummary
-  id: number;
-  name: string;
-  description: string | null;
-  world_id: number;
-  owner_id: number;
-  created_at: string; // Datum jako string (ISO formát)
-  updated_at: string; // Datum jako string (ISO formát)
-}
+// Odstraněna lokální definice Campaign
+// export interface Campaign { ... }
 
 // Základní struktura dat světa vracená z API
 export interface World {
   id: number;
   name: string;
   description: string | null;
-  owner_id: number;
-  created_at: string; // Datum jako string (ISO formát)
-  updated_at: string; // Datum jako string (ISO formát)
-  campaigns: Campaign[]; // Použijeme plný typ Campaign
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+  campaigns: Campaign[];
 }
 
 // Data potřebná pro vytvoření světa
 export interface WorldCreate {
   name: string;
   description?: string | null;
+  is_public?: boolean;
 }
 
-// Data povolená pro úpravu světa (všechna jsou volitelná)
+// Data povolená pro úpravu světa
 export interface WorldUpdate {
-  name?: string; // Ponecháme jako volitelné, ale ne undefined
+  name?: string;
   description?: string | null;
+  is_public?: boolean;
 } 

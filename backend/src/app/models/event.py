@@ -14,4 +14,6 @@ class Event(Base):
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
-    world = relationship("World", back_populates="events") 
+    world = relationship("World")
+
+    # Remove back_populates to resolve mapping error if World.events is not defined 

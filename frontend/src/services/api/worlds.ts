@@ -2,7 +2,9 @@
 // import apiClient from './apiClient'; // Odstraníme původní import
 import { api } from '../auth.service'; // Importujeme sdílenou instanci z auth.service
 // import type { World, WorldCreate, WorldUpdate } from '@/types/world'; // Definice typů
-import type { World, WorldCreate, WorldUpdate, Campaign } from '../../types/world'; // Importujeme Campaign
+import type { World, WorldCreate, WorldUpdate } from '../../types/world';
+// Import Campaign type directly from campaign.ts
+import type { Campaign } from '../../types/campaign';
 
 // Získání všech světů aktuálního uživatele
 export const getWorlds = async (): Promise<World[]> => {

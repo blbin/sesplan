@@ -14,13 +14,13 @@ class CampaignCreate(CampaignBase):
 # Schéma pro úpravu kampaně
 class CampaignUpdate(CampaignBase):
     name: Optional[str] = None
-    world_id: Optional[int] = None # Možná chceme umožnit přesun kampaně? Zatím ne.
+    # world_id: Optional[int] = None # Změnu světa nepovolujeme přes update
 
 # Schéma pro čtení dat kampaně
 class Campaign(CampaignBase):
     id: int
     world_id: int
-    owner_id: int
+    # owner_id: int # Odstraněno
     created_at: datetime
     updated_at: datetime
 
