@@ -13,4 +13,4 @@ class CharacterTagType(Base):
 
     # Relationships
     world = relationship("World", back_populates="character_tag_types")
-    tags = relationship("CharacterTag", back_populates="tag_type", cascade="all, delete-orphan") 
+    tags = relationship("CharacterTag", back_populates="tag_type", cascade="all, delete-orphan")
