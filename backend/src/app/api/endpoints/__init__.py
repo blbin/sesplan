@@ -11,6 +11,7 @@ from . import campaign_invites
 from . import journals
 from . import journal_entries
 from . import sessions
+from . import locations
 
 router = APIRouter()
 
@@ -24,6 +25,7 @@ router.include_router(characters.router, prefix="/characters", tags=["characters
 router.include_router(journals.router, prefix="/journals", tags=["journals"])
 router.include_router(journal_entries.router)
 router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
+router.include_router(locations.router, prefix="/locations", tags=["locations"])
 
 # Registrace obecného routeru pro pozvánky (přijetí/smazání)
 router.include_router(

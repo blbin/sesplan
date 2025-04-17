@@ -10,3 +10,5 @@ from .journal import Journal, JournalUpdate
 from .journal_entry import JournalEntry, JournalEntryCreate, JournalEntryUpdate
 # Import Session schemas
 from .session import Session, SessionCreate, SessionUpdate
+# Import Location schemas
+from .location import Location, LocationCreate, LocationUpdate

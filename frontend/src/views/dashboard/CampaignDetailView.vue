@@ -316,7 +316,7 @@ export default defineComponent({
         } catch (e) {
             console.error("Error formatting date:", e);
             return dateString; // Fallback
-        }
+      }
     };
 
     const worldName = computed(() => {
@@ -504,12 +504,12 @@ export default defineComponent({
     });
 
     watch(
-      () => props.campaignId,
-      (newId) => {
-        if (newId) {
-          loadCampaignDetail(Number(newId));
-        }
-      },
+        () => props.campaignId,
+        (newId) => {
+            if (newId) {
+            loadCampaignDetail(Number(newId));
+            }
+        },
       { immediate: true }
     );
 
