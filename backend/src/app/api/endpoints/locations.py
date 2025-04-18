@@ -6,15 +6,30 @@ from app import crud, models, schemas
 from app.api import dependencies # Use the correct import path
 from app.db.session import get_db # Correct import for get_db
 from app.auth.auth import get_current_user # Correct import for get_current_user
+# Import RoleEnum explicitly
+from app.models.world_user import RoleEnum, WorldUser
 
 router = APIRouter()
 
 async def verify_world_owner(world_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Dependency to verify if the current user owns the world."""
-    world_user_association = crud.get_world_user_association(db, world_id=world_id, user_id=current_user.id)
-    if not world_user_association or world_user_association.role != models.world_user.RoleEnum.OWNER:
+    # Use a direct query to check for the OWNER association
+    is_owner = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == world_id,
+            WorldUser.user_id == current_user.id,
+            WorldUser.role == RoleEnum.OWNER
+        )
+        .first()
+    )
+    if not is_owner:
+        # Optional: Check if the world itself exists to provide a better error message
+        world = crud.get_world(db, world_id=world_id)
+        if not world:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions, must be world owner")
-    return world_user_association # Return association for potential future use
+    # No need to return anything specific, the check passed if no exception was raised
 
 @router.post("/", response_model=schemas.Location)
 async def create_location(
