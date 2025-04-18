@@ -12,6 +12,8 @@ from . import journals
 from . import journal_entries
 from . import sessions
 from . import locations
+# Import routeru pro itemy
+from . import items
 
 router = APIRouter()
 
@@ -26,6 +28,8 @@ router.include_router(journals.router, prefix="/journals", tags=["journals"])
 router.include_router(journal_entries.router)
 router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(locations.router, prefix="/locations", tags=["locations"])
+# Přidání routeru pro itemy
+router.include_router(items.router, prefix="/items", tags=["items"])
 
 # Registrace obecného routeru pro pozvánky (přijetí/smazání)
 router.include_router(

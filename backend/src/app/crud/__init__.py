@@ -12,3 +12,5 @@ from .crud_journal_entry import get_journal_entry, get_entries_by_journal, creat
 from .crud_session import get_session, get_sessions_by_campaign, create_session, update_session, delete_session
 # Import Location CRUD
 from .crud_location import get_location, get_locations_by_world, create_location, update_location, delete_location
+# Import Item CRUD
+from .crud_item import get_item, get_items_by_world, create_item, update_item, delete_item

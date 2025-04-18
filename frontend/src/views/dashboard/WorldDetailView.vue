@@ -58,19 +58,48 @@
           :loading="locationsLoading"
           :error="locationsError"
           @locations-updated="handleLocationsUpdated"
-          @open-add-location="showAddLocationForm = true"
-          @edit-location="handleEditLocation"
+          @open-add-location="openAddLocationModal"
+          @edit-location="openEditLocationModal"
         />
 
-      <!-- Add Location Form Modal -->
-      <div v-if="showAddLocationForm" class="modal-overlay">
+      <!-- Section for Items -->
+      <WorldItemList
+         v-if="world && isCurrentUserOwner !== null" 
+         :items="items"
+         :characters="characters" 
+         :locations="locations" 
+         :worldId="Number(worldId)"
+         :canManage="isCurrentUserOwner"
+         :loading="itemsLoading"
+         :error="itemsError"
+         @items-updated="handleItemsUpdated"
+         @open-add-item="openAddItemModal"
+         @edit-item="openEditItemModal"
+       />
+
+      <!-- Add/Edit Location Form Modal -->
+      <div v-if="showLocationForm" class="modal-overlay">
         <div class="modal-content">
           <CreateLocationForm
             :worldId="Number(worldId)"
             :locations="locations"
             :locationToEdit="locationToEdit"
             @saved="handleLocationSaved"
-            @cancel="handleLocationFormCancel"
+            @cancel="closeLocationModal"
+          />
+        </div>
+      </div>
+      
+      <!-- Add/Edit Item Form Modal -->
+      <div v-if="showItemForm" class="modal-overlay">
+        <div class="modal-content">
+          <CreateItemForm
+            :worldId="Number(worldId)"
+            :characters="characters" 
+            :locations="locations" 
+            :itemToEdit="itemToEdit"
+            @saved="handleItemSaved"
+            @cancel="closeItemModal"
           />
         </div>
       </div>
@@ -91,17 +120,23 @@ import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
 import * as charactersApi from '@/services/api/characters';
 import * as locationsApi from '@/services/api/locations';
+import * as itemsApi from '@/services/api/items';
 import type { World } from '@/types/world';
 import type { Character } from '@/types/character';
 import type { Location } from '@/types/location';
+import type { Item } from '@/types/item';
 import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
+import WorldItemList from '@/components/worlds/WorldItemList.vue';
+import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
 
 export default defineComponent({
   name: 'WorldDetailView',
   components: {
       WorldLocationList,
       CreateLocationForm,
+      WorldItemList,
+      CreateItemForm,
   },
   props: {
     worldId: {
@@ -113,14 +148,19 @@ export default defineComponent({
     const world = ref<World | null>(null);
     const characters = ref<Character[]>([]);
     const locations = ref<Location[]>([]);
+    const items = ref<Item[]>([]);
     const worldLoading = ref(true);
     const charactersLoading = ref(false);
     const locationsLoading = ref(false);
+    const itemsLoading = ref(false);
     const worldError = ref<string | undefined>(undefined);
     const charactersError = ref<string | undefined>(undefined);
     const locationsError = ref<string | undefined>(undefined);
-    const showAddLocationForm = ref(false);
+    const itemsError = ref<string | undefined>(undefined);
+    const showLocationForm = ref(false);
+    const showItemForm = ref(false);
     const locationToEdit = ref<Location | null>(null);
+    const itemToEdit = ref<Item | null>(null);
 
     const isCurrentUserOwner = computed(() => {
         return world.value !== null && !worldLoading.value && worldError.value === undefined;
@@ -132,15 +172,19 @@ export default defineComponent({
       world.value = null;
       characters.value = [];
       locations.value = [];
+      items.value = [];
       charactersError.value = undefined;
       locationsError.value = undefined;
+      itemsError.value = undefined;
       charactersLoading.value = false;
       locationsLoading.value = false;
+      itemsLoading.value = false;
 
       try {
         world.value = await worldsApi.getWorldById(id);
         fetchWorldCharacters(id);
         fetchWorldLocations(id);
+        fetchWorldItems(id);
       } catch (err: any) {
         console.error("Fetch World Error:", err);
         if (err.response?.status === 404) {
@@ -193,26 +237,74 @@ export default defineComponent({
         }
     };
 
+    const fetchWorldItems = async (id: number) => {
+        itemsLoading.value = true;
+        itemsError.value = undefined;
+        items.value = [];
+        try {
+            items.value = await itemsApi.getItemsByWorld(id);
+        } catch (err: any) {
+            console.error("Fetch World Items Error:", err);
+            if (err.response?.status === 403) {
+                 itemsError.value = 'You do not have permission to view items in this world.';
+            } else {
+                 itemsError.value = `Failed to load items: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+            }
+        } finally {
+            itemsLoading.value = false;
+        }
+    };
+
     const handleLocationsUpdated = () => {
         if (world.value) {
             fetchWorldLocations(world.value.id);
         }
     };
 
-    const handleEditLocation = (location: Location) => {
-        locationToEdit.value = { ...location };
-        showAddLocationForm.value = true;
+    const handleItemsUpdated = () => {
+        if (world.value) {
+            fetchWorldItems(world.value.id);
+        }
+    };
+
+    const openAddLocationModal = () => {
+      locationToEdit.value = null;
+      showLocationForm.value = true;
+    };
+    
+    const openEditLocationModal = (location: Location) => {
+      locationToEdit.value = { ...location };
+      showLocationForm.value = true;
     };
 
     const handleLocationSaved = () => {
-        if (world.value) {
-            fetchWorldLocations(world.value.id);
-        }
-        showAddLocationForm.value = false;
+      closeLocationModal();
+      handleLocationsUpdated();
     };
 
-    const handleLocationFormCancel = () => {
-        showAddLocationForm.value = false;
+    const closeLocationModal = () => {
+        showLocationForm.value = false;
+        locationToEdit.value = null;
+    };
+    
+    const openAddItemModal = () => {
+      itemToEdit.value = null;
+      showItemForm.value = true;
+    };
+
+    const openEditItemModal = (item: Item) => {
+      itemToEdit.value = { ...item };
+      showItemForm.value = true;
+    };
+
+    const handleItemSaved = () => {
+      closeItemModal();
+      handleItemsUpdated();
+    };
+
+    const closeItemModal = () => {
+      showItemForm.value = false;
+      itemToEdit.value = null;
     };
 
     const formatDate = (dateString: string): string => {
@@ -238,20 +330,31 @@ export default defineComponent({
       world,
       characters,
       locations,
+      items,
       worldLoading,
       charactersLoading,
       locationsLoading,
+      itemsLoading,
       worldError,
       charactersError,
       locationsError,
-      formatDate,
-      isCurrentUserOwner,
-      handleLocationsUpdated,
-      showAddLocationForm,
+      itemsError,
+      showLocationForm,
       locationToEdit,
-      handleEditLocation,
+      showItemForm,
+      itemToEdit,
+      isCurrentUserOwner,
+      formatDate,
+      handleLocationsUpdated,
+      openAddLocationModal,
+      openEditLocationModal,
       handleLocationSaved,
-      handleLocationFormCancel,
+      closeLocationModal,
+      handleItemsUpdated,
+      openAddItemModal,
+      openEditItemModal,
+      handleItemSaved,
+      closeItemModal,
     };
   },
 });
