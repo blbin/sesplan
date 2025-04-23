@@ -49,7 +49,7 @@ def create_access_token(
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Decode JWT token and return the current user"""
     # Import here to avoid circular import
-    from app.crud.user import get_user_by_username
+    from app.crud import get_user_by_username
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
