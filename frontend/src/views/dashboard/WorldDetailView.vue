@@ -5,14 +5,13 @@
     <!-- Error state for world details -->
     <div v-else-if="worldError" class="error-message">
       <p>{{ worldError }}</p>
-      <router-link :to="{ name: 'dashboard-worlds' }" class="btn btn-secondary">Back to Worlds</router-link>
+      <router-link :to="{ name: 'Worlds' }" class="btn btn-secondary">Back to Worlds</router-link>
     </div>
     <!-- Content when world details are loaded -->
     <div v-else-if="world" class="world-content">
       <header class="view-header">
         <h1>{{ world.name }}</h1>
-        <!-- Add Edit/Delete buttons for world here if needed -->
-        <router-link :to="{ name: 'dashboard-worlds' }" class="btn btn-secondary">Back to List</router-link>
+        <router-link :to="{ name: 'Worlds' }" class="btn btn-secondary">Back to List</router-link>
       </header>
 
       <div class="details-section">
@@ -21,82 +20,59 @@
         <p><strong>Public:</strong> {{ world.is_public ? 'Yes' : 'No' }}</p>
         <p><strong>Created:</strong> {{ formatDate(world.created_at) }}</p>
         <p><strong>Last Updated:</strong> {{ formatDate(world.updated_at) }}</p>
-        <!-- Add more world details as needed -->
       </div>
 
-      <!-- Section for Characters -->
-      <section class="characters-section">
-        <h2>Characters in this World</h2>
-        <!-- Loading state for characters -->
-        <p v-if="charactersLoading" class="loading-message small">Loading characters...</p>
-        <!-- Error state for characters (including permission denied) -->
-        <p v-else-if="charactersError" class="error-message small">{{ charactersError }}</p>
-        <!-- No characters found -->
-        <p v-else-if="characters.length === 0">No characters found in this world.</p>
-        <!-- Character list -->
-        <ul v-else class="item-list">
-          <li v-for="character in characters" :key="character.id" class="item-list-item">
-             <div class="item-info">
-                <h3>
-                    <router-link :to="`/dashboard/characters/${character.id}`" class="item-link">
-                        {{ character.name }}
-                    </router-link>
-                </h3>
-                <p>{{ character.description || 'No description' }}</p>
-             </div>
-             <!-- Actions for character (e.g., quick edit/delete) could go here -->
-          </li>
-        </ul>
-      </section>
+      <!-- Section for Characters - Replaced with component -->
+      <WorldCharacterList :world-id="Number(worldId)" />
 
       <!-- Section for Locations -->
-       <WorldLocationList
-          v-if="world && isCurrentUserOwner !== null" 
-          :locations="locations"
-          :worldId="Number(worldId)"
-          :canManage="isCurrentUserOwner"
-          :loading="locationsLoading"
-          :error="locationsError"
-          @locations-updated="handleLocationsUpdated"
-          @open-add-location="openAddLocationModal"
-          @edit-location="openEditLocationModal"
-        />
+      <WorldLocationList
+        v-if="world && isCurrentUserOwner !== null"
+        :locations="locations"
+        :worldId="Number(worldId)"
+        :canManage="isCurrentUserOwner"
+        :loading="locationsLoading"
+        :error="locationsError"
+        @locations-updated="handleLocationsUpdated"
+        @open-add-location="openAddLocationModal"
+        @edit-location="openEditLocationModal"
+      />
 
       <!-- Section for Items -->
       <WorldItemList
-         v-if="world && isCurrentUserOwner !== null" 
-         :items="items"
-         :characters="characters" 
-         :locations="locations" 
-         :worldId="Number(worldId)"
-         :canManage="isCurrentUserOwner"
-         :loading="itemsLoading"
-         :error="itemsError"
-         @items-updated="handleItemsUpdated"
-         @open-add-item="openAddItemModal"
-         @edit-item="openEditItemModal"
-       />
+        v-if="world && isCurrentUserOwner !== null"
+        :items="items"
+        :characters="[]"  
+        :locations="locations"
+        :worldId="Number(worldId)"
+        :canManage="isCurrentUserOwner"
+        :loading="itemsLoading"
+        :error="itemsError"
+        @items-updated="handleItemsUpdated"
+        @open-add-item="openAddItemModal"
+        @edit-item="openEditItemModal"
+      />
 
       <!-- Add/Edit Location Form Modal -->
       <div v-if="showLocationForm" class="modal-overlay">
         <div class="modal-content">
           <CreateLocationForm
             :worldId="Number(worldId)"
-            :locations="locations"
+            :locations="locations" 
             :locationToEdit="locationToEdit"
             @saved="handleLocationSaved"
             @cancel="closeLocationModal"
           />
         </div>
       </div>
-      
+
       <!-- Add/Edit Item Form Modal -->
       <div v-if="showItemForm" class="modal-overlay">
         <div class="modal-content">
           <CreateItemForm
             :worldId="Number(worldId)"
-            :characters="characters" 
-            :locations="locations" 
+            :characters="[]" 
+            :locations="locations"
             :itemToEdit="itemToEdit"
             @saved="handleItemSaved"
             @cancel="closeItemModal"
@@ -104,13 +80,11 @@
         </div>
       </div>
 
-      <!-- Placeholder for other related sections like Campaigns, Items, Events etc. -->
-
     </div>
     <!-- Fallback if world somehow wasn't found after loading -->
     <div v-else>
-        <p>World not found.</p>
-        <router-link :to="{ name: 'dashboard-worlds' }" class="btn btn-secondary">Back to Worlds</router-link>
+      <p>World not found.</p>
+      <router-link :to="{ name: 'Worlds' }" class="btn btn-secondary">Back to Worlds</router-link>
     </div>
   </div>
 </template>
@@ -118,13 +92,14 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
-import * as charactersApi from '@/services/api/characters';
+// import * as charactersApi from '@/services/api/characters'; // Removed
 import * as locationsApi from '@/services/api/locations';
 import * as itemsApi from '@/services/api/items';
 import type { World } from '@/types/world';
-import type { Character } from '@/types/character';
+// import type { Character } from '@/types/character'; // Removed
 import type { Location } from '@/types/location';
 import type { Item } from '@/types/item';
+import WorldCharacterList from '@/components/worlds/WorldCharacterList.vue'; // Added
 import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
 import WorldItemList from '@/components/worlds/WorldItemList.vue';
@@ -133,10 +108,11 @@ import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
 export default defineComponent({
   name: 'WorldDetailView',
   components: {
-      WorldLocationList,
-      CreateLocationForm,
-      WorldItemList,
-      CreateItemForm,
+    WorldCharacterList, // Added
+    WorldLocationList,
+    CreateLocationForm,
+    WorldItemList,
+    CreateItemForm,
   },
   props: {
     worldId: {
@@ -146,15 +122,15 @@ export default defineComponent({
   },
   setup(props) {
     const world = ref<World | null>(null);
-    const characters = ref<Character[]>([]);
+    // const characters = ref<Character[]>([]); // Removed
     const locations = ref<Location[]>([]);
     const items = ref<Item[]>([]);
     const worldLoading = ref(true);
-    const charactersLoading = ref(false);
+    // const charactersLoading = ref(false); // Removed
     const locationsLoading = ref(false);
     const itemsLoading = ref(false);
     const worldError = ref<string | undefined>(undefined);
-    const charactersError = ref<string | undefined>(undefined);
+    // const charactersError = ref<string | undefined>(undefined); // Removed
     const locationsError = ref<string | undefined>(undefined);
     const itemsError = ref<string | undefined>(undefined);
     const showLocationForm = ref(false);
@@ -162,7 +138,11 @@ export default defineComponent({
     const locationToEdit = ref<Location | null>(null);
     const itemToEdit = ref<Item | null>(null);
 
+    // Assuming only the world owner can manage locations/items for now
     const isCurrentUserOwner = computed(() => {
+        // Placeholder: In a real app, this would check authStore.user.id against world.owner_id
+        // For now, just return true if world is loaded successfully.
+        // If the API returns 403, worldError will be set.
         return world.value !== null && !worldLoading.value && worldError.value === undefined;
     });
 
@@ -170,108 +150,90 @@ export default defineComponent({
       worldLoading.value = true;
       worldError.value = undefined;
       world.value = null;
-      characters.value = [];
+      // characters.value = []; // Removed
       locations.value = [];
       items.value = [];
-      charactersError.value = undefined;
+      // charactersError.value = undefined; // Removed
       locationsError.value = undefined;
       itemsError.value = undefined;
-      charactersLoading.value = false;
+      // charactersLoading.value = false; // Removed
       locationsLoading.value = false;
       itemsLoading.value = false;
 
       try {
         world.value = await worldsApi.getWorldById(id);
-        fetchWorldCharacters(id);
-        fetchWorldLocations(id);
-        fetchWorldItems(id);
+        // fetchWorldCharacters(id); // Removed - Handled by WorldCharacterList
+        fetchWorldLocations(id); // Keep for now, potential future refactor
+        fetchWorldItems(id);     // Keep for now, potential future refactor
       } catch (err: any) {
         console.error("Fetch World Error:", err);
         if (err.response?.status === 404) {
-            worldError.value = 'World not found.';
+          worldError.value = 'World not found.';
         } else if (err.response?.status === 403) {
-            worldError.value = 'You do not have permission to view this world.';
+          worldError.value = 'You do not have permission to view this world.';
         } else {
-            worldError.value = `Failed to load world details: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+          worldError.value = `Failed to load world details: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         }
       } finally {
         worldLoading.value = false;
       }
     };
 
-    const fetchWorldCharacters = async (id: number) => {
-        charactersLoading.value = true;
-        charactersError.value = undefined;
-        characters.value = [];
-        try {
-            characters.value = await charactersApi.getAllWorldCharacters(id);
-        } catch (err: any) {
-            console.error("Fetch World Characters Error:", err);
-            if (err.response?.status === 403) {
-                 charactersError.value = 'You do not have permission to view characters in this world.';
-            } else if (err.response?.status === 404) {
-                 charactersError.value = 'Character endpoint not found for this world.';
-            } else {
-                 charactersError.value = `Failed to load characters: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            }
-        } finally {
-            charactersLoading.value = false;
-        }
-    };
+    // const fetchWorldCharacters = async (id: number) => { ... }; // Removed
 
     const fetchWorldLocations = async (id: number) => {
-        locationsLoading.value = true;
-        locationsError.value = undefined;
-        locations.value = [];
-        try {
-            locations.value = await locationsApi.getLocationsByWorld(id);
-        } catch (err: any) {
-            console.error("Fetch World Locations Error:", err);
-            if (err.response?.status === 403) {
-                 locationsError.value = 'You do not have permission to view locations in this world.';
-            } else {
-                 locationsError.value = `Failed to load locations: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            }
-        } finally {
-            locationsLoading.value = false;
+      locationsLoading.value = true;
+      locationsError.value = undefined;
+      locations.value = [];
+      try {
+        locations.value = await locationsApi.getLocationsByWorld(id);
+      } catch (err: any) {
+        console.error("Fetch World Locations Error:", err);
+        if (err.response?.status === 403) {
+          locationsError.value = 'You do not have permission to view locations in this world.';
+        } else {
+          locationsError.value = `Failed to load locations: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         }
+      } finally {
+        locationsLoading.value = false;
+      }
     };
 
     const fetchWorldItems = async (id: number) => {
-        itemsLoading.value = true;
-        itemsError.value = undefined;
-        items.value = [];
-        try {
-            items.value = await itemsApi.getItemsByWorld(id);
-        } catch (err: any) {
-            console.error("Fetch World Items Error:", err);
-            if (err.response?.status === 403) {
-                 itemsError.value = 'You do not have permission to view items in this world.';
-            } else {
-                 itemsError.value = `Failed to load items: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            }
-        } finally {
-            itemsLoading.value = false;
+      itemsLoading.value = true;
+      itemsError.value = undefined;
+      items.value = [];
+      try {
+        items.value = await itemsApi.getItemsByWorld(id);
+      } catch (err: any) {
+        console.error("Fetch World Items Error:", err);
+        if (err.response?.status === 403) {
+          itemsError.value = 'You do not have permission to view items in this world.';
+        } else {
+          itemsError.value = `Failed to load items: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         }
+      } finally {
+        itemsLoading.value = false;
+      }
     };
 
     const handleLocationsUpdated = () => {
-        if (world.value) {
-            fetchWorldLocations(world.value.id);
-        }
+      if (world.value) {
+        fetchWorldLocations(world.value.id);
+      }
     };
 
     const handleItemsUpdated = () => {
-        if (world.value) {
-            fetchWorldItems(world.value.id);
-        }
+      if (world.value) {
+        fetchWorldItems(world.value.id);
+      }
     };
 
     const openAddLocationModal = () => {
       locationToEdit.value = null;
       showLocationForm.value = true;
     };
-    
+
     const openEditLocationModal = (location: Location) => {
       locationToEdit.value = { ...location };
       showLocationForm.value = true;
@@ -283,10 +245,10 @@ export default defineComponent({
     };
 
     const closeLocationModal = () => {
-        showLocationForm.value = false;
-        locationToEdit.value = null;
+      showLocationForm.value = false;
+      locationToEdit.value = null;
     };
-    
+
     const openAddItemModal = () => {
       itemToEdit.value = null;
       showItemForm.value = true;
@@ -307,36 +269,49 @@ export default defineComponent({
       itemToEdit.value = null;
     };
 
-    const formatDate = (dateString: string): string => {
-        if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleString();
-        } catch (e) {
-            return dateString;
-        }
+    const formatDate = (dateString: string | null | undefined): string => {
+      if (!dateString) return 'N/A';
+      try {
+        // Using toLocaleDateString for just the date part
+        return new Date(dateString).toLocaleDateString();
+      } catch (e) {
+        return String(dateString);
+      }
     };
 
     onMounted(() => {
-      fetchWorldDetails(Number(props.worldId));
+       if (props.worldId) {
+           fetchWorldDetails(Number(props.worldId));
+       } else {
+           worldError.value = "World ID is missing.";
+           worldLoading.value = false;
+       }
     });
 
-    watch(() => props.worldId, (newId) => {
-      if (newId) {
+    watch(() => props.worldId, (newId, oldId) => {
+      if (newId && newId !== oldId) {
         fetchWorldDetails(Number(newId));
+      } else if (!newId) {
+          // Handle case where worldId becomes null/undefined
+          world.value = null;
+          locations.value = [];
+          items.value = [];
+          worldError.value = "World ID is missing.";
+          worldLoading.value = false;
       }
     });
 
     return {
       world,
-      characters,
+      // characters, // Removed
       locations,
       items,
       worldLoading,
-      charactersLoading,
+      // charactersLoading, // Removed
       locationsLoading,
       itemsLoading,
       worldError,
-      charactersError,
+      // charactersError, // Removed
       locationsError,
       itemsError,
       showLocationForm,
@@ -355,13 +330,15 @@ export default defineComponent({
       openEditItemModal,
       handleItemSaved,
       closeItemModal,
+      // Pass worldId explicitly if needed by template sections other than child components
+      worldId: computed(() => props.worldId)
     };
   },
 });
 </script>
 
 <style scoped>
-/* Using similar structure and styles as CharacterDetailView */
+/* Base styles for the view */
 .world-detail-view {
   padding: 2rem;
 }
@@ -377,82 +354,48 @@ export default defineComponent({
 
 .view-header h1 {
   margin: 0;
+  color: #343a40;
 }
 
 .world-content {
-    background-color: #fff;
-    padding: 1.5rem 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background-color: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.details-section,
-.characters-section {
+.details-section {
   margin-bottom: 2rem;
 }
 
-.details-section h2,
-.characters-section h2 {
+.details-section h2 {
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #eee;
+  font-size: 1.2rem;
+  color: #495057;
 }
 
 .details-section p {
   margin: 0.5rem 0;
   line-height: 1.6;
+  color: #555;
 }
 
 .details-section p strong {
-    margin-right: 0.5em;
+  margin-right: 0.5em;
+  color: #333;
 }
 
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
+/* Styles for Character List Section Removed */
 
-.item-list-item {
-  /* Reuse styles from CharactersView if applicable, or define new ones */
-  padding: 1rem 0;
-  border-bottom: 1px solid #e9ecef;
-}
-.item-list-item:last-child {
-    border-bottom: none;
-}
-
-.item-info h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.1rem;
-}
-
-.item-info p {
-  margin: 0;
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.item-link {
-    text-decoration: none;
-    color: #007bff;
-}
-.item-link:hover {
-    text-decoration: underline;
-}
-
-
+/* General Loading/Error/Button/Modal styles can remain or be moved to global styles */
 .loading-message,
 .error-message {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;
-}
-.loading-message.small,
-.error-message.small {
-    padding: 1rem;
-    font-size: 1rem;
-    text-align: left;
+  color: #6c757d;
 }
 
 .error-message {
@@ -468,23 +411,23 @@ export default defineComponent({
     margin-bottom: 1rem;
 }
 
-/* Reusing button styles */
 .btn {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 0.3rem;
-    cursor: pointer;
-    border: none;
-    font-weight: 500;
-    text-decoration: none;
-    text-align: center;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.2s ease;
 }
 .btn-secondary {
-    background-color: #6c757d;
-    color: white;
+  background-color: #6c757d;
+  color: white;
 }
 .btn-secondary:hover {
-    background-color: #5a6268;
+  background-color: #5a6268;
 }
 
 /* Modal styling */
@@ -503,9 +446,13 @@ export default defineComponent({
 
 .modal-content {
   background-color: white;
+  padding: 1.5rem 2rem; /* Slightly reduced padding */
   border-radius: 0.5rem;
   width: 90%;
   max-width: 500px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  /* Overflow handling might be needed if content is too long */
+  max-height: 90vh; 
+  overflow-y: auto;
 }
 </style> 

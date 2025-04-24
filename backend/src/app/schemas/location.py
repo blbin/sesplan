@@ -1,7 +1,10 @@
 """Schemas for Location model."""
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+# Importujeme schéma LocationTag
+from .location_tag import LocationTag
 
 
 class LocationBase(BaseModel):
@@ -33,7 +36,7 @@ class LocationInDBBase(LocationBase):
 
 # Properties to return to client
 class Location(LocationInDBBase):
-    pass
+    tags: List[LocationTag] = [] # Přidáme pole pro tagy
 
 
 # Properties properties stored in DB

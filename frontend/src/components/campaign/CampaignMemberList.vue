@@ -55,8 +55,8 @@ export default defineComponent({
       required: true,
     },
     canManage: {
-      type: Boolean,
-      default: false,
+      type: [Boolean, null] as PropType<boolean | null>,
+      default: null,
     },
     currentUserId: {
       type: Number,

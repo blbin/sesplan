@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from .user import User # Import User schema
 
 # Base schema with common attributes
 class AvailabilityBase(BaseModel):
@@ -23,6 +24,7 @@ class Availability(AvailabilityBase):
     id: int
     user_id: int
     session_id: int
+    user: User # Add the user field
     created_at: datetime
     updated_at: datetime
 

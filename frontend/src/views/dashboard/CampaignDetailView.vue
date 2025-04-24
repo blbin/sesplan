@@ -8,7 +8,7 @@
       <header class="view-header">
         <h1>{{ campaign.name }}</h1>
         <!-- Tlačítko Zpět (volitelné) -->
-        <router-link to="/dashboard/campaigns" class="btn btn-secondary">
+        <router-link :to="{ name: 'Campaigns' }" class="btn btn-secondary">
           &larr; Back to Campaigns
         </router-link>
       </header>
@@ -30,139 +30,61 @@
 
         <!-- Správa členů a pozvánek -->
         <div v-if="!loading && campaign && currentUserId" class="management-section">
+          <CampaignMemberList
+            :members="members"
+            :campaignId="campaign.id"
+            :canManage="isCurrentUserGM"
+            :currentUserId="currentUserId"
+            :loading="membersLoading"
+            :error="membersError"
+            @members-updated="handleMembersUpdated"
+          />
 
-            <CampaignMemberList
-              :members="members"
+          <template v-if="isCurrentUserGM">
+            <!-- Tlačítko pro otevření modálu -->
+            <div class="section-header">
+              <h2>Invites</h2>
+              <button @click="openInviteModal" class="btn btn-primary btn-sm">Invite User</button>
+            </div>
+            <CampaignInviteList
+              :invites="invites"
               :campaignId="campaign.id"
               :canManage="isCurrentUserGM"
-              :currentUserId="currentUserId"
-              :loading="membersLoading"
-              :error="membersError"
-              @members-updated="handleMembersUpdated"
+              :loading="invitesLoading"
+              :error="invitesError"
+              @invites-updated="handleInvitesUpdated"
             />
-
-            <template v-if="isCurrentUserGM">
-              <!-- Tlačítko pro otevření modálu -->
-              <div class="section-header">
-                <h2>Invites</h2>
-                <button @click="openInviteModal" class="btn btn-primary btn-sm">Invite User</button>
-              </div>
-              <!-- Přesunuto do modálu -->
-              <!-- <CreateCampaignInviteForm
-                :campaignId="campaign.id"
-                @invites-updated="handleInvitesUpdated"
-              /> -->
-
-              <CampaignInviteList
-                :invites="invites"
-                :campaignId="campaign.id"
-                :canManage="isCurrentUserGM"
-                :loading="invitesLoading"
-                :error="invitesError"
-                @invites-updated="handleInvitesUpdated"
-              />
-            </template>
-            <div v-else-if="membersLoading && !membersError">
-                <!-- Zobrazit jen pokud se načítají členové a není chyba -->
-                <!-- Může být nahrazeno lepším indikátorem -->
-            </div>
-
+          </template>
+          <div v-else-if="membersLoading && !membersError">
+            <!-- Placeholder or indicator if needed -->
+          </div>
         </div>
 
-        <!-- Sessions Section -->
-        <section class="sessions-section detail-section">
-           <div class="section-header">
-               <h2>Sessions</h2>
-               <button v-if="isCurrentUserGM" @click="openAddSessionModal" class="btn btn-primary btn-sm">Add Session</button>
-           </div>
-           <div v-if="sessionsLoading" class="loading-state small">Loading sessions...</div>
-           <div v-else-if="sessionsError" class="error-message small">{{ sessionsError }}</div>
-           <div v-else-if="sessions.length === 0">No sessions scheduled for this campaign yet.</div>
-           <ul v-else class="item-list session-list">
-               <li v-for="session in sessions" :key="session.id" class="item-list-item">
-                   <router-link 
-                     :to="{ name: 'SessionDetail', params: { campaignId: campaignId, sessionId: session.id } }"
-                     class="item-link"
-                   >
-                     <div class="item-info">
-                       <h3>{{ session.title }}</h3>
-                       <p v-if="session.date_time" class="session-date">Date: {{ formatFullDateTime(session.date_time) }}</p>
-                       <p v-if="session.description" class="session-description">{{ session.description }}</p>
-                       <p v-if="session.summary" class="session-summary">Summary: {{ session.summary }}</p>
-                       <small class="item-meta">Created: {{ formatDate(session.created_at) }}</small>
-                     </div>
-                   </router-link>
-                   <div class="item-actions" v-if="isCurrentUserGM">
-                       <button @click="openEditSessionModal(session)" class="btn btn-secondary btn-sm">Edit</button>
-                       <button @click="confirmDeleteSession(session)" class="btn btn-danger btn-sm">Delete</button>
-                   </div>
-               </li>
-           </ul>
-        </section>
+        <!-- Sessions Section - Replaced with component -->
+        <CampaignSessionManager
+          v-if="campaign && isCurrentUserGM !== null" 
+          :campaign-id="campaign.id"
+          :is-current-user-g-m="isCurrentUserGM"
+        />
+
       </div>
     </div>
     <div v-else class="not-found">
       Campaign not found.
     </div>
 
-    <!-- Add/Edit Session Modal -->
-    <div v-if="showSessionModal" class="modal-backdrop">
-      <div class="modal">
-        <h2>{{ editingSession ? 'Edit Session' : 'Add New Session' }}</h2>
-        <form @submit.prevent="handleSaveSession">
-          <div class="form-group">
-            <label for="sessionTitle">Title:</label>
-            <input type="text" id="sessionTitle" v-model="sessionForm.title" required>
-          </div>
-          <div class="form-group">
-            <label for="sessionDateTime">Date & Time (Optional):</label>
-            <input type="datetime-local" id="sessionDateTime" v-model="sessionForm.date_time">
-          </div>
-          <div class="form-group">
-            <label for="sessionDescription">Description (Optional):</label>
-            <textarea id="sessionDescription" v-model="sessionForm.description"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="sessionSummary">Summary (Optional):</label>
-            <textarea id="sessionSummary" v-model="sessionForm.summary"></textarea>
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="closeSessionModal" class="btn btn-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!sessionForm.title.trim()">
-              {{ editingSession ? 'Save Changes' : 'Create Session' }}
-            </button>
-          </div>
-           <p v-if="sessionFormError" class="error-message">{{ sessionFormError }}</p>
-        </form>
-      </div>
-    </div>
-
-     <!-- Delete Session Confirmation Modal -->
-    <div v-if="sessionToDelete" class="modal-backdrop">
-      <div class="modal confirmation-modal">
-        <h2>Confirm Deletion</h2>
-        <p>Are you sure you want to delete the session "{{ sessionToDelete.title }}"?</p>
-         <div class="modal-actions">
-            <button type="button" @click="sessionToDelete = null" class="btn btn-secondary">Cancel</button>
-            <button type="button" @click="handleDeleteSession" class="btn btn-danger">Delete</button>
-          </div>
-           <p v-if="deleteSessionError" class="error-message">{{ deleteSessionError }}</p>
-      </div>
-    </div>
-
-    <!-- New Invite Modal -->
+    <!-- Invite Modal Remains Here (or could be refactored later) -->
     <div v-if="showInviteModal" class="modal-backdrop">
       <div class="modal">
         <h2>Invite User to Campaign</h2>
         <CreateCampaignInviteForm
-          v-if="campaign" 
+          v-if="campaign"
           :campaignId="campaign.id"
           @invite-sent="handleInviteSent"
           @cancel="closeInviteModal"
         />
-        <!-- Přidáme cancel tlačítko i sem pro konzistenci, pokud formulář nemá vlastní -->
-        <div class="modal-actions" v-if="!campaign"> <!-- Jen pokud se kampaň nenačetla -->
-           <button type="button" @click="closeInviteModal" class="btn btn-secondary">Cancel</button>
+        <div class="modal-actions" v-if="!campaign">
+          <button type="button" @click="closeInviteModal" class="btn btn-secondary">Cancel</button>
         </div>
       </div>
     </div>
@@ -171,40 +93,31 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch, reactive } from 'vue';
+import { defineComponent, ref, computed, watch } from 'vue';
 import * as campaignsApi from '@/services/api/campaigns';
-import * as worldsApi from '@/services/api/worlds'; // Pro načtení jména světa
+import * as worldsApi from '@/services/api/worlds';
 import * as campaignMembersApi from '@/services/api/campaignMembers';
 import * as campaignInvitesApi from '@/services/api/campaignInvites';
-import * as sessionsApi from '@/services/api/sessions'; // Import sessions API
 import type { Campaign } from '@/types/campaign';
 import type { World } from '@/types/world';
-import { useAuthStore } from '@/store/auth.store'; // Správný název souboru
+import { useAuthStore } from '@/store/auth.store';
 import CampaignMemberList from '@/components/campaign/CampaignMemberList.vue';
 import CampaignInviteList from '@/components/campaign/CampaignInviteList.vue';
 import CreateCampaignInviteForm from '@/components/campaign/CreateCampaignInviteForm.vue';
+import CampaignSessionManager from '@/components/campaign/CampaignSessionManager.vue';
 import type { UserCampaignRead } from '@/types/user_campaign';
 import type { CampaignInvite } from '@/types/campaign_invite';
 import { CampaignRoleEnum } from '@/types/campaign_role';
-import type { Session, SessionCreate, SessionUpdate } from '@/types/session'; // Import session types
-
-// Interface for Session form data
-interface SessionFormData {
-    title: string;
-    description: string | null;
-    summary: string | null;
-    date_time: string | null; // Use string to bind with datetime-local input
-}
 
 export default defineComponent({
   name: 'CampaignDetailView',
   components: {
-      CampaignMemberList,
-      CampaignInviteList,
-      CreateCampaignInviteForm,
+    CampaignMemberList,
+    CampaignInviteList,
+    CreateCampaignInviteForm,
+    CampaignSessionManager,
   },
   props: {
-    // Díky props: true v routeru můžeme přijmout ID jako prop
     campaignId: {
       type: [String, Number],
       required: true,
@@ -212,7 +125,7 @@ export default defineComponent({
   },
   setup(props) {
     const campaign = ref<Campaign | null>(null);
-    const world = ref<World | null>(null); // Pro uložení informací o světě
+    const world = ref<World | null>(null);
     const loading = ref(true);
     const error = ref<string | null>(null);
     const loadingWorld = ref(false);
@@ -228,23 +141,6 @@ export default defineComponent({
     const invitesLoading = ref(false);
     const invitesError = ref<string | undefined>(undefined);
 
-    // --- New state for Sessions ---
-    const sessions = ref<Session[]>([]);
-    const sessionsLoading = ref(false);
-    const sessionsError = ref<string | null>(null);
-    const showSessionModal = ref(false);
-    const editingSession = ref<Session | null>(null);
-    const sessionToDelete = ref<Session | null>(null);
-    const sessionFormError = ref<string | null>(null);
-    const deleteSessionError = ref<string | null>(null);
-
-    const sessionForm = reactive<SessionFormData>({
-        title: '',
-        description: null,
-        summary: null,
-        date_time: null,
-    });
-
     // Computed property for the current user's full membership object
     const currentUserMembership = computed(() => {
       if (!currentUserId.value || !members.value) return null;
@@ -253,6 +149,8 @@ export default defineComponent({
 
     // Use currentUserMembership in isCurrentUserGM
     const isCurrentUserGM = computed(() => {
+      // Make sure members are loaded before determining GM status
+      if (membersLoading.value) return null; // Or some indeterminate state
       return currentUserMembership.value?.role === CampaignRoleEnum.GM;
     });
 
@@ -279,7 +177,6 @@ export default defineComponent({
       try {
         invites.value = await campaignInvitesApi.getCampaignInvites(id);
       } catch (err: any) {
-        // Nepovažujeme za chybu stránky, pokud se nepodaří načíst pozvánky (může být 403)
         invitesError.value = `Failed to load invites: ${err.response?.data?.detail || err.message || 'Forbidden?'}`;
         console.warn("Load Invites Error:", err);
       } finally {
@@ -288,84 +185,52 @@ export default defineComponent({
     };
 
     const loadWorldDetail = async (worldId: number) => {
-        loadingWorld.value = true;
-         try {
-            world.value = await worldsApi.getWorldById(worldId);
-         } catch (err: any) {
-             console.error("Load World Detail Error:", err);
-             // Chybu světa nemusíme nutně zobrazovat jako hlavní chybu stránky
-             // Můžeme zobrazit jen ID světa jako fallback
-         } finally {
-            loadingWorld.value = false;
-         }
-    };
-
-    // Formátování data (jednoduchý příklad)
-    const formatDate = (dateString: string) => {
-      if (!dateString) return 'N/A';
+      loadingWorld.value = true;
       try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
-        return dateString; // Fallback na původní string
+        world.value = await worldsApi.getWorldById(worldId);
+      } catch (err: any) {
+        console.error("Load World Detail Error:", err);
+      } finally {
+        loadingWorld.value = false;
       }
     };
 
-    // --- New Formatter for Date and Time ---
-    const formatFullDateTime = (dateString: string | null | undefined) => {
+    // Simple formatDate remains if needed elsewhere, or import from utils
+    const formatDate = (dateString: string | null | undefined) => {
         if (!dateString) return 'N/A';
         try {
-            const date = new Date(dateString);
-            return date.toLocaleString(); // Adjust options as needed
+            return new Date(dateString).toLocaleDateString();
         } catch (e) {
-            console.error("Error formatting date:", e);
-            return dateString; // Fallback
-      }
+            return String(dateString); // Fallback
+        }
     };
 
     const worldName = computed(() => {
-        if (loadingWorld.value) return 'Loading world...';
-        return world.value ? world.value.name : `ID: ${campaign.value?.world_id}`;
+      if (loadingWorld.value) return 'Loading world...';
+      return world.value ? world.value.name : `ID: ${campaign.value?.world_id}`;
     });
 
-    // --- New function to load sessions ---
-    const loadSessions = async (id: number) => {
-        if (!id) return;
-        sessionsLoading.value = true;
-        sessionsError.value = null;
-        sessions.value = [];
-        try {
-            sessions.value = await sessionsApi.getSessionsByCampaign(id);
-        } catch (err: any) {
-            sessionsError.value = `Failed to load sessions: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            console.error("Load Sessions Error:", err);
-        } finally {
-            sessionsLoading.value = false;
-        }
-    };
-    
-    // --- Modified loadCampaignDetail to also load sessions ---
     const loadCampaignDetail = async (id: number) => {
       loading.value = true;
       error.value = null;
       campaign.value = null;
       world.value = null;
       loadingWorld.value = false;
-      members.value = []; 
-      invites.value = []; 
-      sessions.value = []; // Reset sessions
+      members.value = [];
+      invites.value = [];
       membersLoading.value = false;
       membersError.value = undefined;
       invitesLoading.value = false;
       invitesError.value = undefined;
-      sessionsLoading.value = false; // Ensure reset
-      sessionsError.value = null;
 
       try {
         campaign.value = await campaignsApi.getCampaignById(id);
         if (campaign.value) {
+          // Load members first to determine GM status
+          await loadMembers(campaign.value.id);
+          // Now we know GM status, can load invites if GM (handled by watcher)
           await loadWorldDetail(campaign.value.world_id);
-          await loadMembers(campaign.value.id); // Load members first (for GM check)
-          await loadSessions(campaign.value.id); // Then load sessions
+          // Sessions are loaded by CampaignSessionManager component itself
         }
       } catch (err: any) {
         error.value = typeof err === 'string' ? err : (err?.message || 'Failed to load campaign details.');
@@ -373,111 +238,6 @@ export default defineComponent({
       } finally {
         loading.value = false;
       }
-    };
-
-    // --- Session Modal Logic ---
-    const resetSessionForm = () => {
-        sessionForm.title = '';
-        sessionForm.description = null;
-        sessionForm.summary = null;
-        sessionForm.date_time = null;
-        editingSession.value = null;
-        sessionFormError.value = null;
-    };
-
-    const openAddSessionModal = () => {
-        resetSessionForm();
-        showSessionModal.value = true;
-    };
-
-    const openEditSessionModal = (session: Session) => {
-        editingSession.value = session;
-        sessionForm.title = session.title;
-        sessionForm.description = session.description ?? null;
-        sessionForm.summary = session.summary ?? null;
-        sessionForm.date_time = session.date_time ? new Date(session.date_time).toISOString().slice(0, 16) : null;
-        sessionFormError.value = null;
-        showSessionModal.value = true;
-    };
-
-    const closeSessionModal = () => {
-        showSessionModal.value = false;
-        resetSessionForm();
-    };
-
-    const handleSaveSession = async () => {
-        if (!campaign.value) return;
-        sessionFormError.value = null;
-
-        const dateTimeToSend = sessionForm.date_time === '' ? null : sessionForm.date_time;
-
-        try {
-            if (editingSession.value) {
-                // Update
-                const payload: SessionUpdate = {};
-                if (sessionForm.title !== editingSession.value.title) {
-                    payload.title = sessionForm.title;
-                }
-                // Ensure type compatibility for optional fields
-                if (sessionForm.description !== editingSession.value.description) {
-                    payload.description = sessionForm.description === undefined ? null : sessionForm.description;
-                }
-                if (sessionForm.summary !== editingSession.value.summary) {
-                    payload.summary = sessionForm.summary === undefined ? null : sessionForm.summary;
-                }
-                if (dateTimeToSend !== editingSession.value.date_time) { 
-                   payload.date_time = dateTimeToSend;
-                }
-
-                if (Object.keys(payload).length > 0) {
-                    const updatedSession = await sessionsApi.updateSession(editingSession.value.id, payload);
-                    const index = sessions.value.findIndex(s => s.id === updatedSession.id);
-                    if (index !== -1) {
-                        sessions.value[index] = updatedSession;
-                    }
-                } else {
-                    console.log("No changes detected for session update.");
-                }
-            } else {
-                // Create logic remains the same
-                if (!sessionForm.title.trim()) {
-                    sessionFormError.value = "Session title cannot be empty.";
-                    return;
-                }
-                 const sessionCreateData: SessionCreate = {
-                    title: sessionForm.title,
-                    description: sessionForm.description,
-                    summary: sessionForm.summary,
-                    date_time: dateTimeToSend,
-                    campaign_id: campaign.value.id,
-                };
-                const newSession = await sessionsApi.createSession(sessionCreateData);
-                sessions.value.unshift(newSession);
-            }
-            closeSessionModal();
-        } catch (err: any) {
-            console.error("Save Session Error:", err);
-            sessionFormError.value = `Failed to save session: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
-    };
-
-    // --- Delete Session Logic ---
-    const confirmDeleteSession = (session: Session) => {
-        sessionToDelete.value = session;
-        deleteSessionError.value = null;
-    };
-
-    const handleDeleteSession = async () => {
-        if (!sessionToDelete.value) return;
-        deleteSessionError.value = null;
-        try {
-            await sessionsApi.deleteSession(sessionToDelete.value.id);
-            sessions.value = sessions.value.filter(s => s.id !== sessionToDelete.value!.id);
-            sessionToDelete.value = null; // Close confirmation modal
-        } catch (err: any) {
-            console.error("Delete Session Error:", err);
-            deleteSessionError.value = `Failed to delete session: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
     };
 
     // --- State for Invite Modal ---
@@ -493,34 +253,49 @@ export default defineComponent({
     };
 
     const handleInviteSent = () => {
-      // Pozvánka byla odeslána (předpokládáme úspěch z komponenty)
       closeInviteModal();
-      handleInvitesUpdated(); // Refresh seznamu pozvánek
+      handleInvitesUpdated();
     };
 
-    // --- Existing watchers and event handlers ---
-     watch(isCurrentUserGM, (isGM) => {
-        // Load invites only if GM
-        if(isGM && campaign.value && !invitesLoading.value) {
-            loadInvites(campaign.value.id);
-        }
+    // --- Watchers and event handlers ---
+    watch(isCurrentUserGM, (isGM) => {
+      // Load invites only if GM and campaign is loaded
+      if (isGM === true && campaign.value && !invitesLoading.value) {
+          loadInvites(campaign.value.id);
+      }
+       // Reset invites if user is no longer GM or becomes indeterminate
+       else if (isGM === false || isGM === null) {
+           invites.value = [];
+           invitesError.value = undefined;
+           invitesLoading.value = false;
+       }
     });
 
     watch(
-        () => props.campaignId,
-        (newId) => {
-            if (newId) {
-            loadCampaignDetail(Number(newId));
-            }
-        },
+      () => props.campaignId,
+      (newId) => {
+        if (newId) {
+          loadCampaignDetail(Number(newId));
+        } else {
+            // Reset state if campaignId becomes invalid
+            campaign.value = null;
+            world.value = null;
+            members.value = [];
+            invites.value = [];
+            error.value = "Invalid campaign ID provided.";
+            loading.value = false;
+        }
+      },
       { immediate: true }
     );
 
     const handleMembersUpdated = () => {
-        if (campaign.value) loadMembers(campaign.value.id);
+      // Re-load members (e.g., after role change or kick)
+      if (campaign.value) loadMembers(campaign.value.id);
     };
     const handleInvitesUpdated = () => {
-        if (campaign.value && isCurrentUserGM.value) loadInvites(campaign.value.id);
+      // Re-load invites if user is GM
+      if (campaign.value && isCurrentUserGM.value) loadInvites(campaign.value.id);
     };
 
     return {
@@ -537,29 +312,8 @@ export default defineComponent({
       invitesError,
       isCurrentUserGM,
       currentUserId,
-      currentUserMembership,
       handleMembersUpdated,
       handleInvitesUpdated,
-
-      // --- New properties for Sessions ---
-      sessions,
-      sessionsLoading,
-      sessionsError,
-      showSessionModal,
-      editingSession,
-      sessionToDelete,
-      sessionForm,
-      sessionFormError,
-      deleteSessionError,
-      openAddSessionModal,
-      openEditSessionModal,
-      closeSessionModal,
-      handleSaveSession,
-      confirmDeleteSession,
-      handleDeleteSession,
-
-      // --- New formatters ---
-      formatFullDateTime,
 
       // --- Invite Modal properties/methods ---
       showInviteModal,
@@ -598,13 +352,15 @@ export default defineComponent({
 }
 
 .detail-section {
-  margin-bottom: 2rem; /* Consistent spacing */
+  margin-bottom: 2rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid #eee;
 }
 
-.detail-section:last-child {
-  border-bottom: none;
+.detail-section:last-of-type {
+   margin-bottom: 0;
+   padding-bottom: 0;
+   border-bottom: none;
 }
 
 .detail-section h2 {
@@ -647,24 +403,8 @@ export default defineComponent({
   border: 1px solid #f5c6cb;
   padding: 1rem;
   border-radius: 0.25rem;
+  margin-bottom: 1rem;
 }
-
-/* Styly pro tlačítko Zpět (pokud je třeba) */
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 0.3rem;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.2s ease;
-  text-decoration: none;
-}
-.btn-secondary { background-color: #6c757d; color: white; }
-.btn-secondary:hover { background-color: #5a6268; }
 
 .management-section {
     border-bottom: 1px solid #eee;
@@ -677,79 +417,16 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  /* Removed border-bottom here, using border on detail-section */
 }
 
 .section-header h2 {
    margin: 0;
+   font-size: 1.2rem;
+   color: #495057;
+   padding-bottom: 0.25rem;
+   border-bottom: 1px solid #e9ecef;
 }
 
-.session-list {
-    margin-top: 1rem;
-}
-
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.item-list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1rem 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.item-list-item:last-child {
-  border-bottom: none;
-}
-
-.item-info h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.item-info p {
-    margin: 0.3rem 0;
-    color: #555;
-    line-height: 1.5;
-    font-size: 0.95rem;
-}
-
-.item-info .session-date {
-    font-weight: 500;
-    color: #333;
-}
-
-.item-info .session-description {
-    color: #444;
-}
-
-.item-info .session-summary {
-    font-style: italic;
-    color: #666;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.item-info .item-meta {
-    font-size: 0.8rem;
-    color: #777;
-    margin-top: 0.5rem;
-}
-
-.item-actions {
-    margin-left: 1rem; 
-    white-space: nowrap; 
-    display: flex;
-    flex-direction: column; 
-    gap: 0.5rem; 
-}
-
-/* Modal Styles */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -768,7 +445,7 @@ export default defineComponent({
   padding: 2rem 2.5rem;
   border-radius: 0.5rem;
   width: 90%;
-  max-width: 500px; 
+  max-width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
@@ -776,65 +453,23 @@ export default defineComponent({
   margin-top: 0;
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.form-group input[type="text"],
-.form-group input[type="datetime-local"],
-.form-group textarea {
-  width: 100%;
-  padding: 0.6rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  box-sizing: border-box;
-  font-size: 1rem;
-}
-
-.form-group textarea {
-    min-height: 100px;
+  color: #333;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
-.confirmation-modal p {
-    margin-bottom: 1rem;
-}
-.confirmation-modal p strong {
-    margin-right: 0.5em;
-}
-
-.loading-state,
-.loading-state.small,
-.error-message.small {
-    padding: 0.5rem;
-    font-size: 0.9rem;
-    text-align: left;
-    margin-top: 0.5rem;
-}
-
-
-/* Button styles */
-.btn { padding: 0.6rem 1.2rem; border-radius: 0.3rem; cursor: pointer; border: none; font-weight: 500; text-decoration: none; transition: background-color 0.2s ease; }
+.btn { padding: 0.6rem 1.2rem; border-radius: 0.3rem; cursor: pointer; border: none; font-weight: 500; text-decoration: none; transition: background-color 0.2s ease, box-shadow 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1; }
+.btn:disabled { opacity: 0.65; cursor: not-allowed; }
 .btn-primary { background-color: #007bff; color: white; }
-.btn-primary:hover { background-color: #0056b3; }
+.btn-primary:not(:disabled):hover { background-color: #0056b3; }
+.btn-primary:focus { box-shadow: 0 0 0 0.2rem rgba(38,143,255,.5); outline: none; }
 .btn-secondary { background-color: #6c757d; color: white; }
-.btn-secondary:hover { background-color: #5a6268; }
-.btn-danger { background-color: #dc3545; color: white; }
-.btn-danger:hover { background-color: #c82333; }
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
-
+.btn-secondary:not(:disabled):hover { background-color: #5a6268; }
+.btn-secondary:focus { box-shadow: 0 0 0 0.2rem rgba(130,138,145,.5); outline: none; }
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 0.2rem; }
 </style> 

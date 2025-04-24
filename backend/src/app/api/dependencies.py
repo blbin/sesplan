@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
 
 # Use absolute imports from the 'app' package
@@ -16,38 +16,92 @@ async def verify_gm_permission(campaign_id: int, current_user: models.User = Dep
 
 # Sem můžeme v budoucnu přidat další sdílené závislosti/helpery pro API 
 
+async def get_world_or_404(
+    world_id: int = Path(..., description="ID světa"),
+    db: Session = Depends(get_db),
+) -> models.World:
+    """Načte svět podle ID nebo vrátí 404."""
+    db_world = crud.get_world(db, world_id=world_id)
+    if not db_world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+    return db_world
+
+# Zde by mohly být další závislosti, např. pro Campaign, Session atd.
+# Příklad závislosti pro ověření GM kampaně:
+async def get_campaign_and_verify_gm(
+    campaign_id: int = Path(..., description="ID kampaně"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+) -> models.Campaign:
+    db_campaign = crud.get_campaign(db, campaign_id=campaign_id)
+    if not db_campaign:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    membership = await crud.get_campaign_membership(db, campaign_id=campaign_id, user_id=current_user.id)
+    if not membership or membership.role not in [crud.CampaignRoleEnum.GM]: # TODO: Použít enum správně
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="GM permissions required")
+
+    return db_campaign
+
+# Příklad závislosti pro ověření člena kampaně (GM nebo Player):
+async def get_campaign_and_verify_member(
+    campaign_id: int = Path(..., description="ID kampaně"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+) -> models.Campaign:
+    db_campaign = crud.get_campaign(db, campaign_id=campaign_id)
+    if not db_campaign:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+
+    membership = await crud.get_campaign_membership(db, campaign_id=campaign_id, user_id=current_user.id)
+    if not membership:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
+
+    return db_campaign
+
+# Závislost pro získání session a ověření GM oprávnění (přes kampaň)
+async def get_session_and_verify_gm(
+    session_id: int = Path(..., description="ID sezení"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+) -> models.Session:
+    db_session = crud.get_session(db=db, session_id=session_id)
+    if not db_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    
+    # Ověření GM oprávnění přes nadřazenou kampaň
+    await get_campaign_and_verify_gm(campaign_id=db_session.campaign_id, db=db, current_user=current_user)
+    
+    return db_session
+
+# Závislost pro získání Journal a ověření vlastníka postavy
 async def get_journal_and_verify_owner(
-    journal_id: int,
+    journal_id: int = Path(..., description="ID deníku"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ) -> models.Journal:
-    """Dependency to get a journal by ID and verify the current user owns the parent character."""
     db_journal = crud.get_journal(db, journal_id=journal_id)
     if not db_journal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journal not found")
-    # Fetch the character associated with the journal
+    
+    # Získání postavy asociované s deníkem
     db_character = crud.get_character(db, character_id=db_journal.character_id)
     if not db_character or db_character.user_id != current_user.id:
-        # Either character doesn't exist or user doesn't own it
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to access this journal")
+        
     return db_journal
 
+# Závislost pro získání Journal Entry a ověření vlastníka postavy (přes Journal)
 async def get_journal_entry_and_verify_owner(
-    entry_id: int,
+    entry_id: int = Path(..., description="ID záznamu v deníku"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ) -> models.JournalEntry:
-    """Dependency to get a journal entry by ID and verify the current user owns the parent character."""
     db_entry = crud.get_journal_entry(db, entry_id=entry_id)
     if not db_entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journal entry not found")
-    # Fetch the parent journal
-    db_journal = crud.get_journal(db, journal_id=db_entry.journal_id)
-    if not db_journal:
-        # This should ideally not happen if DB constraints are set, but check anyway
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent journal not found")
-    # Fetch the character associated with the journal
-    db_character = crud.get_character(db, character_id=db_journal.character_id)
-    if not db_character or db_character.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+        
+    # Ověření přes nadřazený deník
+    await get_journal_and_verify_owner(journal_id=db_entry.journal_id, db=db, current_user=current_user)
+    
     return db_entry 

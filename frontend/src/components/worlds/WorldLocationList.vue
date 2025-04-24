@@ -26,7 +26,7 @@
             <button v-if="canManage" @click="$emit('edit-location', location)" class="btn-small btn-secondary">
               Edit
             </button>
-            <button v-if="canManage" @click="confirmDelete(location)" class="btn-small btn-danger">
+            <button v-if="canManage" @click="requestDeleteConfirmation(location)" class="btn-small btn-danger">
               Delete
             </button>
           </div>
@@ -35,34 +35,37 @@
     </div>
     <div v-else class="empty-state">No locations found for this world yet.</div>
 
-    <!-- Confirmation Dialog for Delete -->
-    <div v-if="showDeleteConfirm" class="modal-overlay">
-      <div class="modal-content confirmation-modal">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete the location "{{ locationToDelete?.name }}"?</p>
+    <!-- Use the reusable Confirmation Dialog -->
+    <ConfirmDeleteModal
+      :show="showDeleteConfirm"
+      itemType="location"
+      :itemName="locationToDelete?.name"
+      :isDeleting="isDeleting"
+      :error="deleteError"
+      @confirm="executeDelete"
+      @cancel="cancelDelete"
+    >
+      <!-- Add specific warning for locations with children -->
+      <template #additional-warning>
         <p v-if="hasChildren(locationToDelete)" class="warning-text">
-          Warning: This location has child locations that will be orphaned.
+          Warning: This location has child locations that will be orphaned (their parent will be set to null).
         </p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="cancelDelete">Cancel</button>
-          <button class="btn btn-danger" @click="handleDelete" :disabled="isDeleting">
-            {{ isDeleting ? "Deleting..." : "Delete" }}
-          </button>
-        </div>
-        <div v-if="deleteError" class="error-message mt-3">{{ deleteError }}</div>
-      </div>
-    </div>
+      </template>
+    </ConfirmDeleteModal>
   </section>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
-import type { PropType } from 'vue';
+import { defineComponent, ref, type PropType } from 'vue';
 import type { Location } from '@/types/location';
 import * as locationsApi from '@/services/api/locations';
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue'; // Import the reusable modal
 
 export default defineComponent({
   name: 'WorldLocationList',
+  components: {
+      ConfirmDeleteModal, // Register the modal component
+  },
   props: {
     locations: {
       type: Array as PropType<Location[]>,
@@ -117,7 +120,7 @@ export default defineComponent({
       }
     };
 
-    const confirmDelete = (location: Location) => {
+    const requestDeleteConfirmation = (location: Location) => {
       locationToDelete.value = location;
       deleteError.value = null;
       showDeleteConfirm.value = true;
@@ -129,7 +132,7 @@ export default defineComponent({
       deleteError.value = null;
     };
 
-    const handleDelete = async () => {
+    const executeDelete = async () => {
       if (!locationToDelete.value) return;
       
       isDeleting.value = true;
@@ -157,9 +160,9 @@ export default defineComponent({
       getParentName,
       hasChildren,
       formatDateTime,
-      confirmDelete,
+      requestDeleteConfirmation,
       cancelDelete,
-      handleDelete,
+      executeDelete,
     };
   },
 });
@@ -191,13 +194,14 @@ export default defineComponent({
   border: 1px solid #e9ecef;
   border-radius: 0.5rem;
   overflow: hidden;
+  background-color: #fff;
 }
 
 .location-item {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #e9ecef;
   transition: background-color 0.2s ease;
 }
@@ -214,6 +218,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   flex: 1;
+  margin-right: 1rem;
 }
 
 .location-name {
@@ -226,30 +231,31 @@ export default defineComponent({
 .location-details {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
 }
 
 .location-description {
   font-size: 0.9rem;
   color: #6c757d;
+  line-height: 1.4;
 }
 
 .parent-info {
   font-size: 0.85rem;
-  color: #6c757d;
-  font-style: italic;
+  color: #495057;
 }
 
 .location-date {
   font-size: 0.8rem;
   color: #adb5bd;
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
 }
 
 .location-actions {
   display: flex;
   gap: 0.5rem;
-  align-self: flex-start;
+  align-self: center;
+  flex-shrink: 0;
 }
 
 .btn-small {
@@ -294,6 +300,12 @@ export default defineComponent({
   border-radius: 0.25rem;
   border: none;
   cursor: pointer;
+  background-color: #7851a9;
+  color: white;
+}
+
+.btn-sm.btn-primary:hover {
+  background-color: #5f3f87;
 }
 
 .loading-state,
@@ -303,25 +315,15 @@ export default defineComponent({
   text-align: center;
   border-radius: 0.5rem;
   margin-top: 1rem;
-}
-
-.loading-state {
-  color: #6c757d;
-  background-color: #f8f9fa;
   border: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  color: #6c757d;
 }
 
 .error-message {
   color: #721c24;
   background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-}
-
-.empty-state {
-  color: #6c757d;
-  font-style: italic;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  border-color: #f5c6cb;
 }
 
 .warning-text {
@@ -330,60 +332,7 @@ export default defineComponent({
   border: 1px solid #ffeeba;
   padding: 0.75rem;
   border-radius: 0.25rem;
-  margin: 0.75rem 0;
-}
-
-/* Modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 0.5rem;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.confirmation-modal h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #212529;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.3rem;
-  cursor: pointer;
-  border: none;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.mt-3 {
   margin-top: 1rem;
+  font-size: 0.9rem;
 }
 </style> 

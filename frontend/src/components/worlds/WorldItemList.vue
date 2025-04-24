@@ -25,7 +25,7 @@
             <button v-if="canManage" @click="$emit('edit-item', item)" class="btn-small btn-secondary">
               Edit
             </button>
-            <button v-if="canManage" @click="confirmDelete(item)" class="btn-small btn-danger">
+            <button v-if="canManage" @click="requestDeleteConfirmation(item)" class="btn-small btn-danger">
               Delete
             </button>
           </div>
@@ -34,33 +34,32 @@
     </div>
     <div v-else class="empty-state">No items found for this world yet.</div>
 
-    <!-- Confirmation Dialog for Delete -->
-    <div v-if="showDeleteConfirm" class="modal-overlay">
-      <div class="modal-content confirmation-modal">
-        <h3>Confirm Deletion</h3>
-        <p>Are you sure you want to delete the item "{{ itemToDelete?.name }}"?</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="cancelDelete">Cancel</button>
-          <button class="btn btn-danger" @click="handleDelete" :disabled="isDeleting">
-            {{ isDeleting ? "Deleting..." : "Delete" }}
-          </button>
-        </div>
-        <div v-if="deleteError" class="error-message mt-3">{{ deleteError }}</div>
-      </div>
-    </div>
+    <!-- Use the reusable Confirmation Dialog -->
+    <ConfirmDeleteModal
+       :show="showDeleteConfirm"
+       itemType="item"
+       :itemName="itemToDelete?.name"
+       :isDeleting="isDeleting"
+       :error="deleteError"
+       @confirm="executeDelete"
+       @cancel="cancelDelete"
+    />
   </section>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
-import type { PropType } from 'vue';
+import { defineComponent, ref, type PropType } from 'vue';
 import type { Item } from '@/types/item';
 import type { Character } from '@/types/character';
 import type { Location } from '@/types/location';
 import * as itemsApi from '@/services/api/items';
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue'; // Import the reusable modal
 
 export default defineComponent({
   name: 'WorldItemList',
+  components: {
+      ConfirmDeleteModal, // Register the modal component
+  },
   props: {
     items: {
       type: Array as PropType<Item[]>,
@@ -92,7 +91,7 @@ export default defineComponent({
     },
   },
   emits: ['items-updated', 'open-add-item', 'edit-item'],
-  setup(props, { emit }) {
+  setup(_props, { emit }) {
     const showDeleteConfirm = ref(false);
     const itemToDelete = ref<Item | null>(null);
     const isDeleting = ref(false);
@@ -100,14 +99,15 @@ export default defineComponent({
 
     const getCharacterName = (characterId: number | null): string => {
       if (!characterId) return 'Unassigned';
-      const character = props.characters.find(c => c.id === characterId);
-      return character ? character.name : `Unknown Character (ID: ${characterId})`;
+      // Access props via _props argument in setup
+      const character = _props.characters.find(c => c.id === characterId);
+      return character ? character.name : `Unknown (ID: ${characterId})`;
     };
 
     const getLocationName = (locationId: number | null): string => {
       if (!locationId) return 'Unassigned';
-      const location = props.locations.find(l => l.id === locationId);
-      return location ? location.name : `Unknown Location (ID: ${locationId})`;
+      const location = _props.locations.find(l => l.id === locationId);
+      return location ? location.name : `Unknown (ID: ${locationId})`;
     };
     
     const formatDateTime = (dateTimeString: string | null): string => {
@@ -119,7 +119,8 @@ export default defineComponent({
       }
     };
 
-    const confirmDelete = (item: Item) => {
+    // Renamed function to open the confirmation modal
+    const requestDeleteConfirmation = (item: Item) => {
       itemToDelete.value = item;
       deleteError.value = null;
       showDeleteConfirm.value = true;
@@ -131,19 +132,21 @@ export default defineComponent({
       deleteError.value = null;
     };
 
-    const handleDelete = async () => {
+    // Renamed function that executes the delete after confirmation
+    const executeDelete = async () => {
       if (!itemToDelete.value) return;
-      
+
       isDeleting.value = true;
       deleteError.value = null;
-      
+
       try {
         await itemsApi.deleteItem(itemToDelete.value.id);
         emit('items-updated');
-        showDeleteConfirm.value = false;
+        showDeleteConfirm.value = false; // Close modal on success
         itemToDelete.value = null;
       } catch (err: any) {
         console.error('Error deleting item:', err);
+        // Propagate error to the modal
         deleteError.value = err.response?.data?.detail || err.message || 'Failed to delete item';
       } finally {
         isDeleting.value = false;
@@ -158,9 +161,9 @@ export default defineComponent({
       getCharacterName,
       getLocationName,
       formatDateTime,
-      confirmDelete,
+      requestDeleteConfirmation, // Expose the renamed function
       cancelDelete,
-      handleDelete,
+      executeDelete, // Expose the renamed function
     };
   },
 });

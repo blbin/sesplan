@@ -16,3 +16,9 @@ from .location import Location, LocationCreate, LocationUpdate
 from .item import Item, ItemCreate, ItemUpdate
 # Import Availability schemas
 from .availability import Availability, AvailabilityCreate, AvailabilityUpdate
+# Import Event schemas
+from .event import Event, EventCreate, EventUpdate
+# Import LocationTagType schemas
+from .location_tag_type import LocationTagType, LocationTagTypeCreate, LocationTagTypeUpdate
+# Import LocationTag schema (pro použití v Location)
+from .location_tag import LocationTag
