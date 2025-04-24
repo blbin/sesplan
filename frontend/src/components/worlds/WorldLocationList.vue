@@ -13,12 +13,26 @@
       <ul class="location-list">
         <li v-for="location in locations" :key="location.id" class="location-item">
           <div class="location-info">
-            <span class="location-name">{{ location.name }}</span>
+            <span @click="goToLocationDetail(location.id)" class="location-name-link">
+              <span class="location-name">{{ location.name }}</span>
+            </span>
             <div class="location-details">
               <span v-if="location.description" class="location-description">{{ location.description }}</span>
               <span v-if="isChildLocation(location)" class="parent-info">
                 Parent: {{ getParentName(location) }}
               </span>
+              <div v-if="location.tags && location.tags.length" class="tags-container">
+                <v-chip
+                  v-for="tag in location.tags"
+                  :key="tag.id"
+                  size="small"
+                  label
+                  class="mr-1 mb-1"
+                  density="compact" 
+                  >
+                  {{ tag.tag_type?.name || `Tag ID: ${tag.location_tag_type_id}` }}
+                </v-chip>
+              </div>
               <span class="location-date">Created: {{ formatDateTime(location.created_at) }}</span>
             </div>
           </div>
@@ -57,6 +71,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, type PropType } from 'vue';
+import { useRouter } from 'vue-router';
 import type { Location } from '@/types/location';
 import * as locationsApi from '@/services/api/locations';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue'; // Import the reusable modal
@@ -90,6 +105,7 @@ export default defineComponent({
   },
   emits: ['locations-updated', 'open-add-location', 'edit-location'],
   setup(props, { emit }) {
+    const router = useRouter();
     const showDeleteConfirm = ref(false);
     const locationToDelete = ref<Location | null>(null);
     const isDeleting = ref(false);
@@ -151,6 +167,14 @@ export default defineComponent({
       }
     };
 
+    const goToLocationDetail = (locationId: number) => {
+      console.log(`Navigating to location detail: worldId=${props.worldId}, locationId=${locationId}`);
+      router.push({ 
+        name: 'LocationDetail',
+        params: { locationId: locationId },
+      });
+    };
+
     return {
       showDeleteConfirm,
       locationToDelete,
@@ -163,6 +187,7 @@ export default defineComponent({
       requestDeleteConfirmation,
       cancelDelete,
       executeDelete,
+      goToLocationDetail,
     };
   },
 });
@@ -221,9 +246,19 @@ export default defineComponent({
   margin-right: 1rem;
 }
 
+.location-name-link {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+.location-name-link:hover .location-name {
+    text-decoration: underline;
+    color: #5f3f87;
+}
 .location-name {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
   color: #212529;
   font-size: 1.1rem;
 }
@@ -248,18 +283,20 @@ export default defineComponent({
 .location-date {
   font-size: 0.8rem;
   color: #adb5bd;
-  margin-top: 0.3rem;
+}
+
+.tags-container {
+  margin-top: 0.5rem;
 }
 
 .location-actions {
   display: flex;
   gap: 0.5rem;
-  align-self: center;
-  flex-shrink: 0;
+  align-items: center;
 }
 
 .btn-small {
-  padding: 0.375rem 0.75rem;
+  padding: 0.25rem 0.6rem;
   font-size: 0.8rem;
   border-radius: 0.25rem;
   border: none;
@@ -311,28 +348,24 @@ export default defineComponent({
 .loading-state,
 .error-message,
 .empty-state {
-  padding: 1.5rem;
+  padding: 2rem;
   text-align: center;
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border: 1px dashed #dee2e6;
   border-radius: 0.5rem;
   margin-top: 1rem;
-  border: 1px solid #e9ecef;
-  background-color: #f8f9fa;
-  color: #6c757d;
 }
 
 .error-message {
-  color: #721c24;
+  color: #dc3545;
   background-color: #f8d7da;
   border-color: #f5c6cb;
 }
 
 .warning-text {
-  color: #856404;
-  background-color: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 0.75rem;
-  border-radius: 0.25rem;
-  margin-top: 1rem;
-  font-size: 0.9rem;
+  color: #ffc107;
+  font-size: 0.9em;
+  margin-top: 0.5em;
 }
 </style> 

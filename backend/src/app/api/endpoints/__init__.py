@@ -16,6 +16,8 @@ from . import locations
 from . import items
 # Import routeru pro availability
 from . import availability
+# Import routeru pro location_tag_types
+from . import location_tag_types
 
 router = APIRouter()
 
@@ -32,6 +34,8 @@ router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(locations.router, prefix="/locations", tags=["locations"])
 # Přidání routeru pro itemy
 router.include_router(items.router, prefix="/items", tags=["items"])
+# Přidání routeru pro location_tag_types
+router.include_router(location_tag_types.router, prefix="/worlds/{world_id}/location-tag-types", tags=["location-tag-types"])
 
 # Attach the availability router directly to the main router
 router.include_router(

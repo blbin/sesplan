@@ -42,6 +42,25 @@
         </select>
       </div>
       
+      <div class="form-group">
+        <label for="location-tags">Tags</label>
+        <v-select
+          id="location-tags"
+          v-model="selectedTagTypeIds" 
+          :items="availableTagTypes"
+          item-title="name"
+          item-value="id"
+          label="Select tags"
+          multiple
+          chips
+          closable-chips
+          :loading="tagTypesLoading"
+          :error-messages="tagTypesError ? [tagTypesError] : []"
+          variant="outlined"
+          density="compact"
+        ></v-select>
+      </div>
+      
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
@@ -50,7 +69,7 @@
         <button type="button" class="btn btn-secondary" @click="$emit('cancel')">
           Cancel
         </button>
-        <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+        <button type="submit" class="btn btn-primary" :disabled="isSubmitting || tagTypesLoading">
           {{ isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Location') }}
         </button>
       </div>
@@ -59,10 +78,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, ref, computed } from 'vue';
+import { defineComponent, reactive, ref, computed, onMounted } from 'vue';
 import type { PropType } from 'vue';
 import type { Location, LocationCreate, LocationUpdate } from '@/types/location';
+import type { LocationTagType } from '@/types/locationTagType';
 import * as locationsApi from '@/services/api/locations';
+import * as locationTagTypeApi from '@/services/api/locationTagTypeService';
 
 export default defineComponent({
   name: 'CreateLocationForm',
@@ -84,6 +105,10 @@ export default defineComponent({
   setup(props, { emit }) {
     const isSubmitting = ref(false);
     const error = ref<string | null>(null);
+    const availableTagTypes = ref<LocationTagType[]>([]);
+    const tagTypesLoading = ref(false);
+    const tagTypesError = ref<string | null>(null);
+    const selectedTagTypeIds = ref<number[]>([]);
     
     const formData = reactive({
       name: '',
@@ -91,44 +116,86 @@ export default defineComponent({
       parent_location_id: null as number | null
     });
     
-    // Initialize form if editing
+    const isEditing = !!props.locationToEdit;
+    
     if (props.locationToEdit) {
       formData.name = props.locationToEdit.name;
       formData.description = props.locationToEdit.description || '';
       formData.parent_location_id = props.locationToEdit.parent_location_id || null;
+      selectedTagTypeIds.value = props.locationToEdit.tags?.map(tag => tag.location_tag_type_id) || [];
     }
     
-    const isEditing = !!props.locationToEdit;
-    
-    // Filter out the current location from parent options to prevent circular references
     const parentLocationOptions = computed(() => {
       return props.locations
         .filter(loc => loc.id !== props.locationToEdit?.id)
         .map(loc => ({ id: loc.id, name: loc.name }));
     });
+
+    const fetchTagTypes = async () => {
+      tagTypesLoading.value = true;
+      tagTypesError.value = null;
+      try {
+        availableTagTypes.value = await locationTagTypeApi.getLocationTagTypes(props.worldId);
+      } catch (err: any) {
+        console.error('Error fetching location tag types:', err);
+        tagTypesError.value = err.message || 'Failed to load tags';
+      } finally {
+        tagTypesLoading.value = false;
+      }
+    };
+
+    onMounted(fetchTagTypes);
+
+    const syncTags = async (locationId: number) => {
+      const originalTagTypeIds = props.locationToEdit?.tags?.map(t => t.location_tag_type_id) || [];
+      const currentTagTypeIds = new Set(selectedTagTypeIds.value);
+      const originalTagTypeIdsSet = new Set(originalTagTypeIds);
+
+      const tagsToAdd = selectedTagTypeIds.value.filter(id => !originalTagTypeIdsSet.has(id));
+      const tagsToRemove = originalTagTypeIds.filter(id => !currentTagTypeIds.has(id));
+
+      const addPromises = tagsToAdd.map(tagTypeId => 
+        locationsApi.addTagToLocation(locationId, tagTypeId)
+      );
+      const removePromises = tagsToRemove.map(tagTypeId => 
+        locationsApi.removeTagFromLocation(locationId, tagTypeId)
+      );
+
+      try {
+        await Promise.all([...addPromises, ...removePromises]);
+      } catch (err: any) {
+        console.error("Error syncing tags:", err);
+        error.value = `Location saved, but failed to sync tags: ${err.message}`;
+      }
+    };
     
     const handleSubmit = async () => {
       error.value = null;
       isSubmitting.value = true;
+      let savedLocationId: number | null = null;
       
       try {
         if (isEditing && props.locationToEdit) {
-          // Update existing location
           const updateData: LocationUpdate = {
             name: formData.name,
             description: formData.description || null,
             parent_location_id: formData.parent_location_id
           };
-          await locationsApi.updateLocation(props.locationToEdit.id, updateData);
+          const updatedLocation = await locationsApi.updateLocation(props.locationToEdit.id, updateData);
+          savedLocationId = updatedLocation.id;
         } else {
-          // Create new location
           const createData: LocationCreate = {
             name: formData.name,
             description: formData.description || null,
             parent_location_id: formData.parent_location_id,
             world_id: props.worldId
           };
-          await locationsApi.createLocation(createData);
+          const newLocation = await locationsApi.createLocation(createData);
+          savedLocationId = newLocation.id;
+        }
+
+        if (savedLocationId) {
+          await syncTags(savedLocationId);
         }
         
         emit('saved');
@@ -146,6 +213,10 @@ export default defineComponent({
       error,
       isEditing,
       parentLocationOptions,
+      availableTagTypes,
+      tagTypesLoading,
+      tagTypesError,
+      selectedTagTypeIds,
       handleSubmit
     };
   }
@@ -231,5 +302,9 @@ textarea.form-control {
 .btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.form-group + .form-group {
+  /* margin-top: 1rem; */
 }
 </style> 

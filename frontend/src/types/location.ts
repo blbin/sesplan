@@ -1,3 +1,5 @@
+import type { LocationTag } from './locationTag'; // Importujeme LocationTag
+
 export interface LocationBase {
   name: string;
   description?: string | null;
@@ -19,4 +21,5 @@ export interface Location extends LocationBase {
   world_id: number;
   created_at: string; // Assuming ISO date strings from API
   updated_at: string;
+  tags: LocationTag[]; // Přidáme pole tagů
 } 

@@ -25,3 +25,7 @@ from .crud_availability import (
 )
 # Import Event CRUD
 from .crud_event import get_event, get_events_by_world, create_event, update_event, delete_event
+# Import LocationTagType CRUD
+from .crud_location_tag_type import get_location_tag_type, get_location_tag_types_by_world, create_location_tag_type, update_location_tag_type, delete_location_tag_type
+# Import LocationTag CRUD (pro správu přiřazení)
+from .crud_location_tag import add_tag_to_location, remove_tag_from_location, get_tags_for_location, get_location_tag_association

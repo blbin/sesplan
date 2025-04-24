@@ -7,7 +7,8 @@ from app.api import dependencies # Správný import závislostí
 from app.db.session import get_db
 from app.auth.auth import get_current_user
 # Explicitní import pro ověření vlastnictví světa
-from .locations import verify_world_owner # Použijeme stejnou závislost jako u lokací
+# from .locations import verify_world_owner # Chybný import
+from ..dependencies import verify_world_owner # Správný import ze sdílených závislostí
 
 router = APIRouter()
 

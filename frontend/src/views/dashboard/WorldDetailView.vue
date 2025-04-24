@@ -22,36 +22,48 @@
         <p><strong>Last Updated:</strong> {{ formatDate(world.updated_at) }}</p>
       </div>
 
-      <!-- Section for Characters - Replaced with component -->
-      <WorldCharacterList :world-id="Number(worldId)" />
+      <!-- Tabs for sections -->
+      <v-tabs v-model="currentTab" background-color="transparent" color="primary" grow>
+        <v-tab value="characters">Characters</v-tab>
+        <v-tab value="locations">Locations</v-tab>
+        <v-tab value="items">Items</v-tab>
+      </v-tabs>
 
-      <!-- Section for Locations -->
-      <WorldLocationList
-        v-if="world && isCurrentUserOwner !== null"
-        :locations="locations"
-        :worldId="Number(worldId)"
-        :canManage="isCurrentUserOwner"
-        :loading="locationsLoading"
-        :error="locationsError"
-        @locations-updated="handleLocationsUpdated"
-        @open-add-location="openAddLocationModal"
-        @edit-location="openEditLocationModal"
-      />
+      <v-window v-model="currentTab">
+        <v-window-item value="characters">
+          <WorldCharacterList :world-id="Number(worldId)" />
+        </v-window-item>
 
-      <!-- Section for Items -->
-      <WorldItemList
-        v-if="world && isCurrentUserOwner !== null"
-        :items="items"
-        :characters="[]"  
-        :locations="locations"
-        :worldId="Number(worldId)"
-        :canManage="isCurrentUserOwner"
-        :loading="itemsLoading"
-        :error="itemsError"
-        @items-updated="handleItemsUpdated"
-        @open-add-item="openAddItemModal"
-        @edit-item="openEditItemModal"
-      />
+        <v-window-item value="locations">
+          <WorldLocationList
+            v-if="world && isCurrentUserOwner !== null"
+            :locations="locations"
+            :worldId="Number(worldId)"
+            :canManage="isCurrentUserOwner"
+            :loading="locationsLoading"
+            :error="locationsError"
+            @locations-updated="handleLocationsUpdated"
+            @open-add-location="openAddLocationModal"
+            @edit-location="openEditLocationModal"
+          />
+        </v-window-item>
+
+        <v-window-item value="items">
+          <WorldItemList
+            v-if="world && isCurrentUserOwner !== null"
+            :items="items"
+            :characters="[]" 
+            :locations="locations"
+            :worldId="Number(worldId)"
+            :canManage="isCurrentUserOwner"
+            :loading="itemsLoading"
+            :error="itemsError"
+            @items-updated="handleItemsUpdated"
+            @open-add-item="openAddItemModal"
+            @edit-item="openEditItemModal"
+          />
+        </v-window-item>
+      </v-window>
 
       <!-- Add/Edit Location Form Modal -->
       <div v-if="showLocationForm" class="modal-overlay">
@@ -104,6 +116,7 @@ import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
 import WorldItemList from '@/components/worlds/WorldItemList.vue';
 import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
+// import LocationTagTypeManager from '@/components/worlds/LocationTagTypeManager.vue';
 
 export default defineComponent({
   name: 'WorldDetailView',
@@ -113,6 +126,7 @@ export default defineComponent({
     CreateLocationForm,
     WorldItemList,
     CreateItemForm,
+    // Odebrána registrace LocationTagTypeManager
   },
   props: {
     worldId: {
@@ -137,6 +151,7 @@ export default defineComponent({
     const showItemForm = ref(false);
     const locationToEdit = ref<Location | null>(null);
     const itemToEdit = ref<Item | null>(null);
+    const currentTab = ref('characters');
 
     // Assuming only the world owner can manage locations/items for now
     const isCurrentUserOwner = computed(() => {
@@ -301,6 +316,13 @@ export default defineComponent({
       }
     });
 
+    // Watch pro případ, že by výchozí tab byl 'tags', nastavíme jiný
+    watch(currentTab, (newTab) => {
+        if (newTab === 'tags') {
+            currentTab.value = 'characters'; // Nebo jiný platný tab
+        }
+    });
+
     return {
       world,
       // characters, // Removed
@@ -318,6 +340,7 @@ export default defineComponent({
       locationToEdit,
       showItemForm,
       itemToEdit,
+      currentTab,
       isCurrentUserOwner,
       formatDate,
       handleLocationsUpdated,
@@ -391,7 +414,8 @@ export default defineComponent({
 
 /* General Loading/Error/Button/Modal styles can remain or be moved to global styles */
 .loading-message,
-.error-message {
+.error-message,
+.access-denied-message {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;
@@ -454,5 +478,14 @@ export default defineComponent({
   /* Overflow handling might be needed if content is too long */
   max-height: 90vh; 
   overflow-y: auto;
+}
+
+/* Make tabs look a bit nicer */
+.v-tabs {
+  margin-bottom: 1.5rem;
+}
+
+.v-window-item {
+  padding-top: 1rem; /* Add some space below tabs */
 }
 </style> 

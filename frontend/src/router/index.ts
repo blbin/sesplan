@@ -44,6 +44,17 @@ const routes: RouteRecordRaw[] = [
         name: 'dashboard-world-detail',
         component: () => import('../views/dashboard/WorldDetailView.vue'),
         props: true,
+        meta: { requiresAuth: true },
+        // Children odebráno, detail lokace je sourozenec
+        // children: [ ... ]
+      },
+      // Původní nevnořená cesta pro LocationDetail
+      {
+        path: 'locations/:locationId', // Cesta je přímo pod /dashboard
+        name: 'LocationDetail', 
+        component: () => import('@/views/dashboard/LocationDetailView.vue'),
+        // Předáváme jen locationId, worldId si komponenta zjistí z načtené lokace
+        props: route => ({ locationId: Number(route.params.locationId) }),
         meta: { requiresAuth: true }
       },
       // Nová routa pro kampaně
@@ -83,8 +94,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/CharacterDetailView.vue'),
         props: true,
         meta: { requiresAuth: true }
-      }
-      // Zde mohou být další podstránky dashboardu
+      },
     ]
   },
   {

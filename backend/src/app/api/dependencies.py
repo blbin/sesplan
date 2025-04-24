@@ -6,6 +6,8 @@ from app import crud, models
 from app.db.session import get_db
 from app.auth.auth import get_current_user
 from app.models.user_campaign import CampaignRoleEnum
+# Import pro ověření vlastníka světa
+from app.models.world_user import RoleEnum as WorldRoleEnum, WorldUser 
 
 # Helper function to check campaign membership/role (GM)
 async def verify_gm_permission(campaign_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -13,6 +15,29 @@ async def verify_gm_permission(campaign_id: int, current_user: models.User = Dep
     if not membership or membership.role != CampaignRoleEnum.GM:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions (GM required)")
     return membership # Můžeme vrátit členství pro případné další použití
+
+# Závislost pro ověření vlastnictví světa
+async def verify_world_owner(
+    world_id: int, # world_id přijde z Path nebo z těla požadavku, ne přímo jako parametr Path() zde
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dependency to verify if the current user owns the world."""
+    is_owner = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == world_id,
+            WorldUser.user_id == current_user.id,
+            WorldUser.role == WorldRoleEnum.OWNER
+        )
+        .first()
+    )
+    if not is_owner:
+        world = crud.get_world(db, world_id=world_id)
+        if not world:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions, must be world owner")
+    # Úspěch - není potřeba nic vracet
 
 # Sem můžeme v budoucnu přidat další sdílené závislosti/helpery pro API 
 

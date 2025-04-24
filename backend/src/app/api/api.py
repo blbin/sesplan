@@ -14,7 +14,8 @@ from .endpoints import (
     locations,
     items,
     availability,
-    events  # Import nového endpointu
+    events,
+    location_tag_types
 )
 
 api_router = APIRouter()
@@ -38,5 +39,12 @@ api_router.include_router(availability.router, prefix="/availability", tags=["av
 # POZOR: Campaigns, Sessions, Locations, Items by také měly být pravděpodobně vnořené!
 # Prozatím vnoříme jen Events.
 worlds.router.include_router(events.router, prefix="/{world_id}/events", tags=["events"])
+
+# Vnoření specifických routerů pod Worlds
+worlds.router.include_router(
+    location_tag_types.router, 
+    prefix="/{world_id}/location-tag-types", 
+    tags=["location-tag-types"]
+)
 
 # TODO: Zrevidovat strukturu prefixů a vnoření routerů pro konzistenci (např. /worlds/{world_id}/campaigns/{campaign_id}/sessions) 
