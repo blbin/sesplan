@@ -14,3 +14,12 @@ from .crud_session import get_session, get_sessions_by_campaign, create_session,
 from .crud_location import get_location, get_locations_by_world, create_location, update_location, delete_location
 # Import Item CRUD
 from .crud_item import get_item, get_items_by_world, create_item, update_item, delete_item
+# Import Availability CRUD
+from .crud_availability import (
+    get_availability, 
+    get_availability_by_user_and_session, 
+    get_availabilities_by_session, 
+    create_availability, 
+    set_user_session_availability,
+    delete_all_user_session_availability
+)

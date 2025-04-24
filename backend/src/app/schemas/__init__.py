@@ -14,3 +14,5 @@ from .session import Session, SessionCreate, SessionUpdate
 from .location import Location, LocationCreate, LocationUpdate
 # Import Item schemas
 from .item import Item, ItemCreate, ItemUpdate
+# Import Availability schemas
+from .availability import Availability, AvailabilityCreate, AvailabilityUpdate

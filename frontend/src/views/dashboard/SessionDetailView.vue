@@ -8,7 +8,7 @@
       <header class="view-header">
         <h1>{{ session.title }}</h1>
         <router-link 
-          :to="{ name: 'CampaignDetail', params: { campaignId: campaignId } }"
+          :to="{ name: 'CampaignDetail', params: { campaignId: props.campaignId } }"
           class="btn btn-secondary"
         >
           &larr; Back to Campaign
@@ -39,6 +39,22 @@
         <!-- TODO: Add sections for related entities like characters, journal entries, etc. -->
 
       </div>
+
+      <!-- Availability Grid Section -->
+      <section class="detail-section availability-section">
+        <h2>Dostupnost hráčů</h2>
+        <p v-if="availabilitiesLoading">Načítání dostupností...</p>
+        <p v-else-if="availabilitiesError" class="text-error">Chyba načítání dostupností: {{ availabilitiesError }}</p>
+        <AvailabilityInputGrid
+          v-else-if="currentUserId !== undefined && session"
+          :session-id="session.id"
+          :all-availabilities="allAvailabilities"
+          :current-user-id="currentUserId"
+          @availability-updated="handleAvailabilityUpdate"
+        />
+        <p v-else>Pro zobrazení dostupnosti musíte být přihlášen.</p>
+      </section>
+
     </div>
     <div v-else class="not-found">
       Session not found.
@@ -46,88 +62,136 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, onMounted, watch } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
 import * as sessionsApi from '@/services/api/sessions';
+import * as availabilityService from '@/services/api/availabilityService';
+import * as campaignMembersApi from '@/services/api/campaignMembers';
 import type { Session } from '@/types/session';
+import type { Availability } from '@/types/availability';
+import type { UserCampaignRead } from '@/types/user_campaign';
+import { useAuthStore } from '@/store/auth.store';
+import AvailabilityInputGrid from '@/components/campaign/AvailabilityInputGrid.vue';
 
-export default defineComponent({
-  name: 'SessionDetailView',
-  props: {
-    campaignId: {
-      type: [String, Number],
-      required: true,
-    },
-    sessionId: {
-      type: [String, Number],
-      required: true,
-    },
-  },
-  setup(props) {
-    const session = ref<Session | null>(null);
-    const loading = ref(true);
-    const error = ref<string | null>(null);
+// --- Props Definition --- 
+const props = defineProps<{ 
+    campaignId: string | number;
+    sessionId: string | number;
+}>();
 
-    const loadSessionDetail = async (id: number) => {
-      loading.value = true;
-      error.value = null;
-      session.value = null;
-      try {
-        session.value = await sessionsApi.getSessionById(id);
-      } catch (err: any) {
-        error.value = `Failed to load session details: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        console.error("Load Session Detail Error:", err);
-      } finally {
-        loading.value = false;
-      }
-    };
+// --- State --- 
+const authStore = useAuthStore();
+const session = ref<Session | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+const allAvailabilities = ref<Availability[]>([]);
+const availabilitiesLoading = ref(false);
+const availabilitiesError = ref<string | null>(null);
+const currentUserMembership = ref<UserCampaignRead | null>(null);
+const membershipLoading = ref(false);
 
-    // Helper function for simple date formatting
-    const formatDate = (dateString: string | null | undefined) => {
-      if (!dateString) return 'N/A';
-      try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
+// --- Computed Properties --- 
+const currentUserId = computed(() => authStore.user?.id);
+
+// --- Methods --- 
+const loadSessionDetail = async () => {
+  if (!props.sessionId) return;
+  loading.value = true;
+  error.value = null;
+  session.value = null;
+  try {
+    session.value = await sessionsApi.getSessionById(Number(props.sessionId));
+    if (session.value && !currentUserMembership.value) { 
+         await loadCurrentUserMembership(session.value.campaign_id || Number(props.campaignId));
+    }
+  } catch (err: any) {
+    error.value = err.message || 'Failed to load session details';
+    console.error("Load Session Detail Error:", err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadAvailabilities = async () => {
+    if (!props.sessionId) return;
+    availabilitiesLoading.value = true;
+    availabilitiesError.value = null;
+    try {
+        allAvailabilities.value = await availabilityService.availabilityService.getAvailabilities(Number(props.sessionId));
+    } catch (err: any) {
+        availabilitiesError.value = err.message || 'Failed to load availabilities';
+        console.error("Load Availabilities Error:", err);
+    } finally {
+        availabilitiesLoading.value = false;
+    }
+};
+
+const loadCurrentUserMembership = async (campId: number) => {
+    if (!currentUserId.value || !campId) return;
+    membershipLoading.value = true;
+    currentUserMembership.value = null; // Reset before loading
+    try {
+        const members = await campaignMembersApi.getCampaignMembers(campId);
+        currentUserMembership.value = members.find(m => m.user_id === currentUserId.value) || null;
+    } catch (err: any) {
+        console.error("Could not load campaign members:", err);
+    } finally {
+        membershipLoading.value = false;
+    }
+};
+
+const handleAvailabilityUpdate = () => {
+    console.log("Availability updated, refreshing...");
+    loadAvailabilities();
+};
+
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleDateString();
+  } catch (e) {
+    return dateString;
+  }
+};
+
+const formatFullDateTime = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    } catch (e) {
+        console.error("Error formatting date:", e);
         return dateString;
-      }
-    };
+    }
+};
 
-    // Helper function for date and time formatting
-    const formatFullDateTime = (dateString: string | null | undefined) => {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleString(); // Adjust locale/options as needed
-        } catch (e) {
-            console.error("Error formatting date:", e);
-            return dateString; // Fallback
-        }
-    };
-
-    // Load data when component mounts or props change
-    onMounted(() => {
-      loadSessionDetail(Number(props.sessionId));
-    });
-
-    watch(
-      () => props.sessionId,
-      (newId) => {
-        if (newId) {
-          loadSessionDetail(Number(newId));
-        }
-      }
-    );
-
-    return {
-      session,
-      loading,
-      error,
-      formatDate,
-      formatFullDateTime,
-      campaignId: props.campaignId // Pass campaignId for the back link
-    };
-  },
+// --- Lifecycle Hooks --- 
+onMounted(() => {
+  loadSessionDetail();
+  loadAvailabilities();
 });
+
+// --- Watchers --- 
+watch(
+  () => props.sessionId,
+  (newId) => {
+    if (newId) {
+      loadSessionDetail();
+      loadAvailabilities();
+    }
+  },
+  { immediate: false } 
+);
+ watch(
+  () => props.campaignId,
+  (newCampId) => {
+      if (newCampId && !currentUserMembership.value && !membershipLoading.value) {
+          loadCurrentUserMembership(Number(newCampId));
+      }
+  },
+  { immediate: false } 
+ );
+
 </script>
 
 <style scoped>
@@ -219,4 +283,10 @@ export default defineComponent({
 .btn-secondary { background-color: #6c757d; color: white; }
 .btn-secondary:hover { background-color: #5a6268; }
 
+.availability-section h2 {
+    margin-bottom: 1rem;
+}
+.text-error {
+    color: rgb(var(--v-theme-error));
+}
 </style> 

@@ -201,7 +201,7 @@ export default defineComponent({
   components: {
       CampaignMemberList,
       CampaignInviteList,
-      CreateCampaignInviteForm
+      CreateCampaignInviteForm,
   },
   props: {
     // Díky props: true v routeru můžeme přijmout ID jako prop
@@ -245,12 +245,15 @@ export default defineComponent({
         date_time: null,
     });
 
+    // Computed property for the current user's full membership object
+    const currentUserMembership = computed(() => {
+      if (!currentUserId.value || !members.value) return null;
+      return members.value.find(m => m.user_id === currentUserId.value) || null;
+    });
+
+    // Use currentUserMembership in isCurrentUserGM
     const isCurrentUserGM = computed(() => {
-      if (!currentUserId.value || membersLoading.value || members.value.length === 0) {
-        return false;
-      }
-      const currentUserMembership = members.value.find(m => m.user_id === currentUserId.value);
-      return currentUserMembership?.role === CampaignRoleEnum.GM;
+      return currentUserMembership.value?.role === CampaignRoleEnum.GM;
     });
 
     const loadMembers = async (id: number) => {
@@ -534,6 +537,7 @@ export default defineComponent({
       invitesError,
       isCurrentUserGM,
       currentUserId,
+      currentUserMembership,
       handleMembersUpdated,
       handleInvitesUpdated,
 
@@ -666,10 +670,6 @@ export default defineComponent({
     border-bottom: 1px solid #eee;
     padding-bottom: 1rem;
     margin-bottom: 2rem;
-}
-
-.sessions-section {
-    /* Optional: Add specific styles if needed */
 }
 
 .section-header {
