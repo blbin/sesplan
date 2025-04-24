@@ -27,7 +27,7 @@ async def get_tag_type_from_world(
     return db_tag_type
 
 @router.post(
-    "/", 
+    "", 
     response_model=schemas.LocationTagType, 
     status_code=status.HTTP_201_CREATED, 
     summary="Vytvořit nový typ tagu pro lokace ve světě"
