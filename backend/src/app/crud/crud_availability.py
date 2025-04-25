@@ -72,4 +72,4 @@ def delete_all_user_session_availability(db: Session, user_id: int, session_id: 
         models.Availability.session_id == session_id
     ).delete(synchronize_session=False)
     db.commit()
-    return deleted_count 
+    return deleted_count
