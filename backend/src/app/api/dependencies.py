@@ -129,4 +129,43 @@ async def get_journal_entry_and_verify_owner(
     # Ověření přes nadřazený deník
     await get_journal_and_verify_owner(journal_id=db_entry.journal_id, db=db, current_user=current_user)
     
-    return db_entry 
+    return db_entry
+
+# ----- Character Dependencies -----
+
+async def get_character_or_404(
+    character_id: int = Path(..., description="ID charakteru"),
+    db: Session = Depends(get_db),
+) -> models.Character:
+    """Načte charakter podle ID nebo vrátí 404."""
+    db_character = crud.get_character(db, character_id=character_id)
+    if not db_character:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    return db_character
+
+async def verify_character_permission(
+    character: models.Character = Depends(get_character_or_404), # Získáme charakter
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dependency to verify if the current user can modify the character (owner or world GM/Owner)."""
+    # 1. Check if the current user is the character owner
+    if character.user_id == current_user.id:
+        return # Owner has permission
+
+    # 2. Check if the current user is GM or Owner of the world the character belongs to
+    world_membership = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == character.world_id,
+            WorldUser.user_id == current_user.id,
+            WorldUser.role.in_([WorldRoleEnum.OWNER, WorldRoleEnum.GM])
+        )
+        .first()
+    )
+    
+    if world_membership:
+        return # World Owner/GM has permission
+
+    # If neither condition is met, raise forbidden
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions to modify this character") 

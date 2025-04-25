@@ -1,21 +1,31 @@
-from sqlalchemy.orm import Session
-from ..models import Character, World, WorldUser, Journal # Import Journal model
+from sqlalchemy.orm import Session, joinedload
+from .. import models # Importujeme models pro použití v options
+from ..models import World, WorldUser, Journal # Import Journal model
 from ..schemas import CharacterCreate, CharacterUpdate
 
 def get_character(db: Session, character_id: int):
-    return db.query(Character).filter(Character.id == character_id).first()
+    """Získá charakter podle ID, včetně jeho tagů a detailů typů tagů."""
+    return (
+        db.query(models.Character) # Použijeme models.Character
+        .options(
+            joinedload(models.Character.tags) # Eager load the tags association
+            .joinedload(models.CharacterTag.tag_type) # Eager load the tag_type within each tag
+        )
+        .filter(models.Character.id == character_id) # Použijeme models.Character
+        .first()
+    )
 
 def get_characters_by_world(db: Session, world_id: int, user_id: int, skip: int = 0, limit: int = 100):
     """Get characters for a specific world owned by the user."""
-    return db.query(Character).filter(Character.world_id == world_id, Character.user_id == user_id).offset(skip).limit(limit).all()
+    return db.query(models.Character).filter(models.Character.world_id == world_id, models.Character.user_id == user_id).offset(skip).limit(limit).all()
 
 def get_all_characters_in_world(db: Session, world_id: int, skip: int = 0, limit: int = 100):
     """Gets all characters belonging to a specific world."""
-    return db.query(Character).filter(Character.world_id == world_id).offset(skip).limit(limit).all()
+    return db.query(models.Character).filter(models.Character.world_id == world_id).offset(skip).limit(limit).all()
 
 def get_characters_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 100):
     """Get all characters owned by the user across all worlds."""
-    return db.query(Character).filter(Character.user_id == user_id).offset(skip).limit(limit).all()
+    return db.query(models.Character).filter(models.Character.user_id == user_id).offset(skip).limit(limit).all()
 
 def create_character(db: Session, character_in: CharacterCreate, user_id: int):
     """Create a new character and its associated journal. User must be a member of the world."""
@@ -33,7 +43,7 @@ def create_character(db: Session, character_in: CharacterCreate, user_id: int):
         return None # Indicate failure
 
     # Create Character instance
-    db_character = Character(**character_in.dict(), user_id=user_id)
+    db_character = models.Character(**character_in.dict(), user_id=user_id)
     
     # Create associated Journal instance
     default_journal_name = f"{character_in.name}'s Journal"
@@ -59,7 +69,7 @@ def create_character(db: Session, character_in: CharacterCreate, user_id: int):
     
     return db_character # Character object now has the .journal relationship populated
 
-def update_character(db: Session, db_character: Character, character_in: CharacterUpdate):
+def update_character(db: Session, db_character: models.Character, character_in: CharacterUpdate):
     """Update a character. Assumes ownership check happened in the API layer."""
     update_data = character_in.dict(exclude_unset=True)
     for key, value in update_data.items():
@@ -69,7 +79,7 @@ def update_character(db: Session, db_character: Character, character_in: Charact
     db.refresh(db_character)
     return db_character
 
-def delete_character(db: Session, db_character: Character):
+def delete_character(db: Session, db_character: models.Character):
     """Delete a character. Assumes ownership check happened in the API layer."""
     db.delete(db_character)
     db.commit()

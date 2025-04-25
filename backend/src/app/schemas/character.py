@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from .journal import Journal
+from .character_tag import CharacterTag
 
 # Base properties
 class CharacterBase(BaseModel):
@@ -26,6 +27,7 @@ class Character(CharacterBase):
     created_at: datetime
     updated_at: datetime
     journal: Optional[Journal] = None
+    tags: List[CharacterTag] = []
 
     class Config:
         from_attributes = True 

@@ -33,37 +33,12 @@
     <!-- Modal for Add/Edit Character -->
     <div v-if="showModal" class="modal-backdrop">
       <div class="modal">
-        <h2>{{ editingCharacter ? 'Edit Character' : 'Add New Character' }}</h2>
-        <form @submit.prevent="handleSaveCharacter">
-          <!-- World Selection (only for creating) -->
-          <div v-if="!editingCharacter" class="form-group">
-             <label for="characterWorld">World:</label>
-             <select id="characterWorld" v-model="characterForm.world_id" required>
-                <option disabled value="">Please select a world</option>
-                <option v-for="world in availableWorlds" :key="world.id" :value="world.id">
-                  {{ world.name }}
-                </option>
-             </select>
-             <p v-if="loadingWorlds">Loading worlds...</p>
-             <p v-if="worldError" class="error-message">{{ worldError }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="characterName">Name:</label>
-            <input type="text" id="characterName" v-model="characterForm.name" required>
-          </div>
-          <div class="form-group">
-            <label for="characterDescription">Description:</label>
-            <textarea id="characterDescription" v-model="characterForm.description"></textarea>
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!editingCharacter && !characterForm.world_id">
-              {{ editingCharacter ? 'Save Changes' : 'Create Character' }}
-            </button>
-          </div>
-           <p v-if="formError" class="error-message">{{ formError }}</p>
-        </form>
+         <CreateCharacterForm
+            :characterToEdit="editingCharacter"
+            :availableWorlds="availableWorlds" 
+            @saved="handleCharacterSaved"
+            @cancel="closeModal"
+         />
       </div>
     </div>
 
@@ -71,7 +46,7 @@
     <div v-if="characterToDelete" class="modal-backdrop">
       <div class="modal confirmation-modal">
         <h2>Confirm Deletion</h2>
-        <p>Are you sure you want to delete the character "{{ characterToDelete.name }}"?</p>
+        <p>Are you sure you want to delete the character "{{ characterToDelete?.name }}"?</p>
          <div class="modal-actions">
             <button type="button" @click="characterToDelete = null" class="btn btn-secondary">Cancel</button>
             <button type="button" @click="handleDeleteCharacter" class="btn btn-danger">Delete</button>
@@ -84,20 +59,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, reactive } from 'vue';
+import { defineComponent, ref, onMounted } from 'vue';
 import * as charactersApi from '@/services/api/characters';
 import * as worldsApi from '@/services/api/worlds';
-import type { Character, CharacterCreate, CharacterUpdate } from '@/types/character';
+import type { Character } from '@/types/character';
 import type { World } from '@/types/world';
-
-interface CharacterFormData {
-  name: string;
-  description: string | null;
-  world_id: number | null;
-}
+import CreateCharacterForm from '@/components/dashboard/CreateCharacterForm.vue';
 
 export default defineComponent({
   name: 'CharactersView',
+  components: { CreateCharacterForm },
   setup() {
     const characters = ref<Character[]>([]);
     const availableWorlds = ref<World[]>([]);
@@ -105,18 +76,11 @@ export default defineComponent({
     const loadingWorlds = ref(false);
     const error = ref<string | null>(null);
     const worldError = ref<string | null>(null);
-    const formError = ref<string | null>(null);
     const deleteError = ref<string | null>(null);
 
     const showModal = ref(false);
     const editingCharacter = ref<Character | null>(null);
     const characterToDelete = ref<Character | null>(null);
-
-    const characterForm = reactive<CharacterFormData>({
-      name: '',
-      description: null,
-      world_id: null
-    });
 
     const loadCharacters = async () => {
       loading.value = true;
@@ -135,7 +99,6 @@ export default defineComponent({
         loadingWorlds.value = true;
         worldError.value = null;
         try {
-            // Fetch worlds the user OWNS to allow character creation
             availableWorlds.value = await worldsApi.getWorlds();
         } catch (err: any) {
             worldError.value = `Failed to load worlds: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
@@ -145,24 +108,14 @@ export default defineComponent({
         }
     };
 
-    const resetForm = () => {
-      characterForm.name = '';
-      characterForm.description = null;
-      characterForm.world_id = null;
-      editingCharacter.value = null;
-      formError.value = null;
-    };
-
     const closeModal = () => {
       showModal.value = false;
-      resetForm();
+      editingCharacter.value = null;
     };
 
      const openAddModal = () => {
-        resetForm();
         editingCharacter.value = null;
         showModal.value = true;
-        // Load worlds only if needed and not already loaded
         if (availableWorlds.value.length === 0 && !loadingWorlds.value) {
             loadWorlds();
         }
@@ -170,67 +123,30 @@ export default defineComponent({
 
      const openEditModal = (character: Character) => {
       editingCharacter.value = character;
-      characterForm.name = character.name;
-      characterForm.description = character.description;
-      characterForm.world_id = character.world_id; // Keep world_id for reference
       showModal.value = true;
     };
 
     const getWorldName = (worldId: number): string => {
-        // Try finding world in already loaded list first
         const world = availableWorlds.value.find(w => w.id === worldId);
-        // If not found (e.g., world list wasn't loaded yet or character belongs to another world)
-        // just return the ID. A better approach might be to fetch world names on demand.
+        if (!world && availableWorlds.value.length === 0 && !loadingWorlds.value) {
+            loadWorlds();
+        }
         return world ? world.name : `ID: ${worldId}`;
     };
 
-    const handleSaveCharacter = async () => {
-       formError.value = null;
-       try {
-         if (editingCharacter.value) {
-           // Update
-           const characterDataToUpdate: CharacterUpdate = {};
-           if (characterForm.name !== editingCharacter.value.name) {
-               characterDataToUpdate.name = characterForm.name;
-           }
-           if (characterForm.description !== editingCharacter.value.description) {
-               characterDataToUpdate.description = characterForm.description;
-           }
-           // Only send update if something changed
-           if (Object.keys(characterDataToUpdate).length > 0) {
-                const updatedCharacter = await charactersApi.updateCharacter(editingCharacter.value.id, characterDataToUpdate);
-                const index = characters.value.findIndex(c => c.id === updatedCharacter.id);
-                if (index !== -1) {
-                    characters.value[index] = updatedCharacter;
-                }
-           } else {
-               console.log("No changes detected for update.");
-           }
-         } else {
-           // Create
-           if (!characterForm.name.trim()) {
-                formError.value = "Character name cannot be empty.";
-                return;
-           }
-           if (!characterForm.world_id) {
-               formError.value = "Please select a world for the character.";
-               return;
-           }
-           const newCharacterData: CharacterCreate = {
-               name: characterForm.name,
-               description: characterForm.description,
-               world_id: characterForm.world_id
-           };
-           const newCharacter = await charactersApi.createCharacter(newCharacterData);
-           characters.value.push(newCharacter);
-           // If world list wasn't loaded before, load it now to display name
-           if (availableWorlds.value.length === 0) loadWorlds();
-         }
-         closeModal();
-       } catch(err: any) {
-          formError.value = `Save failed: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-          console.error("Save Character Error:", err);
-       }
+    const handleCharacterSaved = (savedCharacter: Character) => {
+        if (editingCharacter.value) {
+             const index = characters.value.findIndex(c => c.id === savedCharacter.id);
+             if (index !== -1) {
+                 characters.value[index] = savedCharacter;
+             }
+        } else {
+            characters.value.push(savedCharacter);
+            if (!availableWorlds.value.find(w => w.id === savedCharacter.world_id)) {
+                loadWorlds();
+            }
+        }
+        closeModal();
     };
 
     const confirmDelete = (character: Character) => {
@@ -253,8 +169,7 @@ export default defineComponent({
 
     onMounted(() => {
         loadCharacters();
-        // Optional: Pre-load worlds if the list is often needed immediately
-        // loadWorlds();
+        loadWorlds();
     });
 
     return {
@@ -264,17 +179,15 @@ export default defineComponent({
       loadingWorlds,
       error,
       worldError,
-      formError,
       deleteError,
       showModal,
       editingCharacter,
       characterToDelete,
-      characterForm,
       closeModal,
       openAddModal,
       openEditModal,
       getWorldName,
-      handleSaveCharacter,
+      handleCharacterSaved,
       confirmDelete,
       handleDeleteCharacter,
     };
@@ -283,7 +196,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Using similar styles as CampaignsView / WorldsView for consistency */
 .characters-view {
   padding: 2rem;
 }
@@ -339,7 +251,7 @@ export default defineComponent({
 
 .item-link {
     text-decoration: none;
-    color: #007bff; /* Link color */
+    color: #007bff;
 }
 .item-link:hover {
     text-decoration: underline;
@@ -355,7 +267,6 @@ export default defineComponent({
   gap: 0.5rem;
 }
 
-/* Modal Styles (basic - reuse/adapt from other views) */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -371,39 +282,12 @@ export default defineComponent({
 
 .modal {
   background-color: white;
-  padding: 2rem;
+  padding: 0;
   border-radius: 0.5rem;
   min-width: 400px;
-  max-width: 90%;
+  max-width: 500px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.modal h2 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.form-group input[type="text"],
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  box-sizing: border-box;
-}
-
-.form-group textarea {
-    min-height: 80px;
+  overflow: hidden;
 }
 
 .modal-actions {
@@ -411,6 +295,12 @@ export default defineComponent({
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.confirmation-modal {
+    padding: 2rem;
+    max-width: 450px;
 }
 
 .confirmation-modal p {
@@ -424,10 +314,9 @@ export default defineComponent({
   padding: 0.8rem;
   border-radius: 0.25rem;
   font-size: 0.9rem;
-  margin-top: 1rem;
+  margin: 1rem 1.5rem;
 }
 
-/* Button styles (reuse/adapt) */
 .btn { padding: 0.5rem 1rem; border-radius: 0.3rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background-color: #007bff; color: white; }
 .btn-primary:hover { background-color: #0056b3; }

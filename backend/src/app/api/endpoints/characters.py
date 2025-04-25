@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import sqlalchemy.orm
 
 from ... import crud, models, schemas
 from ...db.session import get_db
@@ -54,14 +55,31 @@ def read_character(
     current_user: models.User = Depends(get_current_user)
 ):
     """
-    Get character by ID.
+    Get character by ID, ensuring nested tags and tag_types are loaded.
     """
-    character = crud.get_character(db, character_id=character_id)
-    if not character:
+    # Použijeme query přímo zde pro jistotu načtení
+    db_character = (
+        db.query(models.Character)
+        .options(
+            sqlalchemy.orm.selectinload(models.Character.tags)
+            .joinedload(models.CharacterTag.tag_type)
+        )
+        .filter(models.Character.id == character_id)
+        .first()
+    )
+
+    if not db_character:
         raise HTTPException(status_code=404, detail="Character not found")
-    if character.user_id != current_user.id:
+    
+    # Ověření oprávnění (např. vlastník nebo GM světa - zde zjednodušeno na vlastníka)
+    # TODO: Rozšířit ověření oprávnění dle potřeby (např. pomocí závislosti)
+    if db_character.user_id != current_user.id:
+        # Check world owner/GM permissions as alternative?
+        # world_membership = db.query(models.WorldUser).filter(...).first()
+        # if not world_membership:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    return character
+        
+    return db_character
 
 @router.put("/{character_id}", response_model=schemas.Character)
 def update_character(

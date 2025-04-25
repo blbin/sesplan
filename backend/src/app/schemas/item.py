@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from .item_tag import ItemTag # Import ItemTag schema
 
 # Základní schéma s poli sdílenými mezi vytvářením a čtením
 class ItemBase(BaseModel):
@@ -35,7 +36,7 @@ class ItemInDBBase(ItemBase):
 
 # Schéma pro vracení itemu klientovi (může se v budoucnu lišit od DB schématu)
 class Item(ItemInDBBase):
-    pass
+    tags: List[ItemTag] = [] # Add the tags field
 
 # Schéma pro reprezentaci itemu v databázi
 class ItemInDB(ItemInDBBase):

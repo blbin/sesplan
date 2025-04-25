@@ -22,3 +22,7 @@ from .event import Event, EventCreate, EventUpdate
 from .location_tag_type import LocationTagType, LocationTagTypeCreate, LocationTagTypeUpdate
 # Import LocationTag schema (pro použití v Location)
 from .location_tag import LocationTag
+# Import CharacterTagType schemas
+from .character_tag_type import CharacterTagType, CharacterTagTypeCreate, CharacterTagTypeUpdate
+# Import CharacterTag schema
+from .character_tag import CharacterTag
