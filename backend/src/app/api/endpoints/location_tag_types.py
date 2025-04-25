@@ -6,7 +6,7 @@ from ... import crud, models, schemas
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 # Importujeme sdílené závislosti
-from ..dependencies import get_world_or_404, verify_world_owner 
+from ..dependencies import get_world_or_404, verify_world_owner, check_world_membership
 
 router = APIRouter()
 
@@ -59,15 +59,20 @@ async def create_location_tag_type(
 @router.get("", response_model=List[schemas.LocationTagType], summary="Získat typy tagů lokací světa")
 def read_location_tag_types(
     *, 
-    world: models.World = Depends(get_world_or_404), # Ověří existenci světa
+    world_id: int,
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    # TODO: Ověřit členství ve světě pro čtení?
-    current_user: models.User = Depends(get_current_user) # Zatím jen ověření přihlášení
+    current_user: models.User = Depends(get_current_user)
 ):
-    """Získá seznam všech typů tagů pro lokace v rámci specifikovaného světa."""
-    tag_types = crud.get_location_tag_types_by_world(db=db, world_id=world.id, skip=skip, limit=limit)
+    """Získá seznam všech typů tagů pro lokace v rámci specifikovaného světa. Vyžaduje členství ve světě."""
+    # Ověříme členství uživatele ve světě
+    check_world_membership(db, world_id, current_user.id)
+    
+    # Poznámka: Existence světa je implicitně ověřena, pokud check_world_membership nevrátí 403
+    # (protože world_user záznam bez existujícího světa by neměl existovat díky FK constraints)
+    
+    tag_types = crud.get_location_tag_types_by_world(db=db, world_id=world_id, skip=skip, limit=limit)
     return tag_types
 
 @router.put("/{tag_type_id}", response_model=schemas.LocationTagType, summary="Aktualizovat typ tagu lokace")

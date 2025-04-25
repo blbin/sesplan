@@ -26,3 +26,7 @@ from .location_tag import LocationTag
 from .character_tag_type import CharacterTagType, CharacterTagTypeCreate, CharacterTagTypeUpdate
 # Import CharacterTag schema
 from .character_tag import CharacterTag
+# Import ItemTagType schemas
+from .item_tag_type import ItemTagType, ItemTagTypeCreate, ItemTagTypeUpdate
+# Import ItemTag schema (if needed, e.g., for embedding in Item)
+from .item_tag import ItemTag

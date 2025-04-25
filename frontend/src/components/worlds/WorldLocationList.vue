@@ -14,7 +14,7 @@
         <li v-for="location in locations" :key="location.id" class="location-item">
           <div class="location-info">
             <span @click="goToLocationDetail(location.id)" class="location-name-link">
-              <span class="location-name">{{ location.name }}</span>
+            <span class="location-name">{{ location.name }}</span>
             </span>
             <div class="location-details">
               <span v-if="location.description" class="location-description">{{ location.description }}</span>

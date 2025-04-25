@@ -52,7 +52,7 @@
           <WorldItemList
             v-if="world && isCurrentUserOwner !== null"
             :items="items"
-            :characters="[]" 
+            :characters="[]"  
             :locations="locations"
             :worldId="Number(worldId)"
             :canManage="isCurrentUserOwner"
@@ -104,29 +104,25 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
-// import * as charactersApi from '@/services/api/characters'; // Removed
 import * as locationsApi from '@/services/api/locations';
 import * as itemsApi from '@/services/api/items';
 import type { World } from '@/types/world';
-// import type { Character } from '@/types/character'; // Removed
 import type { Location } from '@/types/location';
 import type { Item } from '@/types/item';
-import WorldCharacterList from '@/components/worlds/WorldCharacterList.vue'; // Added
+import WorldCharacterList from '@/components/worlds/WorldCharacterList.vue';
 import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
 import WorldItemList from '@/components/worlds/WorldItemList.vue';
 import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
-// import LocationTagTypeManager from '@/components/worlds/LocationTagTypeManager.vue';
 
 export default defineComponent({
   name: 'WorldDetailView',
   components: {
-    WorldCharacterList, // Added
+    WorldCharacterList,
     WorldLocationList,
     CreateLocationForm,
     WorldItemList,
     CreateItemForm,
-    // Odebrána registrace LocationTagTypeManager
   },
   props: {
     worldId: {
@@ -136,15 +132,12 @@ export default defineComponent({
   },
   setup(props) {
     const world = ref<World | null>(null);
-    // const characters = ref<Character[]>([]); // Removed
     const locations = ref<Location[]>([]);
     const items = ref<Item[]>([]);
     const worldLoading = ref(true);
-    // const charactersLoading = ref(false); // Removed
     const locationsLoading = ref(false);
     const itemsLoading = ref(false);
     const worldError = ref<string | undefined>(undefined);
-    // const charactersError = ref<string | undefined>(undefined); // Removed
     const locationsError = ref<string | undefined>(undefined);
     const itemsError = ref<string | undefined>(undefined);
     const showLocationForm = ref(false);
@@ -153,11 +146,7 @@ export default defineComponent({
     const itemToEdit = ref<Item | null>(null);
     const currentTab = ref('characters');
 
-    // Assuming only the world owner can manage locations/items for now
     const isCurrentUserOwner = computed(() => {
-        // Placeholder: In a real app, this would check authStore.user.id against world.owner_id
-        // For now, just return true if world is loaded successfully.
-        // If the API returns 403, worldError will be set.
         return world.value !== null && !worldLoading.value && worldError.value === undefined;
     });
 
@@ -165,21 +154,17 @@ export default defineComponent({
       worldLoading.value = true;
       worldError.value = undefined;
       world.value = null;
-      // characters.value = []; // Removed
       locations.value = [];
       items.value = [];
-      // charactersError.value = undefined; // Removed
       locationsError.value = undefined;
       itemsError.value = undefined;
-      // charactersLoading.value = false; // Removed
       locationsLoading.value = false;
       itemsLoading.value = false;
 
       try {
         world.value = await worldsApi.getWorldById(id);
-        // fetchWorldCharacters(id); // Removed - Handled by WorldCharacterList
-        fetchWorldLocations(id); // Keep for now, potential future refactor
-        fetchWorldItems(id);     // Keep for now, potential future refactor
+        fetchWorldLocations(id);
+        fetchWorldItems(id);     
       } catch (err: any) {
         console.error("Fetch World Error:", err);
         if (err.response?.status === 404) {
@@ -193,8 +178,6 @@ export default defineComponent({
         worldLoading.value = false;
       }
     };
-
-    // const fetchWorldCharacters = async (id: number) => { ... }; // Removed
 
     const fetchWorldLocations = async (id: number) => {
       locationsLoading.value = true;
@@ -287,7 +270,6 @@ export default defineComponent({
     const formatDate = (dateString: string | null | undefined): string => {
       if (!dateString) return 'N/A';
       try {
-        // Using toLocaleDateString for just the date part
         return new Date(dateString).toLocaleDateString();
       } catch (e) {
         return String(dateString);
@@ -307,7 +289,6 @@ export default defineComponent({
       if (newId && newId !== oldId) {
         fetchWorldDetails(Number(newId));
       } else if (!newId) {
-          // Handle case where worldId becomes null/undefined
           world.value = null;
           locations.value = [];
           items.value = [];
@@ -316,24 +297,14 @@ export default defineComponent({
       }
     });
 
-    // Watch pro případ, že by výchozí tab byl 'tags', nastavíme jiný
-    watch(currentTab, (newTab) => {
-        if (newTab === 'tags') {
-            currentTab.value = 'characters'; // Nebo jiný platný tab
-        }
-    });
-
     return {
       world,
-      // characters, // Removed
       locations,
       items,
       worldLoading,
-      // charactersLoading, // Removed
       locationsLoading,
       itemsLoading,
       worldError,
-      // charactersError, // Removed
       locationsError,
       itemsError,
       showLocationForm,
@@ -344,16 +315,15 @@ export default defineComponent({
       isCurrentUserOwner,
       formatDate,
       handleLocationsUpdated,
+      handleItemsUpdated,
       openAddLocationModal,
       openEditLocationModal,
       handleLocationSaved,
       closeLocationModal,
-      handleItemsUpdated,
       openAddItemModal,
       openEditItemModal,
       handleItemSaved,
       closeItemModal,
-      // Pass worldId explicitly if needed by template sections other than child components
       worldId: computed(() => props.worldId)
     };
   },
@@ -487,5 +457,24 @@ export default defineComponent({
 
 .v-window-item {
   padding-top: 1rem; /* Add some space below tabs */
+}
+
+.settings-container {
+  /* Add styles if needed for the settings tab content area */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .view-header .btn {
+    margin-top: 1rem;
+  }
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
 }
 </style> 

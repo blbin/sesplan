@@ -59,9 +59,28 @@
           </option>
         </select>
       </div>
+
+      <!-- Item Tags Section -->
+      <div class="form-group">
+        <label>Tags</label>
+        <div v-if="tagTypesLoading" class="loading-state-inline">Loading tags...</div>
+        <div v-else-if="tagTypesError" class="error-message-inline">{{ tagTypesError }}</div>
+        <div v-else-if="localAvailableTagTypes.length > 0" class="tag-checkboxes">
+          <div v-for="tagType in localAvailableTagTypes" :key="tagType.id" class="tag-checkbox">
+            <input 
+              type="checkbox" 
+              :id="'item-tag-' + tagType.id" 
+              :value="tagType.id" 
+              v-model="selectedTagTypeIds"
+            >
+            <label :for="'item-tag-' + tagType.id">{{ tagType.name }}</label>
+          </div>
+        </div>
+        <div v-else class="empty-state-inline">No item tag types available for this world. Create them in Settings.</div>
+      </div>
       
-      <div v-if="error" class="error-message">
-        {{ error }}
+      <div v-if="error || tagSyncError" class="error-message">
+        {{ error || tagSyncError }}
       </div>
       
       <div class="form-actions">
@@ -77,12 +96,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, ref } from 'vue';
+import { defineComponent, reactive, ref, onMounted, watch } from 'vue';
 import type { PropType } from 'vue';
 import type { Item, ItemCreate, ItemUpdate } from '@/types/item';
 import type { Character } from '@/types/character';
 import type { Location } from '@/types/location';
+import type { ItemTagType } from '@/types/itemTagType';
+import type { ItemTag } from '@/types/itemTag';
 import * as itemsApi from '@/services/api/items';
+import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
+import * as itemTagApi from '@/services/api/itemTagService';
 
 export default defineComponent({
   name: 'CreateItemForm',
@@ -102,12 +125,17 @@ export default defineComponent({
     locations: {
       type: Array as PropType<Location[]>,
       required: true
-    }
+    },
   },
   emits: ['saved', 'cancel'],
   setup(props, { emit }) {
     const isSubmitting = ref(false);
     const error = ref<string | null>(null);
+    const tagSyncError = ref<string | null>(null);
+    const localAvailableTagTypes = ref<ItemTagType[]>([]);
+    const tagTypesLoading = ref(false);
+    const tagTypesError = ref<string | null>(null);
+    const selectedTagTypeIds = ref<number[]>([]);
     
     const formData = reactive({
       name: '',
@@ -117,22 +145,79 @@ export default defineComponent({
     });
     
     const isEditing = !!props.itemToEdit;
+
+    const fetchTagTypes = async () => {
+      tagTypesLoading.value = true;
+      tagTypesError.value = null;
+      try {
+        localAvailableTagTypes.value = await itemTagTypeApi.getItemTagTypes(props.worldId);
+      } catch (err: any) {
+        console.error('Error fetching item tag types:', err);
+        tagTypesError.value = err.message || 'Failed to load item tags';
+        localAvailableTagTypes.value = [];
+      } finally {
+        tagTypesLoading.value = false;
+      }
+    };
     
-    // Initialize form if editing
-    if (props.itemToEdit) {
-      formData.name = props.itemToEdit.name;
-      formData.description = props.itemToEdit.description || '';
-      formData.character_id = props.itemToEdit.character_id || null;
-      formData.location_id = props.itemToEdit.location_id || null;
-    }
+    const initializeForm = () => {
+       if (props.itemToEdit) {
+        formData.name = props.itemToEdit.name;
+        formData.description = props.itemToEdit.description || '';
+        formData.character_id = props.itemToEdit.character_id || null;
+        formData.location_id = props.itemToEdit.location_id || null;
+        selectedTagTypeIds.value = props.itemToEdit.tags?.map((tag: ItemTag) => tag.item_tag_type_id) || [];
+      } else {
+        formData.name = '';
+        formData.description = '';
+        formData.character_id = null;
+        formData.location_id = null;
+        selectedTagTypeIds.value = [];
+      }
+    };
+
+    onMounted(() => {
+        fetchTagTypes();
+        initializeForm();
+    });
+
+    watch(() => props.itemToEdit, () => {
+        fetchTagTypes();
+        initializeForm();
+    });
+
+    const syncTags = async (itemId: number) => {
+        tagSyncError.value = null;
+        const originalTagTypeIds = props.itemToEdit?.tags?.map((t: ItemTag) => t.item_tag_type_id) || [];
+        const currentTagTypeIdsSet = new Set(selectedTagTypeIds.value);
+        const originalTagTypeIdsSet = new Set(originalTagTypeIds);
+
+        const tagsToAdd = selectedTagTypeIds.value.filter((id: number) => !originalTagTypeIdsSet.has(id));
+        const tagsToRemove = originalTagTypeIds.filter((id: number) => !currentTagTypeIdsSet.has(id));
+
+        const addPromises = tagsToAdd.map((tagTypeId: number) => 
+            itemTagApi.addItemTagToItem(itemId, tagTypeId)
+        );
+        const removePromises = tagsToRemove.map((tagTypeId: number) => 
+            itemTagApi.removeItemTagFromItem(itemId, tagTypeId)
+        );
+
+        try {
+            await Promise.all([...addPromises, ...removePromises]);
+        } catch (err: any) {
+            console.error("Error syncing item tags:", err);
+            tagSyncError.value = `Item saved, but failed to sync tags: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+        }
+    };
     
     const handleSubmit = async () => {
       error.value = null;
+      tagSyncError.value = null;
       isSubmitting.value = true;
+      let savedItemId: number | null = null;
       
       try {
         if (isEditing && props.itemToEdit) {
-          // Update existing item
           const updateData: ItemUpdate = {
             name: formData.name || undefined,
             description: formData.description || null,
@@ -140,10 +225,9 @@ export default defineComponent({
             location_id: formData.location_id
           };
           if (!formData.name) delete updateData.name; 
-
-          await itemsApi.updateItem(props.itemToEdit.id, updateData);
+          const updatedItem = await itemsApi.updateItem(props.itemToEdit.id, updateData);
+          savedItemId = updatedItem.id;
         } else {
-          // Create new item
           if (!formData.name) {
              error.value = 'Item name is required.';
              isSubmitting.value = false;
@@ -156,13 +240,20 @@ export default defineComponent({
             location_id: formData.location_id,
             world_id: props.worldId
           };
-          await itemsApi.createItem(createData);
+          const newItem = await itemsApi.createItem(createData);
+          savedItemId = newItem.id;
         }
         
+        if (savedItemId) {
+          await syncTags(savedItemId);
+        }
+
         emit('saved');
       } catch (err: any) {
         console.error('Error saving item:', err);
-        error.value = err.response?.data?.detail || err.message || 'Failed to save item';
+        if (!tagSyncError.value) {
+          error.value = err.response?.data?.detail || err.message || 'Failed to save item';
+        }
       } finally {
         isSubmitting.value = false;
       }
@@ -173,14 +264,18 @@ export default defineComponent({
       isSubmitting,
       error,
       isEditing,
-      handleSubmit
+      handleSubmit,
+      localAvailableTagTypes,
+      tagTypesLoading,
+      tagTypesError,
+      selectedTagTypeIds,
+      tagSyncError,
     };
   }
 });
 </script>
 
 <style scoped>
-/* Styly jsou velmi podobné CreateLocationForm */
 .create-item-form {
   padding: 1.5rem;
 }
@@ -224,7 +319,7 @@ textarea.form-control {
 }
 
 select.form-control {
-    appearance: none; /* Optional: for custom arrow styling */
+    appearance: none;
 }
 
 .error-message {
@@ -271,5 +366,34 @@ select.form-control {
 .btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.tag-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.tag-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tag-checkbox input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+.loading-state-inline,
+.empty-state-inline,
+.error-message-inline {
+  font-size: 0.9em;
+  color: #666;
+  padding: 0.2rem 0;
+}
+
+.error-message-inline {
+  color: #dc3545;
 }
 </style> 

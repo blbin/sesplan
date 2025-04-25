@@ -33,3 +33,7 @@ from .crud_location_tag import add_tag_to_location, remove_tag_from_location, ge
 from .crud_character_tag_type import get_character_tag_type, get_character_tag_types_by_world, create_character_tag_type, update_character_tag_type, delete_character_tag_type
 # Import CharacterTag CRUD
 from .crud_character_tag import add_tag_to_character, remove_tag_from_character
+# Import ItemTagType CRUD
+from .crud_item_tag_type import get_item_tag_type, get_item_tag_types_by_world, create_item_tag_type, update_item_tag_type, delete_item_tag_type
+# Import ItemTag CRUD
+from .crud_item_tag import add_tag_to_item, remove_tag_from_item

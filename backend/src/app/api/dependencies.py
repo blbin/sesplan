@@ -169,3 +169,24 @@ async def verify_character_permission(
 
     # If neither condition is met, raise forbidden
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions to modify this character") 
+
+# --- New Dependency/Helper Function ---
+
+def check_world_membership(db: Session, world_id: int, user_id: int):
+    """Checks if a user is a member of a world, raises 403 if not."""
+    membership = db.query(WorldUser).filter(
+        WorldUser.world_id == world_id,
+        WorldUser.user_id == user_id
+    ).first()
+    
+    if not membership:
+        # If world exists but user is not a member, or if world doesn't exist
+        # and membership is required anyway, always return 403.
+        # The existence of the world itself should be checked by the calling endpoint if needed.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="User does not have permission to access resources in this world"
+        )
+    # If membership exists, do nothing (permission granted for this check)
+
+# --- End of New Dependency/Helper Function --- 

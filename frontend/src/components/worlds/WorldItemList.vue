@@ -13,11 +13,19 @@
       <ul class="item-list">
         <li v-for="item in items" :key="item.id" class="item-list-item">
           <div class="item-info">
-            <span class="item-name">{{ item.name }}</span>
+            <router-link :to="{ name: 'ItemDetail', params: { itemId: item.id } }" class="item-name">
+              {{ item.name }}
+            </router-link>
             <div class="item-details">
               <span v-if="item.description" class="item-description">{{ item.description }}</span>
               <span v-if="item.character_id" class="item-relation">Character: {{ getCharacterName(item.character_id) }}</span>
               <span v-if="item.location_id" class="item-relation">Location: {{ getLocationName(item.location_id) }}</span>
+              <div v-if="item.tags && item.tags.length > 0" class="item-tags">
+                <strong>Tags:</strong>
+                <span v-for="tag in item.tags" :key="tag.id" class="tag-chip">
+                  {{ tag.tag_type?.name || 'Unknown Tag' }} 
+                </span>
+              </div>
               <span class="item-date">Created: {{ formatDateTime(item.created_at) }}</span>
             </div>
           </div>
@@ -227,12 +235,19 @@ export default defineComponent({
   margin-bottom: 0.5rem;
   color: #212529;
   font-size: 1.1rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.item-name:hover {
+  color: #0056b3;
+  text-decoration: underline;
 }
 
 .item-details {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem; /* Slightly increased gap */
 }
 
 .item-description {
@@ -246,10 +261,32 @@ export default defineComponent({
   font-style: italic;
 }
 
+.item-tags {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.item-tags strong {
+  margin-right: 0.5rem;
+}
+
+.tag-chip {
+  display: inline-block;
+  background-color: #e0e0e0; /* Light gray background */
+  color: #333;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px; /* Pill shape */
+  font-size: 0.8rem;
+  margin-right: 0.3rem;
+  margin-bottom: 0.3rem; /* Allow wrapping */
+  white-space: nowrap;
+}
+
 .item-date {
   font-size: 0.8rem;
-  color: #adb5bd;
-  margin-top: 0.25rem;
+  color: #888;
+  margin-top: 0.2rem; /* Ensure date is below tags */
 }
 
 .item-actions {
