@@ -86,6 +86,7 @@
             :characters="[]" 
             :locations="locations"
             :itemToEdit="itemToEdit"
+            :availableTagTypes="itemTagTypes"
             @saved="handleItemSaved"
             @cancel="closeItemModal"
           />
@@ -106,9 +107,11 @@ import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
 import * as locationsApi from '@/services/api/locations';
 import * as itemsApi from '@/services/api/items';
+import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
 import type { World } from '@/types/world';
 import type { Location } from '@/types/location';
 import type { Item } from '@/types/item';
+import type { ItemTagType } from '@/types/itemTagType';
 import WorldCharacterList from '@/components/worlds/WorldCharacterList.vue';
 import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
@@ -134,9 +137,12 @@ export default defineComponent({
     const world = ref<World | null>(null);
     const locations = ref<Location[]>([]);
     const items = ref<Item[]>([]);
+    const itemTagTypes = ref<ItemTagType[]>([]);
     const worldLoading = ref(true);
     const locationsLoading = ref(false);
     const itemsLoading = ref(false);
+    const itemTagTypesLoading = ref(false);
+    const itemTagTypesError = ref<string | undefined>(undefined);
     const worldError = ref<string | undefined>(undefined);
     const locationsError = ref<string | undefined>(undefined);
     const itemsError = ref<string | undefined>(undefined);
@@ -156,15 +162,19 @@ export default defineComponent({
       world.value = null;
       locations.value = [];
       items.value = [];
+      itemTagTypes.value = [];
       locationsError.value = undefined;
       itemsError.value = undefined;
+      itemTagTypesError.value = undefined;
       locationsLoading.value = false;
       itemsLoading.value = false;
+      itemTagTypesLoading.value = false;
 
       try {
         world.value = await worldsApi.getWorldById(id);
         fetchWorldLocations(id);
-        fetchWorldItems(id);     
+        fetchWorldItems(id);
+        fetchItemTagTypes(id);
       } catch (err: any) {
         console.error("Fetch World Error:", err);
         if (err.response?.status === 404) {
@@ -215,6 +225,20 @@ export default defineComponent({
       }
     };
 
+    const fetchItemTagTypes = async (id: number) => {
+      itemTagTypesLoading.value = true;
+      itemTagTypesError.value = undefined;
+      itemTagTypes.value = [];
+      try {
+        itemTagTypes.value = await itemTagTypeApi.getItemTagTypes(id);
+      } catch (err: any) {
+        console.error("Fetch Item Tag Types Error:", err);
+        itemTagTypesError.value = `Failed to load item tag types: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+      } finally {
+        itemTagTypesLoading.value = false;
+      }
+    };
+
     const handleLocationsUpdated = () => {
       if (world.value) {
         fetchWorldLocations(world.value.id);
@@ -224,6 +248,7 @@ export default defineComponent({
     const handleItemsUpdated = () => {
       if (world.value) {
         fetchWorldItems(world.value.id);
+        fetchItemTagTypes(world.value.id);
       }
     };
 
@@ -301,9 +326,12 @@ export default defineComponent({
       world,
       locations,
       items,
+      itemTagTypes,
       worldLoading,
       locationsLoading,
       itemsLoading,
+      itemTagTypesLoading,
+      itemTagTypesError,
       worldError,
       locationsError,
       itemsError,
