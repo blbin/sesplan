@@ -30,3 +30,9 @@ from .character_tag import CharacterTag
 from .item_tag_type import ItemTagType, ItemTagTypeCreate, ItemTagTypeUpdate
 # Import ItemTag schema (if needed, e.g., for embedding in Item)
 from .item_tag import ItemTag
+# Import Organization schemas
+from .organization import Organization, OrganizationCreate, OrganizationUpdate
+# Import OrganizationTagType schemas
+from .organization_tag_type import OrganizationTagType, OrganizationTagTypeCreate, OrganizationTagTypeUpdate, OrganizationTagTypeBase
+# Import OrganizationTag schema
+from .organization_tag import OrganizationTag

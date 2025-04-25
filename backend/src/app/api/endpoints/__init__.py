@@ -16,6 +16,8 @@ from . import locations
 from . import items
 # Import routeru pro availability
 from . import availability
+# Import routeru pro organizations
+from . import organizations
 # Import routeru pro location_tag_types
 from . import location_tag_types
 # Import routerů pro character tags
@@ -24,6 +26,8 @@ from . import character_tags
 # Import routerů pro item tags
 from . import item_tag_types
 from . import item_tags
+# Import routeru pro organization tag types
+from . import organization_tag_types
 
 router = APIRouter()
 
@@ -40,6 +44,8 @@ router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(locations.router, prefix="/locations", tags=["locations"])
 # Přidání routeru pro itemy
 router.include_router(items.router, prefix="/items", tags=["items"])
+# Přidání routeru pro organizations
+router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 # Přidání routeru pro location_tag_types
 router.include_router(location_tag_types.router, prefix="/worlds/{world_id}/location-tag-types", tags=["location-tag-types"])
 # Přidání routeru pro character_tag_types
@@ -50,6 +56,12 @@ router.include_router(character_tags.router, prefix="/characters/{character_id}/
 router.include_router(item_tag_types.router, prefix="/worlds/{world_id}/item-tag-types", tags=["item-tag-types"])
 # Přidání routeru pro item_tags
 router.include_router(item_tags.router, prefix="/items/{item_id}/tags", tags=["item-tags"])
+# Přidání routeru pro organization_tag_types
+router.include_router(
+    organization_tag_types.router, 
+    prefix="/worlds/{world_id}/organization-tag-types", 
+    tags=["organization-tag-types"]
+)
 
 # Attach the availability router directly to the main router
 router.include_router(

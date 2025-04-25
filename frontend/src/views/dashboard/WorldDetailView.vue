@@ -26,6 +26,7 @@
       <v-tabs v-model="currentTab" background-color="transparent" color="primary" grow>
         <v-tab value="characters">Characters</v-tab>
         <v-tab value="locations">Locations</v-tab>
+        <v-tab value="organizations">Organizations</v-tab>
         <v-tab value="items">Items</v-tab>
       </v-tabs>
 
@@ -45,6 +46,20 @@
             @locations-updated="handleLocationsUpdated"
             @open-add-location="openAddLocationModal"
             @edit-location="openEditLocationModal"
+          />
+        </v-window-item>
+
+        <v-window-item value="organizations">
+          <WorldOrganizationList
+            v-if="world && isCurrentUserOwner !== null"
+            :organizations="organizations"
+            :worldId="Number(worldId)"
+            :canManage="isCurrentUserOwner"
+            :loading="organizationsLoading"
+            :error="organizationsError"
+            @organizations-updated="handleOrganizationsUpdated"
+            @open-add-organization="openAddOrganizationModal"
+            @edit-organization="openEditOrganizationModal"
           />
         </v-window-item>
 
@@ -78,6 +93,19 @@
         </div>
       </div>
 
+      <!-- Add/Edit Organization Form Modal -->
+      <div v-if="showOrganizationForm" class="modal-overlay">
+        <div class="modal-content">
+          <CreateOrganizationForm
+            :worldId="Number(worldId)"
+            :organizations="organizations"
+            :organizationToEdit="organizationToEdit"
+            @saved="handleOrganizationSaved"
+            @cancel="closeOrganizationModal"
+          />
+        </div>
+      </div>
+
       <!-- Add/Edit Item Form Modal -->
       <div v-if="showItemForm" class="modal-overlay">
         <div class="modal-content">
@@ -106,17 +134,22 @@
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
 import * as locationsApi from '@/services/api/locations';
+import * as organizationsApi from '@/services/api/organizations';
 import * as itemsApi from '@/services/api/items';
 import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
 import type { World } from '@/types/world';
 import type { Location } from '@/types/location';
+import type { Organization } from '@/types/organization';
 import type { Item } from '@/types/item';
 import type { ItemTagType } from '@/types/itemTagType';
 import WorldCharacterList from '@/components/worlds/WorldCharacterList.vue';
 import WorldLocationList from '@/components/worlds/WorldLocationList.vue';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
+import WorldOrganizationList from '@/components/dashboard/worlds/WorldOrganizationList.vue';
+import CreateOrganizationForm from '@/components/dashboard/worlds/CreateOrganizationForm.vue';
 import WorldItemList from '@/components/worlds/WorldItemList.vue';
 import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
+import { formatDateTime, formatDate } from '@/utils/dateFormatter';
 
 export default defineComponent({
   name: 'WorldDetailView',
@@ -124,6 +157,8 @@ export default defineComponent({
     WorldCharacterList,
     WorldLocationList,
     CreateLocationForm,
+    WorldOrganizationList,
+    CreateOrganizationForm,
     WorldItemList,
     CreateItemForm,
   },
@@ -136,19 +171,24 @@ export default defineComponent({
   setup(props) {
     const world = ref<World | null>(null);
     const locations = ref<Location[]>([]);
+    const organizations = ref<Organization[]>([]);
     const items = ref<Item[]>([]);
     const itemTagTypes = ref<ItemTagType[]>([]);
     const worldLoading = ref(true);
     const locationsLoading = ref(false);
+    const organizationsLoading = ref(false);
     const itemsLoading = ref(false);
     const itemTagTypesLoading = ref(false);
     const itemTagTypesError = ref<string | undefined>(undefined);
     const worldError = ref<string | undefined>(undefined);
     const locationsError = ref<string | undefined>(undefined);
+    const organizationsError = ref<string | undefined>(undefined);
     const itemsError = ref<string | undefined>(undefined);
     const showLocationForm = ref(false);
+    const showOrganizationForm = ref(false);
     const showItemForm = ref(false);
     const locationToEdit = ref<Location | null>(null);
+    const organizationToEdit = ref<Organization | null>(null);
     const itemToEdit = ref<Item | null>(null);
     const currentTab = ref('characters');
 
@@ -161,18 +201,22 @@ export default defineComponent({
       worldError.value = undefined;
       world.value = null;
       locations.value = [];
+      organizations.value = [];
       items.value = [];
       itemTagTypes.value = [];
       locationsError.value = undefined;
+      organizationsError.value = undefined;
       itemsError.value = undefined;
       itemTagTypesError.value = undefined;
       locationsLoading.value = false;
+      organizationsLoading.value = false;
       itemsLoading.value = false;
       itemTagTypesLoading.value = false;
 
       try {
         world.value = await worldsApi.getWorldById(id);
         fetchWorldLocations(id);
+        fetchWorldOrganizations(id);
         fetchWorldItems(id);
         fetchItemTagTypes(id);
       } catch (err: any) {
@@ -204,6 +248,24 @@ export default defineComponent({
         }
       } finally {
         locationsLoading.value = false;
+      }
+    };
+
+    const fetchWorldOrganizations = async (id: number) => {
+      organizationsLoading.value = true;
+      organizationsError.value = undefined;
+      organizations.value = [];
+      try {
+        organizations.value = await organizationsApi.getOrganizationsByWorld(id);
+      } catch (err: any) {
+        console.error("Fetch World Organizations Error:", err);
+        if (err.response?.status === 403) {
+          organizationsError.value = 'You do not have permission to view organizations in this world.';
+        } else {
+          organizationsError.value = `Failed to load organizations: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+        }
+      } finally {
+        organizationsLoading.value = false;
       }
     };
 
@@ -245,6 +307,12 @@ export default defineComponent({
       }
     };
 
+    const handleOrganizationsUpdated = () => {
+      if (world.value) {
+        fetchWorldOrganizations(world.value.id);
+      }
+    };
+
     const handleItemsUpdated = () => {
       if (world.value) {
         fetchWorldItems(world.value.id);
@@ -272,6 +340,26 @@ export default defineComponent({
       locationToEdit.value = null;
     };
 
+    const openAddOrganizationModal = () => {
+      organizationToEdit.value = null;
+      showOrganizationForm.value = true;
+    };
+
+    const openEditOrganizationModal = (organization: Organization) => {
+      organizationToEdit.value = { ...organization };
+      showOrganizationForm.value = true;
+    };
+
+    const closeOrganizationModal = () => {
+      showOrganizationForm.value = false;
+      organizationToEdit.value = null;
+    };
+
+    const handleOrganizationSaved = () => {
+      closeOrganizationModal();
+      handleOrganizationsUpdated();
+    };
+
     const openAddItemModal = () => {
       itemToEdit.value = null;
       showItemForm.value = true;
@@ -282,23 +370,14 @@ export default defineComponent({
       showItemForm.value = true;
     };
 
-    const handleItemSaved = () => {
-      closeItemModal();
-      handleItemsUpdated();
-    };
-
     const closeItemModal = () => {
       showItemForm.value = false;
       itemToEdit.value = null;
     };
 
-    const formatDate = (dateString: string | null | undefined): string => {
-      if (!dateString) return 'N/A';
-      try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
-        return String(dateString);
-      }
+    const handleItemSaved = () => {
+      closeItemModal();
+      handleItemsUpdated();
     };
 
     onMounted(() => {
@@ -310,48 +389,57 @@ export default defineComponent({
        }
     });
 
-    watch(() => props.worldId, (newId, oldId) => {
-      if (newId && newId !== oldId) {
+    watch(
+      () => props.worldId,
+      (newId) => {
+        if (newId) {
         fetchWorldDetails(Number(newId));
-      } else if (!newId) {
-          world.value = null;
-          locations.value = [];
-          items.value = [];
-          worldError.value = "World ID is missing.";
-          worldLoading.value = false;
-      }
-    });
+        }
+      },
+      { immediate: true }
+    );
 
     return {
       world,
       locations,
+      organizations,
       items,
       itemTagTypes,
       worldLoading,
       locationsLoading,
+      organizationsLoading,
       itemsLoading,
       itemTagTypesLoading,
       itemTagTypesError,
       worldError,
       locationsError,
+      organizationsError,
       itemsError,
       showLocationForm,
-      locationToEdit,
+      showOrganizationForm,
       showItemForm,
+      locationToEdit,
+      organizationToEdit,
       itemToEdit,
       currentTab,
       isCurrentUserOwner,
       formatDate,
+      formatDateTime,
       handleLocationsUpdated,
+      handleOrganizationsUpdated,
       handleItemsUpdated,
       openAddLocationModal,
       openEditLocationModal,
-      handleLocationSaved,
       closeLocationModal,
+      handleLocationSaved,
+      openAddOrganizationModal,
+      openEditOrganizationModal,
+      closeOrganizationModal,
+      handleOrganizationSaved,
       openAddItemModal,
       openEditItemModal,
-      handleItemSaved,
       closeItemModal,
+      handleItemSaved,
       worldId: computed(() => props.worldId)
     };
   },

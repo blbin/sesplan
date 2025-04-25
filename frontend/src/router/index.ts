@@ -57,6 +57,15 @@ const routes: RouteRecordRaw[] = [
         props: route => ({ locationId: Number(route.params.locationId) }),
         meta: { requiresAuth: true }
       },
+      // Nová routa pro OrganizationDetail
+      {
+        path: 'organizations/:organizationId', // Cesta je přímo pod /dashboard
+        name: 'OrganizationDetail',
+        component: () => import('@/views/dashboard/OrganizationDetailView.vue'),
+        // Předáváme jen organizationId
+        props: route => ({ organizationId: Number(route.params.organizationId) }),
+        meta: { requiresAuth: true }
+      },
       // Nová routa pro ItemDetail
       {
         path: 'items/:itemId', // Cesta je přímo pod /dashboard

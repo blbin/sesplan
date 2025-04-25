@@ -12,6 +12,7 @@ from .endpoints import (
     journal_entries,
     sessions,
     locations,
+    organizations,
     items,
     availability,
     events,
@@ -34,6 +35,9 @@ api_router.include_router(sessions.router, prefix="/sessions", tags=["sessions"]
 api_router.include_router(locations.router, prefix="/locations", tags=["locations"])
 api_router.include_router(items.router, prefix="/items", tags=["items"])
 api_router.include_router(availability.router, prefix="/availability", tags=["availability"])
+
+# Add organization router
+api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 
 # Vnoření Event routeru pod World router
 # POZOR: Campaigns, Sessions, Locations, Items by také měly být pravděpodobně vnořené!
