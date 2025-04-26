@@ -1,30 +1,37 @@
 <template>
-  <section class="characters-section">
-    <h2>Characters in this World</h2>
-    <!-- Loading state for characters -->
-    <p v-if="charactersLoading" class="loading-message small">Loading characters...</p>
-    <!-- Error state for characters (including permission denied) -->
-    <p v-else-if="charactersError" class="error-message small">{{ charactersError }}</p>
-    <!-- No characters found -->
-    <p v-else-if="characters.length === 0">No characters found in this world.</p>
-    <!-- Character list -->
-    <ul v-else class="item-list">
-      <li v-for="character in characters" :key="character.id" class="item-list-item">
-         <div class="item-info">
-            <h3>
-                <router-link :to="{ name: 'CharacterDetail', params: { characterId: character.id } }" class="item-link">
-                    {{ character.name }}
+  <section class="characters-section detail-section">
+    <!-- Remove the internal section header -->
+    <!-- 
+    <div class="section-header">
+      <h2>Characters</h2>
+      <button v-if="canManage" @click="$emit('open-add-character')" class="btn btn-primary btn-sm">Add Character</button>
+    </div>
+     -->
+    
+    <p v-if="charactersLoading" class="loading-state">Loading characters...</p>
+    <p v-else-if="charactersError" class="error-message">{{ charactersError }}</p>
+    <p v-else-if="characters.length === 0" class="empty-state">No characters found in this world.</p>
+    <ul v-else class="entity-list">
+      <li v-for="character in characters" :key="character.id" class="entity-list-item">
+         <div class="entity-info">
+           <router-link :to="{ name: 'CharacterDetail', params: { characterId: character.id } }" class="entity-name-link">
+             <span class="entity-name">{{ character.name }}</span>
                 </router-link>
-            </h3>
-            <p>{{ character.description || 'No description' }}</p>
-            <!-- TODO: Add character status/class/level here? -->
+           <div class="entity-details">
+              <div 
+                v-if="character.description"
+                class="entity-description-preview" 
+                v-html="renderDescriptionPreview(character.description)"
+              ></div>
+              <span v-else class="entity-description-preview text-muted"><em>No description</em></span>
+              <!-- Add tags or other info if available -->
+              <span class="entity-date">Created: {{ formatDate(character.created_at) }}</span>
+            </div>
          </div>
-         <!-- Actions for character (e.g., quick edit/delete) could go here if needed and if user has permissions -->
-         <!-- <div class="item-actions" v-if="canManageCharacters"> ... </div> -->
+         <!-- Actions Placeholder -->
+         <!-- <div class="entity-actions"> ... </div> -->
       </li>
     </ul>
-    <!-- TODO: Add button to create character if user has permission -->
-    <!-- <div class="section-actions" v-if="canManageCharacters"> <button>Add Character</button> </div> -->
   </section>
 </template>
 
@@ -32,17 +39,36 @@
 import { ref, watch, defineProps, toRefs } from 'vue';
 import * as charactersApi from '@/services/api/characters';
 import type { Character } from '@/types/character';
+import MarkdownIt from 'markdown-it'; // Import markdown-it
+import { formatDate } from '@/utils/dateFormatter'; // Import formatDate
 
 const props = defineProps<{
   worldId: number | string;
-  // TODO: Potentially add a 'canManage' prop if actions are added
+  // Remove unused canManage prop
+  // canManage: boolean; 
 }>();
 
+// Remove canManage from toRefs
 const { worldId } = toRefs(props);
 
 const characters = ref<Character[]>([]);
 const charactersLoading = ref(false);
 const charactersError = ref<string | undefined>(undefined);
+
+// Initialize markdown-it instance
+const md = new MarkdownIt({ html: false, linkify: true });
+
+// Method to render description preview
+const renderDescriptionPreview = (markdown: string | null): string => {
+  if (!markdown) {
+    return '';
+  }
+  const maxLength = 100;
+  let truncatedMd = markdown.length > maxLength 
+    ? markdown.substring(0, maxLength) + '...' 
+    : markdown;
+  return md.render(truncatedMd);
+};
 
 const fetchWorldCharacters = async (id: number | string) => {
     const numericWorldId = Number(id);
@@ -87,87 +113,156 @@ watch(
 </script>
 
 <style scoped>
-/* Styles specific to the character list section */
-.characters-section {
-  margin-bottom: 2rem; /* Spacing below the section */
-}
-
-.characters-section h2 {
+/* Adopt styles from WorldLocationList, potentially using more generic class names */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #eee;
-  font-size: 1.2rem; /* Consistent heading size */
-  color: #495057;
 }
 
-.item-list {
+.detail-section h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.entity-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #fff;
 }
 
-.item-list-item {
-  display: flex; /* Use flexbox for alignment */
+.entity-list-item {
+  display: flex;
   justify-content: space-between;
-  align-items: center; /* Align items vertically */
-  padding: 1rem 0;
+  align-items: flex-start;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #e9ecef;
 }
-.item-list-item:last-child {
+
+.entity-list-item:last-child {
     border-bottom: none;
 }
 
-.item-info {
-    flex-grow: 1; /* Allow info to take up space */
-    margin-right: 1rem; /* Space before potential actions */
+.entity-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-right: 1rem;
 }
 
-.item-info h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.1rem;
-}
-
-.item-info p {
-  margin: 0;
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.item-link {
+.entity-name-link {
     text-decoration: none;
-    color: #007bff; /* Link color */
-    font-weight: 500;
+    color: var(--v-theme-primary, #7851a9); /* Use primary theme color */
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-block; /* Needed for margin */
+    margin-bottom: 0.25rem; /* Space below name */
 }
-.item-link:hover {
+
+.entity-name-link:hover .entity-name {
     text-decoration: underline;
 }
 
-/* Reusing shared loading/error styles from parent/global */
-.loading-message.small,
-.error-message.small {
-    padding: 1rem 0; /* Adjusted padding */
-    font-size: 1rem;
-    text-align: left;
+.entity-name {
+  font-size: 1.1rem;
 }
 
-.loading-message.small {
+.entity-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.entity-description-preview {
+  line-height: 1.4;
+}
+
+.entity-description-preview :deep(p) {
+    margin: 0;
+    display: inline;
+}
+
+.entity-date {
+  font-size: 0.8rem;
+  color: #adb5bd;
+  margin-top: 0.25rem;
+}
+
+.text-muted {
     color: #6c757d;
+    font-style: italic;
 }
 
-.error-message.small {
+.loading-state,
+.error-message,
+.empty-state {
+  padding: 1rem; /* Adjusted padding */
+  text-align: center; /* Center align messages */
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border: 1px dashed #dee2e6; /* Use dashed border for distinction */
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+}
+
+.error-message {
   color: #dc3545; 
-  /* Removed background/border, assuming simple text message is enough here */
+  border-color: #f5c6cb;
+  background-color: #f8d7da;
 }
 
-/* Styles for potential actions (if added later) */
+/* Placeholder for actions if needed later */
 /*
-.item-actions {
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.section-actions {
-    margin-top: 1rem;
-    text-align: right;
+.entity-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 */
+
+/* Ensure button styles are consistent if not globally defined */
+.btn {
+  /* Basic button resets or styles */
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-primary:hover {
+  color: #fff;
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.2rem;
+}
 </style> 

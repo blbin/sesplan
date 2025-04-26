@@ -1,12 +1,5 @@
 <template>
   <section class="location-list-section detail-section">
-    <div class="section-header">
-      <h2>Locations</h2>
-      <button v-if="canManage" @click="$emit('open-add-location')" class="btn btn-primary btn-sm">
-        Add Location
-      </button>
-    </div>
-    
     <div v-if="loading" class="loading-state">Loading locations...</div>
     <div v-else-if="error" class="error-message">{{ error }}</div>
     <div v-else-if="locations.length > 0">
@@ -14,10 +7,15 @@
         <li v-for="location in locations" :key="location.id" class="location-item">
           <div class="location-info">
             <span @click="goToLocationDetail(location.id)" class="location-name-link">
-            <span class="location-name">{{ location.name }}</span>
+              <span class="location-name">{{ location.name }}</span>
             </span>
             <div class="location-details">
-              <span v-if="location.description" class="location-description">{{ location.description }}</span>
+              <div 
+                v-if="location.description"
+                class="location-description-preview" 
+                v-html="renderDescriptionPreview(location.description)"
+              ></div>
+              <span v-else class="location-description-preview text-muted"><em>No description</em></span>
               <span v-if="isChildLocation(location)" class="parent-info">
                 Parent: {{ getParentName(location) }}
               </span>
@@ -74,12 +72,13 @@ import { defineComponent, ref, type PropType } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Location } from '@/types/location';
 import * as locationsApi from '@/services/api/locations';
-import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue'; // Import the reusable modal
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue';
+import MarkdownIt from 'markdown-it';
 
 export default defineComponent({
   name: 'WorldLocationList',
   components: {
-      ConfirmDeleteModal, // Register the modal component
+      ConfirmDeleteModal,
   },
   props: {
     locations: {
@@ -111,13 +110,15 @@ export default defineComponent({
     const isDeleting = ref(false);
     const deleteError = ref<string | null>(null);
 
+    // Initialize markdown-it instance (only once)
+    const md = new MarkdownIt({ html: false, linkify: true });
+
     const isChildLocation = (location: Location): boolean => {
       return location.parent_location_id !== null;
     };
 
     const getParentName = (location: Location): string => {
       if (!location.parent_location_id) return '';
-      
       const parent = props.locations.find(loc => loc.id === location.parent_location_id);
       return parent ? parent.name : `Unknown (ID: ${location.parent_location_id})`;
     };
@@ -127,12 +128,13 @@ export default defineComponent({
       return props.locations.some(loc => loc.parent_location_id === location.id);
     };
     
-    const formatDateTime = (dateTimeString: string | null): string => {
+    const formatDateTime = (dateTimeString: string | null | undefined): string => {
       if (!dateTimeString) return 'Unknown date';
       try {
+        // Using toLocaleDateString for consistency with other views
         return new Date(dateTimeString).toLocaleDateString();
       } catch (e) {
-        return dateTimeString;
+        return String(dateTimeString); // Fallback
       }
     };
 
@@ -150,10 +152,8 @@ export default defineComponent({
 
     const executeDelete = async () => {
       if (!locationToDelete.value) return;
-      
       isDeleting.value = true;
       deleteError.value = null;
-      
       try {
         await locationsApi.deleteLocation(locationToDelete.value.id);
         emit('locations-updated');
@@ -168,18 +168,30 @@ export default defineComponent({
     };
 
     const goToLocationDetail = (locationId: number) => {
-      console.log(`Navigating to location detail: worldId=${props.worldId}, locationId=${locationId}`);
-      router.push({ 
-        name: 'LocationDetail',
-        params: { locationId: locationId },
-      });
+      router.push({ name: 'LocationDetail', params: { locationId: locationId } });
     };
 
+    // Method to render description preview
+    const renderDescriptionPreview = (markdown: string | null): string => {
+      if (!markdown) {
+        return '';
+      }
+      const maxLength = 100;
+      let truncatedMd = markdown.length > maxLength 
+        ? markdown.substring(0, maxLength) + '...' 
+        : markdown;
+      return md.render(truncatedMd);
+    };
+
+    // Return all needed values for the template
     return {
+      // Props are automatically available in template
+      // Refs
       showDeleteConfirm,
       locationToDelete,
       isDeleting,
       deleteError,
+      // Methods / Computed
       isChildLocation,
       getParentName,
       hasChildren,
@@ -188,6 +200,7 @@ export default defineComponent({
       cancelDelete,
       executeDelete,
       goToLocationDetail,
+      renderDescriptionPreview,
     };
   },
 });

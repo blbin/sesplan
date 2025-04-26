@@ -1,7 +1,5 @@
 <template>
   <div class="create-location-form">
-    <h3>{{ isEditing ? 'Edit Location' : 'Add Location' }}</h3>
-    
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
         <label for="location-name">Location Name *</label>
@@ -19,7 +17,7 @@
         <MarkdownEditor 
           id="location-description"
           v-model="formData.description" 
-          class="form-control" 
+          class="form-control"
         />
       </div>
       

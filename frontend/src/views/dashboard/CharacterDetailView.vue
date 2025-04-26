@@ -621,7 +621,7 @@ export default defineComponent({
        }
      };
 
-    // Tag Type Management Modal Functions
+     // Tag Type Management Modal Functions
     const openAddTagTypeDialog = () => {
       editingTagType.value = null;
       tagTypeName.value = '';

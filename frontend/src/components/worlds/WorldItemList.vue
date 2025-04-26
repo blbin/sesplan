@@ -1,23 +1,31 @@
 <template>
   <section class="item-list-section detail-section">
+    <!-- Remove the internal section header -->
+    <!-- 
     <div class="section-header">
       <h2>Items</h2>
       <button v-if="canManage" @click="$emit('open-add-item')" class="btn btn-primary btn-sm">
         Add Item
       </button>
     </div>
+    -->
     
     <div v-if="loading" class="loading-state">Loading items...</div>
     <div v-else-if="error" class="error-message">{{ error }}</div>
     <div v-else-if="items.length > 0">
-      <ul class="item-list">
-        <li v-for="item in items" :key="item.id" class="item-list-item">
-          <div class="item-info">
-            <router-link :to="{ name: 'ItemDetail', params: { itemId: item.id } }" class="item-name">
-              {{ item.name }}
+      <ul class="entity-list">
+        <li v-for="item in items" :key="item.id" class="entity-list-item">
+          <div class="entity-info">
+            <router-link :to="{ name: 'ItemDetail', params: { itemId: item.id } }" class="entity-name-link">
+              <span class="entity-name">{{ item.name }}</span>
             </router-link>
-            <div class="item-details">
-              <span v-if="item.description" class="item-description">{{ item.description }}</span>
+            <div class="entity-details">
+              <div 
+                v-if="item.description"
+                class="entity-description-preview" 
+                v-html="renderDescriptionPreview(item.description)"
+              ></div>
+              <span v-else class="entity-description-preview text-muted"><em>No description</em></span>
               <span v-if="item.character_id" class="item-relation">Character: {{ getCharacterName(item.character_id) }}</span>
               <span v-if="item.location_id" class="item-relation">Location: {{ getLocationName(item.location_id) }}</span>
               <div v-if="item.tags && item.tags.length > 0" class="item-tags">
@@ -26,10 +34,10 @@
                   {{ tag.tag_type?.name || 'Unknown Tag' }} 
                 </span>
               </div>
-              <span class="item-date">Created: {{ formatDateTime(item.created_at) }}</span>
+              <span class="entity-date">Created: {{ formatDateTime(item.created_at) }}</span>
             </div>
           </div>
-          <div class="item-actions">
+          <div class="entity-actions">
             <button v-if="canManage" @click="$emit('edit-item', item)" class="btn-small btn-secondary">
               Edit
             </button>
@@ -62,6 +70,7 @@ import type { Character } from '@/types/character';
 import type { Location } from '@/types/location';
 import * as itemsApi from '@/services/api/items';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue'; // Import the reusable modal
+import MarkdownIt from 'markdown-it'; // Import markdown-it
 
 export default defineComponent({
   name: 'WorldItemList',
@@ -104,6 +113,21 @@ export default defineComponent({
     const itemToDelete = ref<Item | null>(null);
     const isDeleting = ref(false);
     const deleteError = ref<string | null>(null);
+
+    // Initialize markdown-it
+    const md = new MarkdownIt({ html: false, linkify: true });
+
+    // Method to render description preview
+    const renderDescriptionPreview = (markdown: string | null): string => {
+      if (!markdown) {
+        return '';
+      }
+      const maxLength = 100;
+      let truncatedMd = markdown.length > maxLength 
+        ? markdown.substring(0, maxLength) + '...' 
+        : markdown;
+      return md.render(truncatedMd);
+    };
 
     const getCharacterName = (characterId: number | null): string => {
       if (!characterId) return 'Unassigned';
@@ -172,14 +196,15 @@ export default defineComponent({
       requestDeleteConfirmation, // Expose the renamed function
       cancelDelete,
       executeDelete, // Expose the renamed function
+      renderDescriptionPreview, // Expose the method
     };
   },
 });
 </script>
 
 <style scoped>
-/* Použijeme velmi podobné styly jako WorldLocationList */
-.item-list-section {
+/* Adopt styles from WorldLocationList */
+.detail-section { /* Renamed from .item-list-section */
   margin-top: 2rem;
 }
 
@@ -194,77 +219,85 @@ export default defineComponent({
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #333;
 }
 
-.item-list {
+.entity-list { /* Renamed from .item-list */
   list-style: none;
   padding: 0;
   margin: 0;
   border: 1px solid #e9ecef;
   border-radius: 0.5rem;
   overflow: hidden;
+  background-color: #fff;
 }
 
-.item-list-item {
+.entity-list-item { /* Renamed from .item-list-item */
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
 }
 
-.item-list-item:hover {
-  background-color: #f8f9fa;
-}
-
-.item-list-item:last-child {
+.entity-list-item:last-child {
   border-bottom: none;
 }
 
-.item-info {
+.entity-info { /* Renamed from .item-info */
   display: flex;
   flex-direction: column;
   flex: 1;
-  margin-right: 1rem; /* Space before actions */
+  margin-right: 1rem;
 }
 
-.item-name {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #212529;
+/* Style for the clickable name link */
+.entity-name-link { /* Applied to router-link */
+    text-decoration: none;
+    color: var(--v-theme-primary, #7851a9);
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-block;
+    margin-bottom: 0.25rem;
+}
+
+.entity-name-link:hover .entity-name {
+    text-decoration: underline;
+}
+
+.entity-name { /* Applied to span inside link */
   font-size: 1.1rem;
-  text-decoration: none;
-  display: inline-block;
 }
 
-.item-name:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-.item-details {
+.entity-details { /* Renamed from .item-details */
   display: flex;
   flex-direction: column;
-  gap: 0.35rem; /* Slightly increased gap */
-}
-
-.item-description {
+  gap: 0.3rem;
   font-size: 0.9rem;
   color: #6c757d;
 }
 
-.item-relation {
+.entity-description-preview { /* Renamed from .item-description-preview */
+  line-height: 1.4;
+}
+
+.entity-description-preview :deep(p) {
+    margin: 0;
+    display: inline;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.item-relation { /* Keep specific name for clarity */
   font-size: 0.85rem;
-  color: #6c757d;
   font-style: italic;
 }
 
-.item-tags {
+.item-tags { /* Keep specific name */
   margin-top: 0.4rem;
   font-size: 0.85rem;
-  color: #555;
 }
 
 .item-tags strong {
@@ -273,151 +306,60 @@ export default defineComponent({
 
 .tag-chip {
   display: inline-block;
-  background-color: #e0e0e0; /* Light gray background */
+  background-color: #e0e0e0;
   color: #333;
   padding: 0.15rem 0.5rem;
-  border-radius: 12px; /* Pill shape */
+  border-radius: 12px;
   font-size: 0.8rem;
   margin-right: 0.3rem;
-  margin-bottom: 0.3rem; /* Allow wrapping */
+  margin-bottom: 0.3rem;
   white-space: nowrap;
 }
 
-.item-date {
+.entity-date { /* Renamed from .item-date */
   font-size: 0.8rem;
-  color: #888;
-  margin-top: 0.2rem; /* Ensure date is below tags */
+  color: #adb5bd;
+  margin-top: 0.25rem;
 }
 
-.item-actions {
+.entity-actions { /* Renamed from .item-actions */
   display: flex;
   gap: 0.5rem;
-  align-self: flex-start;
+  align-items: flex-start; /* Align with top of info */
 }
 
+/* Consistent button styles */
 .btn-small {
   padding: 0.375rem 0.75rem;
   font-size: 0.8rem;
   border-radius: 0.25rem;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
 }
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-danger:hover { background-color: #c82333; }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-primary:hover { background-color: #0069d9; }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #5a6268;
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #0069d9;
-}
-
-.btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
-  border-radius: 0.25rem;
-  border: none;
-  cursor: pointer;
-}
-
+/* Loading/Error/Empty states */
 .loading-state,
 .error-message,
 .empty-state {
-  padding: 1.5rem;
+  padding: 1rem;
   text-align: center;
-  border-radius: 0.5rem;
-  margin-top: 1rem;
-}
-
-.loading-state {
   color: #6c757d;
   background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  border: 1px dashed #dee2e6;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
 }
 
 .error-message {
-  color: #721c24;
+  color: #dc3545;
+  border-color: #f5c6cb;
   background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-}
-
-.empty-state {
-  color: #6c757d;
-  font-style: italic;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-}
-
-/* Modal styles - stejné jako u WorldLocationList */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 0.5rem;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.confirmation-modal h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #212529;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.3rem;
-  cursor: pointer;
-  border: none;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.mt-3 {
-  margin-top: 1rem;
 }
 </style> 

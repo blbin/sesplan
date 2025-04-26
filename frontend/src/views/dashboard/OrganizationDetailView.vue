@@ -291,7 +291,7 @@ export default defineComponent({
         saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
       } finally {
         isSavingDescription.value = false;
-      }
+        }
     };
 
     watch(
