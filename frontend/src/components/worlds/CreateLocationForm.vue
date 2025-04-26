@@ -16,12 +16,11 @@
       
       <div class="form-group">
         <label for="location-description">Description</label>
-        <textarea 
+        <MarkdownEditor 
           id="location-description"
           v-model="formData.description" 
-          class="form-control"
-          rows="3"
-        ></textarea>
+          class="form-control" 
+        />
       </div>
       
       <div class="form-group">
@@ -84,9 +83,13 @@ import type { Location, LocationCreate, LocationUpdate } from '@/types/location'
 import type { LocationTagType } from '@/types/locationTagType';
 import * as locationsApi from '@/services/api/locations';
 import * as locationTagTypeApi from '@/services/api/locationTagTypeService';
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue';
 
 export default defineComponent({
   name: 'CreateLocationForm',
+  components: {
+    MarkdownEditor
+  },
   props: {
     worldId: {
       type: Number,

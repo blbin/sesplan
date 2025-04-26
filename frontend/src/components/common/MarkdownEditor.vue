@@ -1,5 +1,77 @@
 <template>
   <div class="tiptap-editor-wrapper">
+    <!-- Toolbar -->
+    <div v-if="editor" class="tiptap-toolbar">
+      <v-btn-toggle variant="outlined" divided density="compact">
+        <v-btn 
+          icon
+          @click="editor.chain().focus().toggleBold().run()"
+          :disabled="!editor.can().chain().focus().toggleBold().run()"
+          :class="{ 'is-active': editor.isActive('bold') }"
+          title="Bold (Ctrl+B)"
+        >
+          <v-icon>mdi-format-bold</v-icon>
+        </v-btn>
+        <v-btn 
+          icon
+          @click="editor.chain().focus().toggleItalic().run()"
+          :disabled="!editor.can().chain().focus().toggleItalic().run()"
+          :class="{ 'is-active': editor.isActive('italic') }"
+          title="Italic (Ctrl+I)"
+        >
+          <v-icon>mdi-format-italic</v-icon>
+        </v-btn>
+        <v-btn 
+          icon
+          @click="editor.chain().focus().toggleStrike().run()"
+          :disabled="!editor.can().chain().focus().toggleStrike().run()"
+          :class="{ 'is-active': editor.isActive('strike') }"
+          title="Strikethrough"
+        >
+          <v-icon>mdi-format-strikethrough</v-icon>
+        </v-btn>
+      </v-btn-toggle>
+
+      <v-btn-toggle variant="outlined" divided density="compact" class="ml-2">
+         <v-btn 
+          icon
+          @click="editor.chain().focus().toggleBulletList().run()"
+          :class="{ 'is-active': editor.isActive('bulletList') }"
+          title="Bullet List"
+        >
+          <v-icon>mdi-format-list-bulleted</v-icon>
+        </v-btn>
+        <v-btn 
+          icon
+          @click="editor.chain().focus().toggleOrderedList().run()"
+          :class="{ 'is-active': editor.isActive('orderedList') }"
+          title="Ordered List"
+        >
+          <v-icon>mdi-format-list-numbered</v-icon>
+        </v-btn>
+      </v-btn-toggle>
+
+      <v-btn-toggle variant="outlined" divided density="compact" class="ml-2">
+         <v-btn 
+          icon
+          @click="editor.chain().focus().toggleBlockquote().run()"
+          :class="{ 'is-active': editor.isActive('blockquote') }"
+          title="Blockquote"
+        >
+          <v-icon>mdi-format-quote-close</v-icon>
+        </v-btn>
+        <v-btn 
+          icon
+          @click="editor.chain().focus().setHorizontalRule().run()"
+          title="Horizontal Rule"
+        >
+          <v-icon>mdi-minus</v-icon>
+        </v-btn>
+      </v-btn-toggle>
+    </div>
+
+    <v-divider v-if="editor" class="my-2"></v-divider>
+
     <editor-content :editor="editor" class="tiptap-content" />
   </div>
 </template>
@@ -69,13 +141,36 @@ onBeforeUnmount(() => {
 .tiptap-editor-wrapper {
   border: 1px solid #ccc; /* Basic border */
   border-radius: 4px;
-  padding: 10px;
-  min-height: 150px; /* Adjust as needed */
+  /* Removed padding here, toolbar handles top padding */
+}
+
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid #ccc; 
+}
+
+.tiptap-toolbar .v-btn {
+  /* Ensure consistent height/look */
+}
+
+.tiptap-toolbar .v-btn.is-active {
+  background-color: rgba(0, 0, 0, 0.1); /* Visual cue for active button */
+  border-color: rgba(0, 0, 0, 0.2); 
+}
+
+.ml-2 {
+  margin-left: 8px; /* Space between button groups */
+}
+.my-2 {
+    margin-top: 8px;
+    margin-bottom: 8px;
 }
 
 .tiptap-content {
-  /* Add styles for the editor content area if needed */
-  /* ProseMirror default styles might be sufficient */
+  padding: 10px; /* Add padding back to the content area */
   outline: none;
 }
 

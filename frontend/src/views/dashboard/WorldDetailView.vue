@@ -16,7 +16,7 @@
 
       <div class="details-section">
         <h2>World Details</h2>
-        <p><strong>Description:</strong> {{ world.description || 'No description provided.' }}</p>
+        <div class="description-content" v-html="renderedDescription"></div>
         <p><strong>Public:</strong> {{ world.is_public ? 'Yes' : 'No' }}</p>
         <p><strong>Created:</strong> {{ formatDate(world.created_at) }}</p>
         <p><strong>Last Updated:</strong> {{ formatDate(world.updated_at) }}</p>
@@ -302,6 +302,7 @@ import CreateOrganizationForm from '@/components/dashboard/worlds/CreateOrganiza
 import WorldItemList from '@/components/worlds/WorldItemList.vue';
 import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
 import { formatDateTime, formatDate } from '@/utils/dateFormatter';
+import MarkdownIt from 'markdown-it';
 
 export default defineComponent({
   name: 'WorldDetailView',
@@ -342,7 +343,7 @@ export default defineComponent({
     const locationToEdit = ref<Location | null>(null);
     const organizationToEdit = ref<Organization | null>(null);
     const itemToEdit = ref<Item | null>(null);
-    const currentTab = ref('characters');
+    const currentTab = ref('locations');
 
     // --- AI Generator State - IMPROVED ---
     const showAIGeneratorDialog = ref(false);
@@ -363,6 +364,21 @@ export default defineComponent({
     const entityTypeLabel = computed(() => {
       // Capitalize first letter
       return entityType.value.charAt(0).toUpperCase() + entityType.value.slice(1);
+    });
+
+    // Initialize markdown-it
+    const md = new MarkdownIt({
+      html: false, // Basic security - don't render arbitrary HTML from markdown
+      linkify: true, // Auto-detect links
+      typographer: true, // Enable nice typography
+    });
+
+    // Computed property for rendering description
+    const renderedDescription = computed(() => {
+      if (world.value?.description) {
+        return md.render(world.value.description);
+      }
+      return '<p><em>No description provided.</em></p>'; // Default message if no description
     });
 
     // --- World Data Fetching Functions ---
@@ -771,7 +787,8 @@ export default defineComponent({
       openAIGenerator,
       closeAIGenerator,
       generateEntity,
-      generateAnother
+      generateAnother,
+      renderedDescription
     };
   },
 });
@@ -916,5 +933,17 @@ export default defineComponent({
     width: 95%;
     padding: 1.5rem;
   }
+}
+
+/* Add styles for rendered markdown if needed */
+.description-content :deep(p) {
+  margin-bottom: 1em; /* Example styling for paragraphs */
+}
+.description-content :deep(a) {
+  color: var(--v-theme-primary); /* Example link styling */
+  text-decoration: none;
+}
+.description-content :deep(a:hover) {
+  text-decoration: underline;
 }
 </style> 

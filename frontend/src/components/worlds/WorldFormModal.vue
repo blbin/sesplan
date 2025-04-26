@@ -9,7 +9,7 @@
         </div>
         <div class="form-group">
           <label for="worldDescription">Description:</label>
-          <textarea id="worldDescription" v-model="form.description"></textarea>
+          <MarkdownEditor id="worldDescription" :model-value="descriptionForEditor" @update:model-value="updateDescription" />
         </div>
         <div class="modal-actions">
           <button type="button" @click="$emit('cancel')" class="btn btn-secondary">Cancel</button>
@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { reactive, watch, defineProps, defineEmits, computed } from 'vue';
 import type { World, WorldCreate, WorldUpdate } from '@/types/world';
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue';
 
 interface WorldFormData {
   name: string;
@@ -51,6 +52,14 @@ const form = reactive<WorldFormData>({
   description: null,
 });
 
+// Computed property to handle null -> '' for editor
+const descriptionForEditor = computed(() => form.description ?? '');
+
+// Function to handle update from editor, converting '' -> null if needed
+const updateDescription = (newValue: string) => {
+  form.description = newValue.trim() === '' ? null : newValue;
+};
+
 // Watch for changes in the worldToEdit prop to populate the form
 watch(() => props.worldToEdit, (newWorld) => {
   if (newWorld) {
@@ -71,7 +80,6 @@ watch(() => props.show, (newVal) => {
     }
 });
 
-
 const submitForm = () => {
   if (!form.name.trim()) {
     // Basic validation, although covered by :disabled
@@ -86,6 +94,7 @@ const submitForm = () => {
     if (form.name !== props.worldToEdit.name) {
       updatePayload.name = form.name;
     }
+    // Use the potentially null-converted value from form.description
     if (form.description !== props.worldToEdit.description) {
       updatePayload.description = form.description;
     }
@@ -99,6 +108,7 @@ const submitForm = () => {
     }
   } else {
     // Prepare create payload
+    // Use the potentially null-converted value from form.description
     saveData = { ...form };
     emit('save', saveData);
   }

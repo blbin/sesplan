@@ -16,7 +16,7 @@
       <div class="details-section">
         <h2>Details</h2>
         <p><strong>Description:</strong></p>
-        <p>{{ location.description || 'No description provided.' }}</p>
+        <div class="description-content" v-html="renderedDescription"></div>
         
         <p v-if="location.parent_location_id">
           <strong>Parent Location:</strong> 
@@ -197,6 +197,8 @@ import type { LocationTagType } from '@/types/locationTagType';
 import * as locationsApi from '@/services/api/locations';
 import * as locationTagTypeApi from '@/services/api/locationTagTypeService';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
+import MarkdownIt from 'markdown-it';
+import { formatDate } from '@/utils/dateFormatter';
 
 export default defineComponent({
   name: 'LocationDetailView',
@@ -236,6 +238,21 @@ export default defineComponent({
     const tagTypeToDelete = ref<LocationTagType | null>(null);
     const isDeletingTagType = ref(false);
     const deleteTagTypeError = ref<string | null>(null);
+
+    // Initialize markdown-it
+    const md = new MarkdownIt({
+      html: false, 
+      linkify: true,
+      typographer: true,
+    });
+
+    // Computed property for rendering description
+    const renderedDescription = computed(() => {
+      if (location.value?.description) {
+        return md.render(location.value.description);
+      }
+      return '<p><em>No description provided.</em></p>';
+    });
 
     // Computed property pro získání worldId z načtené lokace
     const worldId = computed(() => location.value?.world_id);
@@ -418,29 +435,19 @@ export default defineComponent({
       }
     };
 
-    const formatDate = (dateString: string | null | undefined): string => {
-      if (!dateString) return 'N/A';
-      try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
-        return String(dateString); 
-      }
-    };
-
     onMounted(fetchLocationDetails);
 
     return {
       location,
       loading,
       error,
-      worldId,
+      renderedDescription,
       formatDate,
-      // Location edit
+      worldId,
       showEditModal,
       openEditModal,
       closeEditModal,
       handleLocationSaved,
-      // Tag assignment
       showTagEditDialog,
       availableTagTypes,
       tagTypesLoading,
@@ -451,7 +458,6 @@ export default defineComponent({
       openTagEditDialog,
       closeTagEditDialog,
       saveTags,
-      // Tag type management
       showTagTypeDialog,
       editingTagType,
       tagTypeName,
@@ -461,7 +467,6 @@ export default defineComponent({
       openEditTagTypeDialog,
       closeTagTypeDialog,
       saveTagType,
-      // Delete tag type
       showDeleteTagTypeConfirm,
       tagTypeToDelete,
       isDeletingTagType,
@@ -739,5 +744,17 @@ export default defineComponent({
   text-align: center;
   color: #6c757d;
   font-style: italic;
+}
+
+/* Add styles for rendered markdown if needed */
+.description-content :deep(p) {
+  margin-bottom: 1em;
+}
+.description-content :deep(a) {
+  color: var(--v-theme-primary);
+  text-decoration: none;
+}
+.description-content :deep(a:hover) {
+  text-decoration: underline;
 }
 </style> 
