@@ -15,8 +15,41 @@
 
       <div class="details-section">
         <h2>Detaily</h2>
-        <p><strong>Popis:</strong></p>
-        <p>{{ item.description || 'Žádný popis nebyl zadán.' }}</p>
+        <div class="description-section">
+          <div class="description-header">
+            <strong>Popis:</strong>
+            <v-btn 
+              v-if="!isEditingDescription"
+              icon="mdi-pencil" 
+              variant="text" 
+              size="x-small" 
+              @click="startEditingDescription"
+              class="ml-2"
+              title="Upravit popis"
+            ></v-btn>
+          </div>
+          
+          <div v-if="!isEditingDescription" class="description-content mt-2" v-html="renderedDescription"></div>
+          
+          <div v-else class="description-editor mt-2">
+            <MarkdownEditor v-model="editableDescription" />
+            <div v-if="saveDescriptionError" class="error-message mt-2">{{ saveDescriptionError }}</div>
+            <div class="editor-actions mt-2">
+              <v-btn 
+                size="small" 
+                @click="cancelDescriptionEdit"
+                :disabled="isSavingDescription"
+              >Zrušit</v-btn>
+              <v-btn 
+                color="primary" 
+                size="small" 
+                @click="saveDescription"
+                :loading="isSavingDescription"
+                :disabled="!isDescriptionChanged"
+              >Uložit</v-btn>
+            </div>
+          </div>
+        </div>
         
         <p v-if="item.character_id">
           <strong>Postava:</strong> 
@@ -198,7 +231,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
-import type { Item } from '@/types/item';
+import type { Item, ItemUpdate } from '@/types/item';
 import type { ItemTagType } from '@/types/itemTagType';
 import type { Location } from '@/types/location';
 import * as itemsApi from '@/services/api/items';
@@ -206,11 +239,15 @@ import * as locationsApi from '@/services/api/locations';
 import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
 import * as itemTagApi from '@/services/api/itemTagService';
 import CreateItemForm from '@/components/worlds/CreateItemForm.vue';
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue';
+import MarkdownIt from 'markdown-it';
+import { formatDate } from '@/utils/dateFormatter';
 
 export default defineComponent({
   name: 'ItemDetailView',
   components: { 
-    CreateItemForm
+    CreateItemForm,
+    MarkdownEditor
   },
   props: {
     itemId: {
@@ -247,8 +284,36 @@ export default defineComponent({
     const isDeletingTagType = ref(false);
     const deleteTagTypeError = ref<string | null>(null);
 
+    // Inline Description Editing State
+    const isEditingDescription = ref(false);
+    const editableDescription = ref('');
+    const isSavingDescription = ref(false);
+    const saveDescriptionError = ref<string | null>(null);
+
     // Computed property pro získání worldId z načteného předmětu
     const worldId = computed(() => item.value?.world_id);
+
+    // Initialize markdown-it
+    const md = new MarkdownIt({
+      html: false, 
+      linkify: true,
+      typographer: true,
+    });
+
+    // Computed property for rendering description
+    const renderedDescription = computed(() => {
+      if (item.value?.description) {
+        return md.render(item.value.description);
+      }
+      return '<p><em>Žádný popis nebyl zadán.</em></p>';
+    });
+
+    // Computed to check if description changed
+    const isDescriptionChanged = computed(() => {
+      const currentDesc = item.value?.description ?? '';
+      const editedDesc = editableDescription.value.trim() === '' ? '' : editableDescription.value;
+      return currentDesc !== editedDesc;
+    });
 
     const fetchItemDetails = async () => {
       loading.value = true;
@@ -438,12 +503,42 @@ export default defineComponent({
       }
     };
 
-    const formatDate = (dateString: string | null | undefined): string => {
-      if (!dateString) return 'N/A';
+    // Inline Description Editing Functions
+    const startEditingDescription = () => {
+      if (!item.value) return;
+      editableDescription.value = item.value.description ?? '';
+      saveDescriptionError.value = null;
+      isEditingDescription.value = true;
+    };
+
+    const cancelDescriptionEdit = () => {
+      isEditingDescription.value = false;
+      saveDescriptionError.value = null;
+    };
+
+    const saveDescription = async () => {
+      if (!item.value || !isDescriptionChanged.value) return;
+
+      isSavingDescription.value = true;
+      saveDescriptionError.value = null;
+      const newDescription = editableDescription.value.trim() === '' ? null : editableDescription.value;
+      
       try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
-        return String(dateString); 
+        const updatePayload: ItemUpdate = { 
+          description: newDescription
+          // Ensure other required fields for update are NOT included if not changed
+        };
+        const updatedItem = await itemsApi.updateItem(props.itemId, updatePayload);
+        
+        // Update local state
+        item.value = updatedItem;
+        isEditingDescription.value = false;
+        
+      } catch (err: any) {
+        console.error("Error saving description:", err);
+        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
+      } finally {
+        isSavingDescription.value = false;
       }
     };
 
@@ -489,7 +584,17 @@ export default defineComponent({
       deleteTagTypeError,
       confirmDeleteTagType,
       cancelDeleteTagType,
-      executeDeleteTagType
+      executeDeleteTagType,
+      // Inline Description Editing
+      isEditingDescription,
+      editableDescription,
+      isSavingDescription,
+      saveDescriptionError,
+      startEditingDescription,
+      cancelDescriptionEdit,
+      saveDescription,
+      isDescriptionChanged,
+      renderedDescription
     };
   }
 });
@@ -750,5 +855,38 @@ export default defineComponent({
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
+}
+
+.description-section {
+  position: relative;
+  margin-bottom: 1rem; 
+}
+
+.description-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.description-header strong {
+  margin-right: auto; 
+}
+
+.description-editor {
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: #f9f9f9; 
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mt-4 {
+    margin-top: 1.5rem; 
 }
 </style> 

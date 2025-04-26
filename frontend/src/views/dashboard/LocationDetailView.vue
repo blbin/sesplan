@@ -15,10 +15,45 @@
 
       <div class="details-section">
         <h2>Details</h2>
-        <p><strong>Description:</strong></p>
-        <div class="description-content" v-html="renderedDescription"></div>
+        <div class="description-section">
+          <div class="description-header">
+            <strong>Description:</strong>
+            <v-btn 
+              v-if="!isEditingDescription"
+              icon="mdi-pencil" 
+              variant="text" 
+              size="x-small" 
+              @click="startEditingDescription"
+              class="ml-2"
+              title="Edit Description"
+            ></v-btn>
+          </div>
+          
+          <!-- Display Mode -->
+          <div v-if="!isEditingDescription" class="description-content mt-2" v-html="renderedDescription"></div>
+          
+          <!-- Edit Mode -->
+          <div v-else class="description-editor mt-2">
+            <MarkdownEditor v-model="editableDescription" />
+            <div v-if="saveDescriptionError" class="error-message mt-2">{{ saveDescriptionError }}</div>
+            <div class="editor-actions mt-2">
+              <v-btn 
+                size="small" 
+                @click="cancelDescriptionEdit"
+                :disabled="isSavingDescription"
+              >Cancel</v-btn>
+              <v-btn 
+                color="primary" 
+                size="small" 
+                @click="saveDescription"
+                :loading="isSavingDescription"
+                :disabled="!isDescriptionChanged"
+              >Save</v-btn>
+            </div>
+          </div>
+        </div>
         
-        <p v-if="location.parent_location_id">
+        <p v-if="location.parent_location_id" class="mt-4">
           <strong>Parent Location:</strong> 
           ID: {{ location.parent_location_id }}
         </p>
@@ -192,18 +227,20 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
-import type { Location } from '@/types/location';
+import type { Location, LocationUpdate } from '@/types/location';
 import type { LocationTagType } from '@/types/locationTagType';
 import * as locationsApi from '@/services/api/locations';
 import * as locationTagTypeApi from '@/services/api/locationTagTypeService';
 import CreateLocationForm from '@/components/worlds/CreateLocationForm.vue';
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue';
 import MarkdownIt from 'markdown-it';
 import { formatDate } from '@/utils/dateFormatter';
 
 export default defineComponent({
   name: 'LocationDetailView',
   components: { 
-    CreateLocationForm
+    CreateLocationForm,
+    MarkdownEditor
   },
   props: {
     locationId: {
@@ -239,6 +276,12 @@ export default defineComponent({
     const isDeletingTagType = ref(false);
     const deleteTagTypeError = ref<string | null>(null);
 
+    // Inline Description Editing State
+    const isEditingDescription = ref(false);
+    const editableDescription = ref('');
+    const isSavingDescription = ref(false);
+    const saveDescriptionError = ref<string | null>(null);
+
     // Initialize markdown-it
     const md = new MarkdownIt({
       html: false, 
@@ -256,6 +299,13 @@ export default defineComponent({
 
     // Computed property pro získání worldId z načtené lokace
     const worldId = computed(() => location.value?.world_id);
+
+    // Computed to check if description actually changed
+    const isDescriptionChanged = computed(() => {
+      const currentDesc = location.value?.description ?? '';
+      const editedDesc = editableDescription.value.trim() === '' ? '' : editableDescription.value;
+      return currentDesc !== editedDesc;
+    });
 
     const fetchLocationDetails = async () => {
       loading.value = true;
@@ -435,6 +485,44 @@ export default defineComponent({
       }
     };
 
+    // Inline Description Editing Functions
+    const startEditingDescription = () => {
+      if (!location.value) return;
+      editableDescription.value = location.value.description ?? '';
+      saveDescriptionError.value = null;
+      isEditingDescription.value = true;
+    };
+
+    const cancelDescriptionEdit = () => {
+      isEditingDescription.value = false;
+      saveDescriptionError.value = null;
+    };
+
+    const saveDescription = async () => {
+      if (!location.value || !isDescriptionChanged.value) return;
+
+      isSavingDescription.value = true;
+      saveDescriptionError.value = null;
+      const newDescription = editableDescription.value.trim() === '' ? null : editableDescription.value;
+      
+      try {
+        const updatePayload: LocationUpdate = { 
+          description: newDescription
+        };
+        const updatedLocation = await locationsApi.updateLocation(props.locationId, updatePayload);
+        
+        // Update local state
+        location.value = updatedLocation;
+        isEditingDescription.value = false;
+        
+      } catch (err: any) {
+        console.error("Error saving description:", err);
+        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
+      } finally {
+        isSavingDescription.value = false;
+      }
+    };
+
     onMounted(fetchLocationDetails);
 
     return {
@@ -473,7 +561,15 @@ export default defineComponent({
       deleteTagTypeError,
       confirmDeleteTagType,
       cancelDeleteTagType,
-      executeDeleteTagType
+      executeDeleteTagType,
+      isEditingDescription,
+      editableDescription,
+      isSavingDescription,
+      saveDescriptionError,
+      startEditingDescription,
+      cancelDescriptionEdit,
+      saveDescription,
+      isDescriptionChanged
     };
   }
 });
@@ -756,5 +852,38 @@ export default defineComponent({
 }
 .description-content :deep(a:hover) {
   text-decoration: underline;
+}
+
+.description-section {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.description-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.description-header strong {
+  margin-right: auto;
+}
+
+.description-editor {
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
 }
 </style> 

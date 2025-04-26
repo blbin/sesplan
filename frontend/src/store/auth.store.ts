@@ -58,7 +58,7 @@ export const useAuthStore = defineStore('auth', {
 
       this.loading = true;
       this.error = null;
-      console.log("fetchCurrentUser: Fetching user data...");
+      // console.log("fetchCurrentUser: Fetching user data...");
       try {
         const userData = await userService.getCurrentUser();
         this.user = userData;
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', {
           console.warn("fetchCurrentUser returned null, logging out.");
           this.logout();
         } else {
-           console.log("fetchCurrentUser: User data loaded successfully:", userData);
+           // console.log("fetchCurrentUser: User data loaded successfully:", userData);
         }
       } catch (err: any) {
         console.error("Fetch user error in store:", err);
@@ -79,12 +79,12 @@ export const useAuthStore = defineStore('auth', {
     },
     async initializeAuth() {
        if (this.token && !this.user) {
-         console.log("Initializing auth: Found token, fetching user...");
+         // console.log("Initializing auth: Found token, fetching user...");
         await this.fetchCurrentUser();
       } else if (this.token && this.user) {
-         console.log("Initializing auth: Token and user already present.");
+         // console.log("Initializing auth: Token and user already present.");
       } else if (!this.token) {
-         console.log("Initializing auth: No token found.");
+         // console.log("Initializing auth: No token found.");
          this.user = null;
       }
     }

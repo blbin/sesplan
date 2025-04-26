@@ -45,7 +45,7 @@
               Generate with AI
             </v-btn>
           </div>
-          <WorldCharacterList :world-id="Number(worldId)" />
+          <WorldCharacterList v-if="numericWorldId" :world-id="numericWorldId" />
         </v-window-item>
 
         <v-window-item value="locations">
@@ -63,9 +63,9 @@
             </v-btn>
           </div>
           <WorldLocationList
-            v-if="world && isCurrentUserOwner !== null"
+            v-if="numericWorldId && !locationsLoading && isCurrentUserOwner"
             :locations="locations"
-            :worldId="Number(worldId)"
+            :worldId="numericWorldId"
             :canManage="isCurrentUserOwner"
             :loading="locationsLoading"
             :error="locationsError"
@@ -90,9 +90,9 @@
             </v-btn>
           </div>
           <WorldOrganizationList
-            v-if="world && isCurrentUserOwner !== null"
+            v-if="numericWorldId && !organizationsLoading && isCurrentUserOwner"
             :organizations="organizations"
-            :worldId="Number(worldId)"
+            :worldId="numericWorldId"
             :canManage="isCurrentUserOwner"
             :loading="organizationsLoading"
             :error="organizationsError"
@@ -117,11 +117,11 @@
             </v-btn>
           </div>
           <WorldItemList
-            v-if="world && isCurrentUserOwner !== null"
+            v-if="numericWorldId && !itemsLoading && isCurrentUserOwner"
             :items="items"
             :characters="[]"  
             :locations="locations"
-            :worldId="Number(worldId)"
+            :worldId="numericWorldId"
             :canManage="isCurrentUserOwner"
             :loading="itemsLoading"
             :error="itemsError"
@@ -136,7 +136,8 @@
       <div v-if="showLocationForm" class="modal-overlay">
         <div class="modal-content">
           <CreateLocationForm
-            :worldId="Number(worldId)"
+            v-if="numericWorldId" 
+            :worldId="numericWorldId"
             :locations="locations" 
             :locationToEdit="locationToEdit"
             @saved="handleLocationSaved"
@@ -149,7 +150,8 @@
       <div v-if="showOrganizationForm" class="modal-overlay">
         <div class="modal-content">
           <CreateOrganizationForm
-            :worldId="Number(worldId)"
+            v-if="numericWorldId"
+            :worldId="numericWorldId"
             :organizations="organizations"
             :organizationToEdit="organizationToEdit"
             @saved="handleOrganizationSaved"
@@ -162,7 +164,8 @@
       <div v-if="showItemForm" class="modal-overlay">
         <div class="modal-content">
           <CreateItemForm
-            :worldId="Number(worldId)"
+            v-if="numericWorldId" 
+            :worldId="numericWorldId"
             :characters="[]" 
             :locations="locations"
             :itemToEdit="itemToEdit"
@@ -281,7 +284,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch, computed } from 'vue';
+import { defineComponent, ref, watch, computed } from 'vue';
 import * as worldsApi from '@/services/api/worlds';
 import * as locationsApi from '@/services/api/locations';
 import * as organizationsApi from '@/services/api/organizations';
@@ -356,6 +359,7 @@ export default defineComponent({
     const generatedEntity = ref<any | null>(null);
     const availableExamples = ref<any[]>([]);
     const loadingExamples = ref(false);
+    const loadingCharacterExamples = ref(false);
 
     const isCurrentUserOwner = computed(() => {
         return world.value !== null && !worldLoading.value && worldError.value === undefined;
@@ -381,10 +385,26 @@ export default defineComponent({
       return '<p><em>No description provided.</em></p>'; // Default message if no description
     });
 
+    // Computed property for numeric world ID
+    const numericWorldId = computed(() => {
+      const id = Number(props.worldId);
+      return !isNaN(id) && id > 0 ? id : null; // Return null if ID is invalid or not positive
+    });
+
     // --- World Data Fetching Functions ---
-    const fetchWorldDetails = async (id: number) => {
+    const fetchWorldDetails = async (id: number | string) => {
+      const numericId = Number(id);
+      if (isNaN(numericId)) {
+        console.error("Invalid World ID:", id);
+        worldError.value = "Invalid World ID provided.";
+        worldLoading.value = false;
+        return;
+      }
+
+      console.log(`Fetching details for world ID: ${numericId}`); // Add log
       worldLoading.value = true;
       worldError.value = undefined;
+      // Reset states *before* fetching
       world.value = null;
       locations.value = [];
       organizations.value = [];
@@ -394,19 +414,32 @@ export default defineComponent({
       organizationsError.value = undefined;
       itemsError.value = undefined;
       itemTagTypesError.value = undefined;
+      // Keep individual loading flags false initially, they will be set by their respective functions
       locationsLoading.value = false;
       organizationsLoading.value = false;
       itemsLoading.value = false;
       itemTagTypesLoading.value = false;
 
+
       try {
-        world.value = await worldsApi.getWorldById(id);
-        fetchWorldLocations(id);
-        fetchWorldOrganizations(id);
-        fetchWorldItems(id);
-        fetchItemTagTypes(id);
+        console.log("Fetching main world data..."); // Add log
+        const fetchedWorld = await worldsApi.getWorldById(numericId);
+        console.log("Main world data fetched:", fetchedWorld); // Add log
+        world.value = fetchedWorld;
+
+        // Fetch related data concurrently and wait for all
+        console.log("Initiating fetches for related data..."); // Add log
+        await Promise.all([
+          fetchWorldLocations(numericId),
+          fetchWorldOrganizations(numericId),
+          fetchWorldItems(numericId),
+          fetchItemTagTypes(numericId)
+        ]);
+        console.log("All related data fetches completed or failed individually."); // Add log
+
       } catch (err: any) {
         console.error("Fetch World Error:", err);
+        // Keep the existing error handling for world fetch
         if (err.response?.status === 404) {
           worldError.value = 'World not found.';
         } else if (err.response?.status === 403) {
@@ -414,8 +447,11 @@ export default defineComponent({
         } else {
           worldError.value = `Failed to load world details: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         }
+         // If the main world fetch fails, we might not want to proceed further.
+         // The individual error handlers in fetchWorldLocations etc. should handle their specific errors if they were initiated.
       } finally {
-        worldLoading.value = false;
+        console.log("Setting worldLoading to false."); // Add log
+        worldLoading.value = false; // Set loading to false only after all fetches are done or main fetch failed.
       }
     };
 
@@ -590,21 +626,40 @@ export default defineComponent({
       generationComplete.value = false;
       generatedEntity.value = null;
       loadingExamples.value = true;
+      loadingCharacterExamples.value = false; // Reset character loading flag
+      availableExamples.value = []; // Clear previous examples
       
       // Load examples for this entity type
       try {
         switch (type) {
           case 'character':
+            loadingCharacterExamples.value = true;
             availableExamples.value = await fetchWorldCharacters(Number(props.worldId));
             break;
           case 'location':
-            availableExamples.value = locations.value;
+            if (!locationsLoading.value) {
+              availableExamples.value = locations.value;
+            } else {
+              console.warn("Attempted to open AI generator for locations while locations are still loading.");
+              // Optionally set an error message or just show empty examples / rely on loading state
+              generationError.value = "Location data is still loading, please wait.";
+            }
             break;
           case 'organization':
-            availableExamples.value = organizations.value;
+             if (!organizationsLoading.value) {
+              availableExamples.value = organizations.value;
+            } else {
+              console.warn("Attempted to open AI generator for organizations while organizations are still loading.");
+              generationError.value = "Organization data is still loading, please wait.";
+            }
             break;
           case 'item':
-            availableExamples.value = items.value;
+             if (!itemsLoading.value) {
+              availableExamples.value = items.value;
+            } else {
+              console.warn("Attempted to open AI generator for items while items are still loading.");
+              generationError.value = "Item data is still loading, please wait.";
+            }
             break;
         }
         console.log(`[AI Generator] Loaded ${availableExamples.value.length} examples for ${type}`);
@@ -613,7 +668,8 @@ export default defineComponent({
         generationError.value = `Failed to load examples: ${err.message}`;
         availableExamples.value = [];
       } finally {
-        loadingExamples.value = false;
+        loadingExamples.value = false; // General loading indicator
+        loadingCharacterExamples.value = false; // Ensure character loading is false
       }
       
       // Show the dialog
@@ -710,6 +766,8 @@ export default defineComponent({
     };
 
     // --- Watchers and Lifecycle Hooks ---
+    // Remove onMounted as the watcher with immediate: true handles the initial call
+    /*
     onMounted(() => {
       if (props.worldId) {
         fetchWorldDetails(Number(props.worldId));
@@ -718,15 +776,26 @@ export default defineComponent({
         worldLoading.value = false;
       }
     });
+    */
 
     watch(
       () => props.worldId,
       (newId) => {
-        if (newId) {
-          fetchWorldDetails(Number(newId));
+        if (newId !== undefined && newId !== null) { // Check for existence
+           fetchWorldDetails(newId); // Pass String or Number
+        } else {
+            console.warn("worldId prop became null or undefined");
+            worldError.value = "World ID is missing.";
+            worldLoading.value = false;
+            // Reset data when ID becomes invalid
+            world.value = null;
+            locations.value = [];
+            organizations.value = [];
+            items.value = [];
+            itemTagTypes.value = [];
         }
       },
-      { immediate: true }
+      { immediate: true } // immediate: true ensures it runs on mount
     );
 
     return {
@@ -784,11 +853,13 @@ export default defineComponent({
       generatedEntity,
       availableExamples,
       loadingExamples,
+      loadingCharacterExamples,
       openAIGenerator,
       closeAIGenerator,
       generateEntity,
       generateAnother,
-      renderedDescription
+      renderedDescription,
+      numericWorldId // Expose the computed numeric ID
     };
   },
 });

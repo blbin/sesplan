@@ -152,9 +152,7 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid #ccc; 
 }
 
-.tiptap-toolbar .v-btn {
-  /* Ensure consistent height/look */
-}
+/* Ruleset for .tiptap-toolbar .v-btn removed as it was empty. */
 
 .tiptap-toolbar .v-btn.is-active {
   background-color: rgba(0, 0, 0, 0.1); /* Visual cue for active button */
@@ -177,6 +175,11 @@ onBeforeUnmount(() => {
 /* Style ProseMirror/Tiptap elements if needed */
 :deep(.ProseMirror) {
   min-height: 100px; /* Ensure minimum height */
+  outline: none !important; /* Remove focus outline */
+}
+
+:deep(.ProseMirror:focus) {
+  outline: none !important; /* Explicitly remove focus outline */
 }
 
 :deep(.ProseMirror p.is-editor-empty:first-child::before) {

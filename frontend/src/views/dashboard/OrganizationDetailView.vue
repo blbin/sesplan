@@ -26,8 +26,42 @@
 
       <div class="details-section">
         <h2>Details</h2>
-        <p><strong>Description:</strong> {{ organization.description || 'No description provided.' }}</p>
-        <p v-if="parentOrganization"><strong>Parent Organization:</strong> 
+        <div class="description-section">
+          <div class="description-header">
+            <strong>Description:</strong>
+            <v-btn 
+              v-if="!isEditingDescription && canManageWorld" 
+              icon="mdi-pencil" 
+              variant="text" 
+              size="x-small" 
+              @click="startEditingDescription"
+              class="ml-2"
+              title="Edit Description"
+            ></v-btn>
+          </div>
+          
+          <div v-if="!isEditingDescription" class="description-content mt-2" v-html="renderedDescription"></div>
+          
+          <div v-else class="description-editor mt-2">
+            <MarkdownEditor v-model="editableDescription" />
+            <div v-if="saveDescriptionError" class="error-message mt-2">{{ saveDescriptionError }}</div>
+            <div class="editor-actions mt-2">
+              <v-btn 
+                size="small" 
+                @click="cancelDescriptionEdit"
+                :disabled="isSavingDescription"
+              >Cancel</v-btn>
+              <v-btn 
+                color="primary" 
+                size="small" 
+                @click="saveDescription"
+                :loading="isSavingDescription"
+                :disabled="!isDescriptionChanged"
+              >Save</v-btn>
+            </div>
+          </div>
+        </div>
+        <p v-if="parentOrganization" class="mt-4"><strong>Parent Organization:</strong> 
           <router-link :to="{ name: 'OrganizationDetail', params: { organizationId: organization.parent_organization_id } }">
             {{ parentOrganization.name }}
            </router-link>
@@ -91,18 +125,21 @@
 import { defineComponent, ref, watch, computed } from 'vue';
 import * as organizationsApi from '@/services/api/organizations';
 import * as organizationTagTypeApi from '@/services/api/organizationTagTypeService';
-import type { Organization } from '@/types/organization';
+import type { Organization, OrganizationUpdate } from '@/types/organization';
 import type { OrganizationTagType } from '@/types/organizationTagType';
 import { formatDateTime } from '@/utils/dateFormatter';
 import OrganizationTagAssignment from '@/components/organization/OrganizationTagAssignment.vue';
 import OrganizationTagTypeManager from '@/components/organization/OrganizationTagTypeManager.vue';
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue';
+import MarkdownIt from 'markdown-it';
 import { useAuthStore } from '@/store/auth.store';
 
 export default defineComponent({
   name: 'OrganizationDetailView',
   components: {
       OrganizationTagAssignment,
-      OrganizationTagTypeManager
+      OrganizationTagTypeManager,
+      MarkdownEditor
   },
   props: {
     organizationId: {
@@ -122,9 +159,33 @@ export default defineComponent({
     const worldId = ref<number | null>(null);
     const showTagManagerModal = ref(false);
 
+    const isEditingDescription = ref(false);
+    const editableDescription = ref('');
+    const isSavingDescription = ref(false);
+    const saveDescriptionError = ref<string | null>(null);
+
     const canManageWorld = computed(() => {
         if (!worldId.value || !authStore.user) return false;
         return authStore.isLoggedIn;
+    });
+
+    const md = new MarkdownIt({
+      html: false, 
+      linkify: true,
+      typographer: true,
+    });
+
+    const renderedDescription = computed(() => {
+      if (organization.value?.description) {
+        return md.render(organization.value.description);
+      }
+      return '<p><em>No description provided.</em></p>';
+    });
+
+    const isDescriptionChanged = computed(() => {
+      const currentDesc = organization.value?.description ?? '';
+      const editedDesc = editableDescription.value.trim() === '' ? '' : editableDescription.value;
+      return currentDesc !== editedDesc;
     });
 
     const fetchAvailableTagTypes = async (currentWorldId: number) => {
@@ -197,6 +258,42 @@ export default defineComponent({
         }
     };
 
+    const startEditingDescription = () => {
+      if (!organization.value) return;
+      editableDescription.value = organization.value.description ?? '';
+      saveDescriptionError.value = null;
+      isEditingDescription.value = true;
+    };
+
+    const cancelDescriptionEdit = () => {
+      isEditingDescription.value = false;
+      saveDescriptionError.value = null;
+    };
+
+    const saveDescription = async () => {
+      if (!organization.value || !isDescriptionChanged.value) return;
+
+      isSavingDescription.value = true;
+      saveDescriptionError.value = null;
+      const newDescription = editableDescription.value.trim() === '' ? null : editableDescription.value;
+      
+      try {
+        const updatePayload: OrganizationUpdate = { 
+          description: newDescription
+        };
+        const updatedOrg = await organizationsApi.updateOrganization(Number(props.organizationId), updatePayload);
+        
+        organization.value = updatedOrg;
+        isEditingDescription.value = false;
+        
+      } catch (err: any) {
+        console.error("Error saving description:", err);
+        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
+      } finally {
+        isSavingDescription.value = false;
+      }
+    };
+
     watch(
       () => props.organizationId,
       (newId) => {
@@ -221,6 +318,15 @@ export default defineComponent({
       formatDateTime,
       refreshOrganizationDetails,
       handleTagTypesUpdated,
+      renderedDescription,
+      isEditingDescription,
+      editableDescription,
+      isSavingDescription,
+      saveDescriptionError,
+      startEditingDescription,
+      cancelDescriptionEdit,
+      saveDescription,
+      isDescriptionChanged,
     };
   },
 });
@@ -373,5 +479,39 @@ export default defineComponent({
 }
 .close-modal-btn:hover {
     color: #333;
+}
+
+/* Add styles similar to LocationDetailView */
+.description-section {
+  position: relative;
+  margin-bottom: 1rem; 
+}
+
+.description-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.description-header strong {
+  margin-right: auto; 
+}
+
+.description-editor {
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: #f9f9f9; 
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mt-4 {
+    margin-top: 1.5rem; 
 }
 </style> 
