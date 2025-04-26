@@ -113,6 +113,13 @@ const routes: RouteRecordRaw[] = [
         props: true,
         meta: { requiresAuth: true }
       },
+      // Přidání ukázkové stránky Vuetify
+      {
+        path: 'vuetify-example',
+        name: 'VuetifyExample',
+        component: () => import('../views/VuetifyExample.vue'),
+        meta: { requiresAuth: true }
+      },
     ]
   },
   {

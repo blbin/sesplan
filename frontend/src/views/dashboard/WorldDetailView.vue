@@ -32,10 +32,36 @@
 
       <v-window v-model="currentTab">
         <v-window-item value="characters">
+          <div class="d-flex justify-space-between align-center mb-4">
+            <h2 class="text-h5">Characters in this World</h2>
+            <v-btn 
+              color="primary" 
+              variant="outlined" 
+              prepend-icon="mdi-robot"
+              @click="openAIGenerator('character')"
+              :disabled="worldLoading"
+              size="small"
+            >
+              Generate with AI
+            </v-btn>
+          </div>
           <WorldCharacterList :world-id="Number(worldId)" />
         </v-window-item>
 
         <v-window-item value="locations">
+          <div class="d-flex justify-space-between align-center mb-4">
+            <h2 class="text-h5">Locations in this World</h2>
+            <v-btn 
+              color="primary" 
+              variant="outlined" 
+              prepend-icon="mdi-robot"
+              @click="openAIGenerator('location')"
+              :disabled="worldLoading || locationsLoading"
+              size="small"
+            >
+              Generate with AI
+            </v-btn>
+          </div>
           <WorldLocationList
             v-if="world && isCurrentUserOwner !== null"
             :locations="locations"
@@ -50,6 +76,19 @@
         </v-window-item>
 
         <v-window-item value="organizations">
+          <div class="d-flex justify-space-between align-center mb-4">
+            <h2 class="text-h5">Organizations in this World</h2>
+            <v-btn 
+              color="primary" 
+              variant="outlined" 
+              prepend-icon="mdi-robot"
+              @click="openAIGenerator('organization')"
+              :disabled="worldLoading || organizationsLoading"
+              size="small"
+            >
+              Generate with AI
+            </v-btn>
+          </div>
           <WorldOrganizationList
             v-if="world && isCurrentUserOwner !== null"
             :organizations="organizations"
@@ -64,6 +103,19 @@
         </v-window-item>
 
         <v-window-item value="items">
+          <div class="d-flex justify-space-between align-center mb-4">
+            <h2 class="text-h5">Items in this World</h2>
+            <v-btn 
+              color="primary" 
+              variant="outlined" 
+              prepend-icon="mdi-robot"
+              @click="openAIGenerator('item')"
+              :disabled="worldLoading || itemsLoading"
+              size="small"
+            >
+              Generate with AI
+            </v-btn>
+          </div>
           <WorldItemList
             v-if="world && isCurrentUserOwner !== null"
             :items="items"
@@ -121,6 +173,104 @@
         </div>
       </div>
 
+      <!-- AI Generator Dialog - Improved Design -->
+      <v-dialog v-model="showAIGeneratorDialog" max-width="700px" persistent>
+        <v-card>
+          <v-card-title class="text-h5 d-flex align-center">
+            <v-icon class="mr-2" color="primary">mdi-robot</v-icon>
+            Generate {{ entityTypeLabel }} with AI
+          </v-card-title>
+          
+          <v-divider></v-divider>
+          
+          <v-card-text class="pt-4">
+            <div v-if="generationError" class="mb-4">
+              <v-alert type="error" variant="tonal" closable>
+                {{ generationError }}
+              </v-alert>
+            </div>
+            
+            <div v-if="!isGenerating && !generationComplete">
+              <p class="mb-4 text-body-1">
+                Select existing {{ entityTypeLabel.toLowerCase() }}s as examples to influence the AI generation.
+                The AI will create a new {{ entityTypeLabel.toLowerCase() }} with similar characteristics.
+              </p>
+              
+              <v-select
+                v-model="selectedExampleIds"
+                :items="availableExamples"
+                item-title="name"
+                item-value="id"
+                :label="`Select ${entityTypeLabel.toLowerCase()} examples`"
+                multiple
+                chips
+                closable-chips
+                :loading="loadingExamples"
+                :rules="[(v: any) => (!!v && v.length > 0) || 'At least one example is required']"
+                required
+                class="mb-4"
+              ></v-select>
+              
+              <v-textarea
+                v-model="generationContext"
+                label="Additional Context (Optional)"
+                placeholder="Provide any specific requirements or context for the generation..."
+                rows="3"
+                class="mb-4"
+                hide-details
+              ></v-textarea>
+            </div>
+            
+            <div v-if="isGenerating" class="py-8 text-center">
+              <v-progress-circular indeterminate size="64" color="primary" class="mb-4"></v-progress-circular>
+              <p class="text-body-1">Generating new {{ entityTypeLabel.toLowerCase() }}...</p>
+              <p class="text-caption">This may take a few moments</p>
+            </div>
+            
+            <div v-if="generationComplete" class="py-4">
+              <v-alert type="success" variant="tonal" class="mb-4">
+                {{ entityTypeLabel }} successfully generated!
+              </v-alert>
+              
+              <v-card variant="outlined" class="mb-4">
+                <v-card-title>{{ generatedEntity?.name || 'Unnamed Entity' }}</v-card-title>
+                <v-card-text>
+                  <p>{{ generatedEntity?.description || 'No description available.' }}</p>
+                </v-card-text>
+              </v-card>
+            </div>
+          </v-card-text>
+          
+          <v-divider></v-divider>
+          
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn 
+              variant="text" 
+              :disabled="isGenerating"
+              @click="closeAIGenerator"
+            >
+              {{ generationComplete ? 'Close' : 'Cancel' }}
+            </v-btn>
+            <v-btn
+              v-if="!isGenerating && !generationComplete"
+              color="primary"
+              :disabled="selectedExampleIds.length === 0"
+              @click="generateEntity"
+            >
+              Generate
+            </v-btn>
+            <v-btn
+              v-if="generationComplete"
+              color="primary"
+              @click="generateAnother"
+            >
+              Generate Another
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
     </div>
     <!-- Fallback if world somehow wasn't found after loading -->
     <div v-else>
@@ -137,6 +287,8 @@ import * as locationsApi from '@/services/api/locations';
 import * as organizationsApi from '@/services/api/organizations';
 import * as itemsApi from '@/services/api/items';
 import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
+import * as characterApi from '@/services/api/characters';
+import * as aiApi from '@/services/api/aiService';
 import type { World } from '@/types/world';
 import type { Location } from '@/types/location';
 import type { Organization } from '@/types/organization';
@@ -192,10 +344,28 @@ export default defineComponent({
     const itemToEdit = ref<Item | null>(null);
     const currentTab = ref('characters');
 
+    // --- AI Generator State - IMPROVED ---
+    const showAIGeneratorDialog = ref(false);
+    const entityType = ref<'character' | 'location' | 'organization' | 'item'>('character');
+    const isGenerating = ref(false);
+    const generationError = ref<string | null>(null);
+    const generationComplete = ref(false);
+    const selectedExampleIds = ref<number[]>([]);
+    const generationContext = ref<string | null>(null);
+    const generatedEntity = ref<any | null>(null);
+    const availableExamples = ref<any[]>([]);
+    const loadingExamples = ref(false);
+
     const isCurrentUserOwner = computed(() => {
         return world.value !== null && !worldLoading.value && worldError.value === undefined;
     });
 
+    const entityTypeLabel = computed(() => {
+      // Capitalize first letter
+      return entityType.value.charAt(0).toUpperCase() + entityType.value.slice(1);
+    });
+
+    // --- World Data Fetching Functions ---
     const fetchWorldDetails = async (id: number) => {
       worldLoading.value = true;
       worldError.value = undefined;
@@ -287,6 +457,15 @@ export default defineComponent({
       }
     };
 
+    const fetchWorldCharacters = async (id: number) => {
+      try {
+        return await characterApi.getAllWorldCharacters(id);
+      } catch (err: any) {
+        console.error("Fetch World Characters Error:", err);
+        throw err;
+      }
+    };
+
     const fetchItemTagTypes = async (id: number) => {
       itemTagTypesLoading.value = true;
       itemTagTypesError.value = undefined;
@@ -301,6 +480,7 @@ export default defineComponent({
       }
     };
 
+    // --- Event Handlers ---
     const handleLocationsUpdated = () => {
       if (world.value) {
         fetchWorldLocations(world.value.id);
@@ -320,6 +500,7 @@ export default defineComponent({
       }
     };
 
+    // --- Modal Form Handlers ---
     const openAddLocationModal = () => {
       locationToEdit.value = null;
       showLocationForm.value = true;
@@ -380,20 +561,153 @@ export default defineComponent({
       handleItemsUpdated();
     };
 
+    // --- AI Generator Methods - IMPROVED ---
+    const openAIGenerator = async (type: 'character' | 'location' | 'organization' | 'item') => {
+      console.log(`Opening AI Generator for type: ${type}`);
+      entityType.value = type;
+      
+      // Reset generator state
+      selectedExampleIds.value = [];
+      generationContext.value = null;
+      generationError.value = null;
+      isGenerating.value = false;
+      generationComplete.value = false;
+      generatedEntity.value = null;
+      loadingExamples.value = true;
+      
+      // Load examples for this entity type
+      try {
+        switch (type) {
+          case 'character':
+            availableExamples.value = await fetchWorldCharacters(Number(props.worldId));
+            break;
+          case 'location':
+            availableExamples.value = locations.value;
+            break;
+          case 'organization':
+            availableExamples.value = organizations.value;
+            break;
+          case 'item':
+            availableExamples.value = items.value;
+            break;
+        }
+        console.log(`[AI Generator] Loaded ${availableExamples.value.length} examples for ${type}`);
+      } catch (err: any) {
+        console.error(`[AI Generator] Failed to load examples for ${type}:`, err);
+        generationError.value = `Failed to load examples: ${err.message}`;
+        availableExamples.value = [];
+      } finally {
+        loadingExamples.value = false;
+      }
+      
+      // Show the dialog
+      showAIGeneratorDialog.value = true;
+    };
+
+    const closeAIGenerator = () => {
+      showAIGeneratorDialog.value = false;
+    };
+
+    const generateEntity = async () => {
+      if (selectedExampleIds.value.length === 0) {
+        generationError.value = 'Please select at least one example.';
+        return;
+      }
+
+      isGenerating.value = true;
+      generationError.value = null;
+      
+      try {
+        // Find the full example objects based on selected IDs
+        const selectedExamples = availableExamples.value.filter(entity => 
+          selectedExampleIds.value.includes(entity.id)
+        ).map(entity => ({
+          id: entity.id,
+          name: entity.name,
+          description: entity.description
+        }));
+        
+        const payload = {
+          existing_entities: selectedExamples,
+          context: generationContext.value
+        };
+        
+        console.log(`[AI Generator] Generating ${entityType.value} with payload:`, payload);
+        
+        // Call AI service
+        const newEntity = await aiApi.aiService.generateEntity(
+          Number(props.worldId),
+          entityType.value,
+          payload
+        );
+        
+        console.log(`[AI Generator] Successfully generated ${entityType.value}:`, newEntity);
+        
+        // Store generated entity
+        generatedEntity.value = newEntity;
+        generationComplete.value = true;
+        
+        // Refresh the appropriate list
+        refreshEntityList();
+        
+      } catch (err: any) {
+        console.error(`[AI Generator] Generation failed:`, err);
+        generationError.value = err.response?.data?.detail || err.message || `An error occurred during generation.`;
+      } finally {
+        isGenerating.value = false;
+      }
+    };
+    
+    const generateAnother = () => {
+      // Reset generation state but keep the dialog open and examples selected
+      generationComplete.value = false;
+      generatedEntity.value = null;
+      // Keep selectedExampleIds and generationContext for convenience
+    };
+    
+    const refreshEntityList = () => {
+      // Refresh the appropriate entity list based on the generated entity type
+      switch (entityType.value) {
+        case 'character':
+          // Character list is managed by WorldCharacterList component
+          // We might need to emit an event or reload the page
+          console.log('[AI Generator] Character list refresh needs implementation.');
+          // Changing tab and back could refresh it
+          const currentTabValue = currentTab.value;
+          if (currentTabValue === 'characters') {
+            currentTab.value = 'locations';
+            setTimeout(() => {
+              currentTab.value = 'characters';
+            }, 10);
+          }
+          break;
+        case 'location':
+          fetchWorldLocations(Number(props.worldId));
+          break;
+        case 'organization':
+          fetchWorldOrganizations(Number(props.worldId));
+          break;
+        case 'item':
+          fetchWorldItems(Number(props.worldId));
+          break;
+      }
+    };
+
+    // --- Watchers and Lifecycle Hooks ---
     onMounted(() => {
-       if (props.worldId) {
-           fetchWorldDetails(Number(props.worldId));
-       } else {
-           worldError.value = "World ID is missing.";
-           worldLoading.value = false;
-       }
+      if (props.worldId) {
+        fetchWorldDetails(Number(props.worldId));
+      } else {
+        worldError.value = "World ID is missing.";
+        worldLoading.value = false;
+      }
     });
 
     watch(
       () => props.worldId,
       (newId) => {
         if (newId) {
-        fetchWorldDetails(Number(newId));
+          fetchWorldDetails(Number(newId));
         }
       },
       { immediate: true }
@@ -440,7 +754,24 @@ export default defineComponent({
       openEditItemModal,
       closeItemModal,
       handleItemSaved,
-      worldId: computed(() => props.worldId)
+      worldId: computed(() => props.worldId),
+      
+      // AI Generator related exports
+      showAIGeneratorDialog,
+      entityType,
+      entityTypeLabel,
+      isGenerating,
+      generationError,
+      generationComplete,
+      selectedExampleIds,
+      generationContext,
+      generatedEntity,
+      availableExamples,
+      loadingExamples,
+      openAIGenerator,
+      closeAIGenerator,
+      generateEntity,
+      generateAnother
     };
   },
 });
@@ -496,9 +827,7 @@ export default defineComponent({
   color: #333;
 }
 
-/* Styles for Character List Section Removed */
-
-/* General Loading/Error/Button/Modal styles can remain or be moved to global styles */
+/* General Loading/Error/Button/Modal styles */
 .loading-message,
 .error-message,
 .access-denied-message {
@@ -556,27 +885,22 @@ export default defineComponent({
 
 .modal-content {
   background-color: white;
-  padding: 1.5rem 2rem; /* Slightly reduced padding */
+  padding: 1.5rem 2rem;
   border-radius: 0.5rem;
   width: 90%;
   max-width: 500px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  /* Overflow handling might be needed if content is too long */
   max-height: 90vh; 
   overflow-y: auto;
 }
 
-/* Make tabs look a bit nicer */
+/* Make tabs look nicer */
 .v-tabs {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .v-window-item {
   padding-top: 1rem; /* Add some space below tabs */
-}
-
-.settings-container {
-  /* Add styles if needed for the settings tab content area */
 }
 
 /* Responsive adjustments */

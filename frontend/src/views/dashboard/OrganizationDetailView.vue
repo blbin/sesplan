@@ -325,9 +325,7 @@ export default defineComponent({
     margin-top: 1.5rem;
 }
 
-.related-section h3 {
-   /* Styles for h3 in other sections */
-}
+
 
 .btn-outline-secondary {
     color: #6c757d;

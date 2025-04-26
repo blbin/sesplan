@@ -28,6 +28,7 @@ from . import item_tag_types
 from . import item_tags
 # Import routeru pro organization tag types
 from . import organization_tag_types
+from . import generation
 
 router = APIRouter()
 
@@ -76,6 +77,9 @@ router.include_router(
     prefix="/invites",
     tags=["invites"]
 )
+
+# Přidána registrace generation routeru
+router.include_router(generation.router, prefix="/ai", tags=["ai"])
 
 # Přidejte další endpointy z původního endpoints.py
 @router.get("/healthcheck")

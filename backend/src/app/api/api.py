@@ -16,7 +16,14 @@ from .endpoints import (
     items,
     availability,
     events,
-    location_tag_types
+    location_tag_types,
+    generation,
+    base,
+    character_tag_types,
+    character_tags,
+    item_tag_types,
+    item_tags,
+    organization_tag_types
 )
 
 api_router = APIRouter()
@@ -39,6 +46,19 @@ api_router.include_router(availability.router, prefix="/availability", tags=["av
 # Add organization router
 api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 
+# LangChain / AI Endpoints
+api_router.include_router(generation.router, prefix="/ai", tags=["ai"])
+
+# Base router (pro healthcheck)
+api_router.include_router(base.router, tags=["base"])
+
+# Obecný router pro pozvánky (přijetí/smazání)
+api_router.include_router(
+    campaign_invites.invite_router,
+    prefix="/invites",
+    tags=["invites"]
+)
+
 # Vnoření Event routeru pod World router
 # POZOR: Campaigns, Sessions, Locations, Items by také měly být pravděpodobně vnořené!
 # Prozatím vnoříme jen Events.
@@ -49,6 +69,35 @@ worlds.router.include_router(
     location_tag_types.router, 
     prefix="/{world_id}/location-tag-types", 
     tags=["location-tag-types"]
+)
+worlds.router.include_router(
+    character_tag_types.router, 
+    prefix="/{world_id}/character-tag-types", 
+    tags=["character-tag-types"]
+)
+worlds.router.include_router(
+    item_tag_types.router, 
+    prefix="/{world_id}/item-tag-types", 
+    tags=["item-tag-types"]
+)
+worlds.router.include_router(
+    organization_tag_types.router, 
+    prefix="/{world_id}/organization-tag-types", 
+    tags=["organization-tag-types"]
+)
+
+# Vnoření pod Characters
+characters.router.include_router(
+    character_tags.router, 
+    prefix="/{character_id}/tags", 
+    tags=["character-tags"]
+)
+
+# Vnoření pod Items
+items.router.include_router(
+    item_tags.router, 
+    prefix="/{item_id}/tags", 
+    tags=["item-tags"]
 )
 
 # TODO: Zrevidovat strukturu prefixů a vnoření routerů pro konzistenci (např. /worlds/{world_id}/campaigns/{campaign_id}/sessions) 
