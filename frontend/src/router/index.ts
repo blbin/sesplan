@@ -48,31 +48,43 @@ const routes: RouteRecordRaw[] = [
         // Children odebráno, detail lokace je sourozenec
         // children: [ ... ]
       },
-      // Původní nevnořená cesta pro LocationDetail
+      // Původní nevnořená cesta pro LocationDetail - UPRAVENO
       {
-        path: 'locations/:locationId', // Cesta je přímo pod /dashboard
+        // Přidáno /worlds/:worldId/ na začátek
+        path: 'worlds/:worldId/locations/:locationId', 
         name: 'LocationDetail', 
         component: () => import('@/views/dashboard/LocationDetailView.vue'),
-        // Předáváme jen locationId, worldId si komponenta zjistí z načtené lokace
-        props: route => ({ locationId: Number(route.params.locationId) }),
+        // Předáváme worldId a locationId
+        props: route => ({
+             worldId: Number(route.params.worldId), // Převedeme na číslo
+             locationId: Number(route.params.locationId) 
+        }),
         meta: { requiresAuth: true }
       },
-      // Nová routa pro OrganizationDetail
+      // Nová routa pro OrganizationDetail - UPRAVENO
       {
-        path: 'organizations/:organizationId', // Cesta je přímo pod /dashboard
+        // Přidáno /worlds/:worldId/ na začátek
+        path: 'worlds/:worldId/organizations/:organizationId', 
         name: 'OrganizationDetail',
         component: () => import('@/views/dashboard/OrganizationDetailView.vue'),
-        // Předáváme jen organizationId
-        props: route => ({ organizationId: Number(route.params.organizationId) }),
+        // Předáváme worldId a organizationId
+        props: route => ({
+             worldId: Number(route.params.worldId), 
+             organizationId: Number(route.params.organizationId)
+         }),
         meta: { requiresAuth: true }
       },
-      // Nová routa pro ItemDetail
+      // Nová routa pro ItemDetail - UPRAVENO
       {
-        path: 'items/:itemId', // Cesta je přímo pod /dashboard
+        // Přidáno /worlds/:worldId/ na začátek
+        path: 'worlds/:worldId/items/:itemId', 
         name: 'ItemDetail', 
         component: () => import('@/views/dashboard/ItemDetailView.vue'),
-        // Předáváme jen itemId, worldId si komponenta zjistí z načteného předmětu
-        props: route => ({ itemId: Number(route.params.itemId) }),
+        // Předáváme worldId a itemId
+        props: route => ({
+             worldId: Number(route.params.worldId),
+             itemId: Number(route.params.itemId)
+         }),
         meta: { requiresAuth: true }
       },
       // Nová routa pro kampaně

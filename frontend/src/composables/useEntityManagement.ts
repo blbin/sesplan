@@ -208,12 +208,10 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
       const validId = Number(newId);
       if (!isNaN(validId) && validId > 0) {
         // Fetch items always when ID is valid
-        fetchItems(validId);
+        fetchItems(validId); // Fetch items initially or on ID change
         // Fetch tag types only if the flag is set
         if (fetchTagTypesFlag) {
           fetchTagTypes(validId);
-        } else {
-          tagTypes.value = []; // Ensure tags are cleared if not fetching
         }
       } else {
         // Reset state if the ID becomes invalid
@@ -232,7 +230,7 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
   );
 
   // --- Manual Refresh Function ---
-  const refresh = () => {
+  const refreshData = () => {
       if (numericWorldId.value) {
           console.log(`[useEntityManagement:${entityType}] Manual refresh triggered.`);
           // Re-fetch items
@@ -241,6 +239,8 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
           if (fetchTagTypesFlag) {
             fetchTagTypes(numericWorldId.value);
           }
+      } else {
+        console.warn(`[useEntityManagement:${entityType}] Cannot refresh data, worldId is invalid.`);
       }
   };
 
@@ -268,6 +268,6 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
 
     // Actions
     deleteItem,
-    refresh, // Expose refresh function
+    refreshData, // Expose the manual refresh function
   };
 } 

@@ -7,7 +7,7 @@
     <div v-else-if="item" class="item-content">
       <header class="view-header">
         <h1>{{ item.name }}</h1>
-        <router-link v-if="worldId" :to="{ name: 'dashboard-world-detail', params: { worldId: worldId } }" class="btn btn-secondary">
+        <router-link v-if="worldId" :to="backToWorldRoute" class="btn btn-secondary">
           Zpět do světa
         </router-link>
         <button @click="openEditModal" class="btn btn-primary">Upravit předmět</button>
@@ -231,6 +231,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import type { Item, ItemUpdate } from '@/types/item';
 import type { ItemTagType } from '@/types/itemTagType';
 import type { Location } from '@/types/location';
@@ -256,6 +257,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const route = useRoute();
     const item = ref<Item | null>(null);
     const locations = ref<Location[]>([]);
     const loading = ref(true);
@@ -290,8 +292,30 @@ export default defineComponent({
     const isSavingDescription = ref(false);
     const saveDescriptionError = ref<string | null>(null);
 
-    // Computed property pro získání worldId z načteného předmětu
-    const worldId = computed(() => item.value?.world_id);
+    // Získání ID z route
+    const routeWorldId = computed(() => route.params.worldId as string | undefined);
+    const numericWorldId = computed(() => routeWorldId.value ? Number(routeWorldId.value) : null);
+    const fromTab = computed(() => route.query.fromTab as string | undefined);
+
+    // World ID se primárně bere z načteného itemu, ale routeWorldId je fallback pro odkaz
+    const worldId = computed(() => item.value?.world_id ?? numericWorldId.value);
+
+    // Dynamická cesta zpět
+    const backToWorldRoute = computed(() => {
+      const wId = routeWorldId.value || item.value?.world_id.toString();
+      const routeParams: { name: string; params: { worldId: string }; query?: { tab?: string } } = {
+        name: 'dashboard-world-detail',
+        params: { worldId: wId || '' }, 
+      };
+      if (fromTab.value) {
+        routeParams.query = { tab: fromTab.value };
+      }
+      if (!routeParams.params.worldId) {
+        console.warn("[ItemDetailView] Cannot determine worldId for back link.");
+        return { name: 'dashboard-worlds' }; // Fallback
+      }
+      return routeParams;
+    });
 
     // Initialize markdown-it
     const md = new MarkdownIt({
@@ -380,10 +404,10 @@ export default defineComponent({
 
     // Tag assignment functions
     const openTagEditDialog = () => {
-      if (!item.value || worldId.value === undefined) return;
+      if (!item.value || !numericWorldId.value) return;
       selectedTagTypeIds.value = item.value.tags?.map(t => t.item_tag_type_id) || [];
       if (availableTagTypes.value.length === 0 || tagTypesError.value) {
-        fetchTagTypes(worldId.value);
+        fetchTagTypes(numericWorldId.value);
       }
       tagSyncError.value = null;
       showTagEditDialog.value = true;
@@ -594,7 +618,10 @@ export default defineComponent({
       cancelDescriptionEdit,
       saveDescription,
       isDescriptionChanged,
-      renderedDescription
+      renderedDescription,
+      backToWorldRoute,
+      numericWorldId,
+      fromTab
     };
   }
 });

@@ -37,6 +37,7 @@
         <!-- Characters Tab Content -->
         <v-window-item value="characters" eager>
           <WorldEntityTable
+            ref="characterTableRef" 
             v-if="worldIdRef && isCurrentUserOwner !== undefined"
             :world-id="worldIdRef"
             entity-type="character"
@@ -55,6 +56,7 @@
         <!-- Locations Tab Content -->
         <v-window-item value="locations" eager>
           <WorldEntityTable
+            ref="locationTableRef"
             v-if="worldIdRef && isCurrentUserOwner !== undefined"
             :world-id="worldIdRef"
             entity-type="location"
@@ -84,6 +86,7 @@
         <!-- Organizations Tab Content -->
         <v-window-item value="organizations" eager>
           <WorldEntityTable
+            ref="organizationTableRef"
             v-if="worldIdRef && isCurrentUserOwner !== undefined"
             :world-id="worldIdRef"
             entity-type="organization"
@@ -113,6 +116,7 @@
         <!-- Items Tab Content -->
         <v-window-item value="items" eager>
            <WorldEntityTable
+             ref="itemTableRef"
             v-if="worldIdRef && isCurrentUserOwner !== undefined"
             :world-id="worldIdRef"
             entity-type="item"
@@ -254,17 +258,17 @@
                 {{ generationError }}
               </v-alert>
             <div v-if="!isGenerating && !generationComplete">
-               <p class="mb-4 text-body-1">Select existing {{ aiEntityTypeLabel.toLowerCase() }}s as examples.</p>
+               <p class="mb-4 text-body-1">Optionally select existing {{ aiEntityTypeLabel.toLowerCase() }}s as examples for style and content inspiration.</p>
               <v-select
                 v-model="selectedExampleIds"
                 :items="availableExamples"
                 item-title="name"
                 item-value="id"
-                 :label="`Select ${aiEntityTypeLabel.toLowerCase()} examples`"
+                 :label="`Select ${aiEntityTypeLabel.toLowerCase()} examples (Optional)`"
                  multiple chips closable-chips
+                 clearable
                 :loading="loadingExamples"
-                 :rules="[(v: any) => (v && v.length > 0) || 'At least one example is required']"
-                 required class="mb-4"
+                 class="mb-4"
               ></v-select>
               <v-textarea
                 v-model="generationContext"
@@ -283,16 +287,23 @@
               <v-card variant="outlined" class="mb-4">
                  <v-card-title>{{ generatedEntity.name || 'Unnamed Entity' }}</v-card-title>
                 <v-card-text>
-                   <p>{{ generatedEntity.description || 'No description available.' }}</p>
+                   <p v-html="renderMarkdownPreview(generatedEntity.description || 'No description available.')"></p>
                 </v-card-text>
               </v-card>
+               <v-btn 
+                color="primary"
+                 variant="outlined"
+                 prepend-icon="mdi-eye-outline"
+                 @click="goToDetailView(generatedEntity, aiEntityType)"
+                class="mr-2"
+               >View Details</v-btn>
             </div>
           </v-card-text>
           <v-divider></v-divider>
           <v-card-actions>
             <v-spacer></v-spacer>
              <v-btn variant="text" :disabled="isGenerating" @click="closeAIGenerator">{{ generationComplete ? 'Close' : 'Cancel' }}</v-btn>
-             <v-btn v-if="!isGenerating && !generationComplete" color="primary" :disabled="selectedExampleIds.length === 0" @click="generateEntity">Generate</v-btn>
+             <v-btn v-if="!isGenerating && !generationComplete" color="primary" @click="generateEntity">Generate</v-btn>
              <v-btn v-if="generationComplete" color="primary" @click="generateAnother">Generate Another</v-btn>
           </v-card-actions>
         </v-card>
@@ -327,7 +338,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 // Import Composables
@@ -371,16 +382,36 @@ const numericWorldId = computed(() => {
 });
 
 // --- World Detail Composable ---
-const { worldError, worldLoading, isCurrentUserOwner } = useWorldDetail(worldIdRef);
+const { worldError, worldLoading, isCurrentUserOwner, renderMarkdownPreview } = useWorldDetail(worldIdRef);
 
 // --- Current Tab State ---
 const currentTab = ref('details');
+const validTabs = ['details', 'characters', 'locations', 'organizations', 'items'];
+
+// --- Template Refs for Tables ---
+const characterTableRef = ref<InstanceType<typeof WorldEntityTable> | null>(null);
+const locationTableRef = ref<InstanceType<typeof WorldEntityTable> | null>(null);
+const organizationTableRef = ref<InstanceType<typeof WorldEntityTable> | null>(null);
+const itemTableRef = ref<InstanceType<typeof WorldEntityTable> | null>(null);
+
+// Sledování změny záložky a aktualizace URL
+watch(currentTab, (newTab) => {
+  router.replace({ query: { ...route.query, tab: newTab } });
+});
+
+// Nastavení počáteční záložky z URL při načtení
+onMounted(() => {
+  const tabFromUrl = route.query.tab as string;
+  if (tabFromUrl && validTabs.includes(tabFromUrl)) {
+    currentTab.value = tabFromUrl;
+  }
+});
 
 // --- Entity Management Composables (for unfiltered lists and specific tags) ---
-const { allItems: allCharacters, tagTypes: characterTagTypes, refresh: refreshCharacters } = useEntityManagement<Character, CharacterTagType>(worldIdRef, 'character', true);
-const { allItems: allLocations, refresh: refreshLocations } = useEntityManagement<Location, any>(worldIdRef, 'location');
-const { allItems: allOrganizations, refresh: refreshOrganizations } = useEntityManagement<Organization, any>(worldIdRef, 'organization');
-const { allItems: allItems, tagTypes: itemTagTypes, refresh: refreshItems } = useEntityManagement<Item, ItemTagType>(worldIdRef, 'item', true);
+const { allItems: allCharacters, tagTypes: characterTagTypes } = useEntityManagement<Character, CharacterTagType>(worldIdRef, 'character', true);
+const { allItems: allLocations } = useEntityManagement<Location, any>(worldIdRef, 'location');
+const { allItems: allOrganizations } = useEntityManagement<Organization, any>(worldIdRef, 'organization');
+const { allItems: allItems, tagTypes: itemTagTypes } = useEntityManagement<Item, ItemTagType>(worldIdRef, 'item', true);
 
 // --- Table Headers ---
 const characterHeaders = ref([
@@ -442,21 +473,21 @@ const aiEntityType = ref<EntityType>('character');
 const openAddLocationModal = () => { locationToEdit.value = null; showLocationForm.value = true; };
 const openEditLocationModal = (loc: Location) => { locationToEdit.value = { ...loc }; showLocationForm.value = true; };
 const closeLocationModal = () => { showLocationForm.value = false; locationToEdit.value = null; };
-const handleLocationSaved = () => { closeLocationModal(); refreshLocations(); };
+const handleLocationSaved = () => { closeLocationModal(); locationTableRef.value?.refreshData(); };
 
 const openAddOrganizationModal = () => { organizationToEdit.value = null; showOrganizationForm.value = true; };
 const openEditOrganizationModal = (org: Organization) => { organizationToEdit.value = { ...org }; showOrganizationForm.value = true; };
 const closeOrganizationModal = () => { showOrganizationForm.value = false; organizationToEdit.value = null; };
-const handleOrganizationSaved = () => { closeOrganizationModal(); refreshOrganizations(); };
+const handleOrganizationSaved = () => { closeOrganizationModal(); organizationTableRef.value?.refreshData(); };
 
 const openAddItemModal = () => { itemToEdit.value = null; showItemForm.value = true; };
 const openEditItemModal = (item: Item) => { itemToEdit.value = { ...item }; showItemForm.value = true; };
 const closeItemModal = () => { showItemForm.value = false; itemToEdit.value = null; };
-const handleItemSaved = () => { closeItemModal(); refreshItems(); };
+const handleItemSaved = () => { closeItemModal(); itemTableRef.value?.refreshData(); };
 
 const openCharacterFormModal = (char: Character | null = null) => { characterToEdit.value = char ? { ...char } : null; showCharacterForm.value = true; };
 const closeCharacterModal = () => { showCharacterForm.value = false; characterToEdit.value = null; };
-const handleCharacterSaved = () => { closeCharacterModal(); refreshCharacters(); };
+const handleCharacterSaved = () => { closeCharacterModal(); characterTableRef.value?.refreshData(); };
 
 // --- Delete ---
 const requestDelete = (item: any, type: EntityType) => {
@@ -476,16 +507,25 @@ const cancelDelete = () => {
   itemTypeToDelete.value = null;
 };
 
-// Get the correct refresh function based on type
-const getRefreshFnForType = (type: EntityType | null) => {
-    if (!type) return () => {};
+// Get the correct table ref based on type - UPDATED HELPER
+const getTableRefForType = (type: EntityType | null) => {
+    if (!type) return null;
     switch (type) {
-        case 'character': return refreshCharacters;
-        case 'location': return refreshLocations;
-        case 'organization': return refreshOrganizations;
-        case 'item': return refreshItems;
-        default: return () => {};
+        case 'character': return characterTableRef;
+        case 'location': return locationTableRef;
+        case 'organization': return organizationTableRef;
+        case 'item': return itemTableRef;
+        default: return null;
     }
+};
+
+// Získání správné instance composable pro deleteItem
+// (Potřebujeme je pro přístup k deleteItem a deleteError)
+const entityComposables = {
+  character: useEntityManagement<Character, CharacterTagType>(worldIdRef, 'character'),
+  location: useEntityManagement<Location, any>(worldIdRef, 'location'),
+  organization: useEntityManagement<Organization, any>(worldIdRef, 'organization'),
+  item: useEntityManagement<Item, ItemTagType>(worldIdRef, 'item')
 };
 
 const executeDelete = async () => {
@@ -494,21 +534,26 @@ const executeDelete = async () => {
   deleteError.value = null;
   const id = itemToDelete.value.id;
   const type = itemTypeToDelete.value;
-  const refreshFn = getRefreshFnForType(type);
+  const tableRef = getTableRefForType(type);
+  const composableInstance = entityComposables[type]; // Získání správné instance
 
-  // We need a separate composable instance just for deletion, as we can't easily get
-  // the instance from the WorldEntityTable component. This is slightly less efficient
-  // but ensures correct API call. Alternatively, pass the delete function down.
-  const { deleteItem: deleteItemApi, deleteError: apiDeleteError } = useEntityManagement(worldIdRef, type);
+  if (!composableInstance) {
+      deleteError.value = `Internal error: Cannot find composable for type ${type}`;
+      isDeleting.value = false;
+      return;
+  }
 
   try {
-    await deleteItemApi(id);
-    refreshFn(); // Call the refresh function for the correct list
+    // Volání deleteItem z příslušné instance composable
+    await composableInstance.deleteItem(id); 
+    // Počkáme na dokončení smazání a pak refreshujeme PŘES REF tabulky
+    tableRef?.value?.refreshData(); 
     cancelDelete();
-  } catch (err) {
+  } catch (err: any) { 
     console.error(`[WorldDetailView] Delete ${type} error:`, err);
-    deleteError.value = apiDeleteError.value || `Failed to delete ${type}: Unknown error`;
-      } finally {
+    // Získání chyby z composable instance
+    deleteError.value = composableInstance.deleteError.value || `Failed to delete ${type}: ${err.message || 'Unknown error'}`;
+  } finally {
     isDeleting.value = false;
   }
 };
@@ -545,18 +590,24 @@ const openAIGenerator = (type: EntityType) => {
 const closeAIGenerator = () => showAIGeneratorDialog.value = false;
 
     const generateEntity = async () => {
-  if (selectedExampleIds.value.length === 0 || !numericWorldId.value) return;
+      if (!numericWorldId.value) return;
       isGenerating.value = true;
       generationError.value = null;
+      const tableRef = getTableRefForType(aiEntityType.value);
   try {
-    const selectedExamples = availableExamples.value
-      .filter(entity => selectedExampleIds.value.includes(entity.id))
-      .map(entity => ({ id: entity.id, name: entity.name, description: entity.description }));
+        // Správné sestavení payloadu - příklady se pošlou jen pokud jsou vybrané
+        const selectedExamples = selectedExampleIds.value.length > 0 
+            ? availableExamples.value
+                .filter(entity => selectedExampleIds.value.includes(entity.id))
+                .map(entity => ({ id: entity.id, name: entity.name, description: entity.description }))
+            : []; // Prázdné pole, pokud nejsou vybrány žádné příklady
     const payload = { existing_entities: selectedExamples, context: generationContext.value };
+
     const newEntity = await aiApi.aiService.generateEntity(numericWorldId.value, aiEntityType.value, payload);
         generatedEntity.value = newEntity;
         generationComplete.value = true;
-    getRefreshFnForType(aiEntityType.value)(); // Refresh the list
+        // Zavoláme refresh na referenci tabulky PO úspěšném generování
+    tableRef?.value?.refreshData(); 
       } catch (err: any) {
     generationError.value = err.response?.data?.detail || err.message || "Generation error";
       } finally {
@@ -574,12 +625,15 @@ const goToDetailView = (item: any, type: EntityType) => {
   let routeName = '';
   let params = {};
         switch (type) {
-    case 'character': routeName = 'CharacterDetail'; params = { characterId: item.id }; break;
-    case 'location': routeName = 'LocationDetail'; params = { locationId: item.id }; break;
-    case 'organization': routeName = 'OrganizationDetail'; params = { organizationId: item.id }; break;
-    case 'item': routeName = 'ItemDetail'; params = { itemId: item.id }; break;
+    case 'character': routeName = 'CharacterDetail'; params = { worldId: numericWorldId.value, characterId: item.id }; break;
+    case 'location': routeName = 'LocationDetail'; params = { worldId: numericWorldId.value, locationId: item.id }; break;
+    case 'organization': routeName = 'OrganizationDetail'; params = { worldId: numericWorldId.value, organizationId: item.id }; break;
+    case 'item': routeName = 'ItemDetail'; params = { worldId: numericWorldId.value, itemId: item.id }; break;
   }
-  if (routeName) router.push({ name: routeName, params });
+  if (routeName && numericWorldId.value) { 
+    // Přidání aktuální záložky jako query parametr
+    router.push({ name: routeName, params, query: { fromTab: currentTab.value } }); 
+  }
 };
 const handleCharacterRowClick = (item: Character) => goToDetailView(item, 'character');
 const handleLocationRowClick = (item: Location) => goToDetailView(item, 'location');

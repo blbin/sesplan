@@ -3,7 +3,7 @@
     <div v-if="loading" class="loading-message">Loading organization details...</div>
     <div v-else-if="error" class="error-message">
       <p>{{ error }}</p>
-      <router-link v-if="worldId" :to="{ name: 'dashboard-world-detail', params: { worldId: worldId } }" class="btn btn-secondary">Back to World</router-link>
+      <router-link v-if="worldId" :to="backToWorldRoute" class="btn btn-secondary">Back to World</router-link>
       <router-link v-else :to="{ name: 'dashboard-worlds' }" class="btn btn-secondary">Back to Worlds</router-link>
     </div>
     <div v-else-if="organization" class="organization-content">
@@ -18,7 +18,7 @@
            >
             Manage Tag Types
           </button>
-          <router-link :to="{ name: 'dashboard-world-detail', params: { worldId: organization.world_id } }" class="btn btn-secondary">
+          <router-link :to="backToWorldRoute" class="btn btn-secondary">
             Back to World
           </router-link>
         </div>
@@ -123,6 +123,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import * as organizationsApi from '@/services/api/organizations';
 import * as organizationTagTypeApi from '@/services/api/organizationTagTypeService';
 import type { Organization, OrganizationUpdate } from '@/types/organization';
@@ -148,6 +149,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const route = useRoute();
     const authStore = useAuthStore();
     const organization = ref<Organization | null>(null);
     const parentOrganization = ref<Organization | null>(null);
@@ -157,6 +159,8 @@ export default defineComponent({
     const tagTypesLoading = ref(false);
     const tagTypesError = ref<string | undefined>(undefined);
     const worldId = ref<number | null>(null);
+    const routeWorldId = computed(() => route.params.worldId as string | undefined);
+    const fromTab = computed(() => route.query.fromTab as string | undefined);
     const showTagManagerModal = ref(false);
 
     const isEditingDescription = ref(false);
@@ -186,6 +190,21 @@ export default defineComponent({
       const currentDesc = organization.value?.description ?? '';
       const editedDesc = editableDescription.value.trim() === '' ? '' : editableDescription.value;
       return currentDesc !== editedDesc;
+    });
+
+    const backToWorldRoute = computed(() => {
+      const routeParams: { name: string; params: { worldId: string }; query?: { tab?: string } } = {
+        name: 'dashboard-world-detail',
+        params: { worldId: routeWorldId.value || organization.value?.world_id.toString() || '' }, 
+      };
+      if (fromTab.value) {
+        routeParams.query = { tab: fromTab.value };
+      }
+      if (!routeParams.params.worldId) {
+        console.warn("[OrganizationDetailView] Cannot determine worldId for back link.");
+        return { name: 'dashboard-worlds' }; 
+      }
+      return routeParams;
     });
 
     const fetchAvailableTagTypes = async (currentWorldId: number) => {
@@ -327,6 +346,7 @@ export default defineComponent({
       cancelDescriptionEdit,
       saveDescription,
       isDescriptionChanged,
+      backToWorldRoute,
     };
   },
 });

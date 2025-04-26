@@ -6,16 +6,23 @@
         <span></span>
         <span></span>
       </button>
-      <h1>Dashboard</h1>
+      <!-- Odstraněn text Dashboard -->
+      <!-- <h1>Dashboard</h1> -->
     </div>
     <div class="header-actions">
+      <!-- Zakomentován search bar -->
+      <!--
       <div class="search-bar">
         <input type="text" placeholder="Search..." />
         <i class="icon">🔍</i>
       </div>
+      -->
+      <!-- Zakomentován zvoneček -->
+      <!--
       <div class="notifications">
         <i class="icon">🔔</i>
       </div>
+      -->
       <div class="user-profile">
         <div class="user-avatar" @click="toggleDropdown">
           {{ username ? username.charAt(0).toUpperCase() : 'U' }}

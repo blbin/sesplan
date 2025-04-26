@@ -154,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
+import { computed, toRef, defineExpose } from 'vue';
 import { useEntityManagement } from '@/composables/useEntityManagement';
 import type { EntityType } from '@/composables/useEntityManagement'; // Import as type
 import { useWorldDetail } from '@/composables/useWorldDetail'; // To check world loading state and get markdown renderer
@@ -192,7 +192,7 @@ const props = defineProps<{
 }>();
 
 // Default props
-const { itemsPerPage = 5, fetchTagTypes = true } = props;
+const { itemsPerPage = 10, fetchTagTypes = true } = props;
 
 // Emits definition
 const emit = defineEmits<{
@@ -216,10 +216,16 @@ const {
   selectedTagIds,
   addTagToFilter,
   getTagTypeName,
+  refreshData,
 } = useEntityManagement(toRef(props, 'worldId'), props.entityType, fetchTagTypes);
 
 // Use world detail composable for world loading state and markdown preview
 const { worldLoading, renderMarkdownPreview } = useWorldDetail(toRef(props, 'worldId'));
+
+// Expose the refreshData function to the parent component
+defineExpose({
+  refreshData
+});
 
 // Compute singular entity type for button labels
 const singularEntityType = computed(() => {
@@ -273,9 +279,7 @@ const handleRowClick = (_event: Event, { item }: { item: any }) => {
 </script>
 
 <style scoped>
-.entity-table-container {
-  /* Container styling */
-}
+/* Container styling */
 
 .tag-filter-select {
   max-width: 200px; 
