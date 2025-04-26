@@ -1,7 +1,7 @@
 <template>
   <div class="characters-view">
     <header class="view-header">
-      <h1>My Characters</h1>
+      <h1>Characters</h1>
       <button @click="openAddModal" class="btn btn-primary">
         <i class="icon">+</i> Add New Character
       </button>
@@ -10,7 +10,7 @@
     <div class="list-container">
       <p v-if="loading">Loading characters...</p>
       <p v-else-if="error" class="error-message">{{ error }}</p>
-      <div v-else-if="characters.length === 0">You haven't created any characters yet.</div>
+      <div v-else-if="characters.length === 0">No characters found for this world.</div>
       <ul v-else class="item-list">
         <li v-for="character in characters" :key="character.id" class="item-list-item">
           <div class="item-info">
@@ -20,7 +20,6 @@
               </router-link>
             </h2>
             <p>{{ character.description || 'No description' }}</p>
-            <small class="world-info">World: {{ getWorldName(character.world_id) }}</small>
           </div>
           <div class="item-actions">
             <button @click="openEditModal(character)" class="btn btn-secondary btn-sm">Edit</button>
@@ -31,11 +30,12 @@
     </div>
 
     <!-- Modal for Add/Edit Character -->
-    <div v-if="showModal" class="modal-backdrop">
+    <div v-if="showModal && numericWorldId" class="modal-backdrop">
       <div class="modal">
          <CreateCharacterForm
+            :worldId="numericWorldId"
             :characterToEdit="editingCharacter"
-            :availableWorlds="availableWorlds" 
+            :availableTagTypes="characterTagTypes"
             @saved="handleCharacterSaved"
             @cancel="closeModal"
          />
@@ -59,34 +59,48 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import * as charactersApi from '@/services/api/characters';
-import * as worldsApi from '@/services/api/worlds';
 import type { Character } from '@/types/character';
-import type { World } from '@/types/world';
+import type { CharacterTagType } from '@/types/characterTagType';
 import CreateCharacterForm from '@/components/dashboard/CreateCharacterForm.vue';
+import * as characterTagTypeApi from '@/services/api/characterTagTypeService';
 
 export default defineComponent({
   name: 'CharactersView',
   components: { CreateCharacterForm },
   setup() {
+    const route = useRoute();
     const characters = ref<Character[]>([]);
-    const availableWorlds = ref<World[]>([]);
+    const characterTagTypes = ref<CharacterTagType[]>([]);
     const loading = ref(true);
-    const loadingWorlds = ref(false);
+    const loadingTagTypes = ref(false);
     const error = ref<string | null>(null);
-    const worldError = ref<string | null>(null);
+    const tagTypesError = ref<string | null>(null);
     const deleteError = ref<string | null>(null);
 
     const showModal = ref(false);
     const editingCharacter = ref<Character | null>(null);
     const characterToDelete = ref<Character | null>(null);
 
+    const worldIdRef = computed(() => route.params.worldId as string | undefined);
+    const numericWorldId = computed(() => {
+      const id = Number(worldIdRef.value);
+      return !isNaN(id) && id > 0 ? id : null;
+    });
+
     const loadCharacters = async () => {
+      if (!numericWorldId.value) {
+        error.value = "Invalid World ID.";
+        loading.value = false;
+        characters.value = [];
+        return;
+      }
       loading.value = true;
       error.value = null;
       try {
-        characters.value = await charactersApi.getMyCharacters();
+        characters.value = await charactersApi.getAllWorldCharacters(numericWorldId.value);
       } catch (err: any) {
         error.value = `Failed to load characters: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         console.error("Load Characters Error:", err);
@@ -95,16 +109,17 @@ export default defineComponent({
       }
     };
 
-    const loadWorlds = async () => {
-        loadingWorlds.value = true;
-        worldError.value = null;
+    const loadCharacterTagTypes = async () => {
+        if (!numericWorldId.value) return;
+        loadingTagTypes.value = true;
+        tagTypesError.value = null;
         try {
-            availableWorlds.value = await worldsApi.getWorlds();
+            characterTagTypes.value = await characterTagTypeApi.getCharacterTagTypes(numericWorldId.value);
         } catch (err: any) {
-            worldError.value = `Failed to load worlds: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            console.error("Load Worlds Error:", err);
+            tagTypesError.value = `Failed to load character tags: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+            console.error("Load Character Tag Types Error:", err);
         } finally {
-            loadingWorlds.value = false;
+            loadingTagTypes.value = false;
         }
     };
 
@@ -114,38 +129,25 @@ export default defineComponent({
     };
 
      const openAddModal = () => {
+        if (!numericWorldId.value) return;
         editingCharacter.value = null;
         showModal.value = true;
-        if (availableWorlds.value.length === 0 && !loadingWorlds.value) {
-            loadWorlds();
+        if (characterTagTypes.value.length === 0 && !loadingTagTypes.value) {
+            loadCharacterTagTypes();
         }
     };
 
      const openEditModal = (character: Character) => {
+      if (!numericWorldId.value) return;
       editingCharacter.value = character;
       showModal.value = true;
+      if (characterTagTypes.value.length === 0 && !loadingTagTypes.value) {
+            loadCharacterTagTypes();
+        }
     };
 
-    const getWorldName = (worldId: number): string => {
-        const world = availableWorlds.value.find(w => w.id === worldId);
-        if (!world && availableWorlds.value.length === 0 && !loadingWorlds.value) {
-            loadWorlds();
-        }
-        return world ? world.name : `ID: ${worldId}`;
-    };
-
-    const handleCharacterSaved = (savedCharacter: Character) => {
-        if (editingCharacter.value) {
-             const index = characters.value.findIndex(c => c.id === savedCharacter.id);
-             if (index !== -1) {
-                 characters.value[index] = savedCharacter;
-             }
-        } else {
-            characters.value.push(savedCharacter);
-            if (!availableWorlds.value.find(w => w.id === savedCharacter.world_id)) {
-                loadWorlds();
-            }
-        }
+    const handleCharacterSaved = (_savedCharacter: Character) => {
+        loadCharacters();
         closeModal();
     };
 
@@ -159,7 +161,7 @@ export default defineComponent({
       deleteError.value = null;
       try {
           await charactersApi.deleteCharacter(characterToDelete.value.id);
-          characters.value = characters.value.filter(c => c.id !== characterToDelete.value!.id);
+          loadCharacters();
           characterToDelete.value = null;
       } catch (err: any) {
            deleteError.value = `Delete failed: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
@@ -168,25 +170,30 @@ export default defineComponent({
     };
 
     onMounted(() => {
-        loadCharacters();
-        loadWorlds();
+        if (numericWorldId.value) {
+            loadCharacters();
+            loadCharacterTagTypes();
+        } else {
+            error.value = "World ID not found in route.";
+            loading.value = false;
+        }
     });
 
     return {
       characters,
-      availableWorlds,
+      characterTagTypes,
       loading,
-      loadingWorlds,
+      loadingTagTypes,
       error,
-      worldError,
+      tagTypesError,
       deleteError,
       showModal,
       editingCharacter,
       characterToDelete,
+      numericWorldId,
       closeModal,
       openAddModal,
       openEditModal,
-      getWorldName,
       handleCharacterSaved,
       confirmDelete,
       handleDeleteCharacter,
@@ -255,11 +262,6 @@ export default defineComponent({
 }
 .item-link:hover {
     text-decoration: underline;
-}
-
-.world-info {
-    font-size: 0.8rem;
-    color: #888;
 }
 
 .item-actions {

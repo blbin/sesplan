@@ -80,14 +80,17 @@ Existing Examples (used for style and content inspiration):
 List of existing names for {entity_type} in this world (DO NOT use these names):
 {existing_names_list}
 
-Please generate ONLY a JSON object containing the core details for the new entity. The JSON object should have the following keys:
+Please generate ONLY the raw JSON object containing the core details for the new entity. Do NOT include any markdown formatting like ```json or ``` around the JSON object.
+Your entire response must start directly with `{` and end directly with `}`.
+Ensure the generated JSON is valid and uses correct UTF-8 encoding for all characters.
+The JSON object must have the following keys:
 - "name": (string) The name of the {entity_type}. It must be unique and not in the list above.
-- "description": (string) A detailed description of the {entity_type}.
+- "description": (string) A detailed description of the {entity_type}, including any necessary Markdown formatting INSIDE the string value.
 
 Example JSON format:
-{{ "name": "Unique Example Name", "description": "Example Description." }}
+{{ "name": "Unique Example Name", "description": "Example **description** with markdown." }}
 
-JSON Output:
+Valid JSON Output:
 """
         prompt = PromptTemplate(
             template=prompt_template_str,
@@ -112,20 +115,31 @@ JSON Output:
             })
             print(f"[LangChainService] Raw LLM output received:\n{llm_raw_output}")
 
-            # Extrakce JSON z markdown bloku
-            match = re.search(r"```(json)?\s*({.*?})\s*```", llm_raw_output, re.DOTALL | re.IGNORECASE)
+            # Extrakce JSON - vylepšená logika
+            json_string = None
+            # 1. Pokus: Najít blok ```json ... ``` nebo ``` ... ```
+            match = re.search(r"```(?:json)?\s*({.*?})\s*```", llm_raw_output, re.DOTALL | re.IGNORECASE)
             if match:
-                json_string = match.group(2)
+                json_string = match.group(1) # Skupina 1 obsahuje obsah mezi {}              
             else:
-                # Pokud markdown blok nenalezen, zkusíme použít celý výstup (po očištění)
-                json_string = llm_raw_output.strip()
-                # Případně odstraníme jen ``` pokud nejsou spárované
-                if json_string.startswith("```json"):
-                    json_string = json_string[7:].strip()
-                elif json_string.startswith("```"):
-                    json_string = json_string[3:].strip()
-                if json_string.endswith("```"):
-                    json_string = json_string[:-3].strip()
+                # 2. Pokus: Najít první platný JSON objekt (začínající { končící })
+                # Toto je méně spolehlivé, ale může zachytit případy bez značek
+                match = re.search(r"({.*?})", llm_raw_output, re.DOTALL)
+                if match:
+                    # Zkusíme parsovat, zda je to validní JSON, abychom se vyhnuli chycení neúplných {} bloků
+                    potential_json = match.group(1)
+                    try:
+                        json.loads(potential_json, strict=False)
+                        json_string = potential_json
+                        print("[LangChainService] Warning: Extracted JSON without ``` markers.")
+                    except json.JSONDecodeError:
+                        print("[LangChainService] Warning: Found {} block, but it's not valid JSON.")
+                        pass # Necháme json_string None
+
+            # Pokud se nepodařilo extrahovat JSON ani jedním způsobem
+            if json_string is None:
+                 print(f"[LangChainService] FATAL: Could not extract JSON block from LLM output.\n>>>\n{llm_raw_output}\n<<<")
+                 raise ValueError("Could not extract JSON block from LLM response.")
             
             print(f"[LangChainService] Extracted JSON string:\n{json_string}")
 

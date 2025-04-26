@@ -1,55 +1,58 @@
 <template>
   <form @submit.prevent="handleSaveCharacter" class="character-form">
-    <h3>{{ isEditing ? 'Edit Character' : 'Add New Character' }}</h3>
-
-    <!-- World Selection (only for creating) -->
-    <div v-if="!isEditing" class="form-group">
-      <label for="characterWorld">World *</label>
-      <select id="characterWorld" v-model="formData.world_id" required class="form-control">
-        <option disabled :value="null">Please select a world</option>
-        <option v-for="world in availableWorlds" :key="world.id" :value="world.id">
-          {{ world.name }}
-        </option>
-      </select>
-      <p v-if="!availableWorlds || availableWorlds.length === 0" class="info-message">
-        <!-- Provide info or loading state if needed -->
-        No worlds available or loading...
-      </p>
-    </div>
-
     <div class="form-group">
       <label for="characterName">Name *</label>
-      <input 
-        type="text" 
-        id="characterName" 
+      <v-text-field 
         v-model="formData.name" 
-        required 
-        class="form-control"
-      >
+        :rules="[rules.required]"
+        variant="outlined"
+        density="compact"
+        id="characterName"
+      />
     </div>
     <div class="form-group">
       <label for="characterDescription">Description</label>
-      <textarea 
-        id="characterDescription" 
+      <v-textarea 
         v-model="formData.description"
-        class="form-control"
+        variant="outlined"
+        density="compact"
         rows="4"
-      ></textarea>
+        id="characterDescription"
+      />
     </div>
 
-    <div v-if="formError" class="error-message">
-      {{ formError }}
+    <!-- Tags Selection -->
+    <div class="form-group">
+      <label for="characterTags">Tags</label>
+      <v-select
+        id="characterTags"
+        v-model="selectedTagTypeIds"
+        :items="availableTagTypes"
+        item-title="name"
+        item-value="id"
+        label="Select tags"
+        multiple
+        chips
+        closable-chips
+        variant="outlined"
+        density="compact"
+      ></v-select>
     </div>
+
+    <v-alert v-if="formError" type="error" variant="tonal" density="compact" class="mb-4">
+      {{ formError }}
+    </v-alert>
 
     <div class="form-actions">
-      <button type="button" @click="onCancel" class="btn btn-secondary">Cancel</button>
-      <button 
+      <v-btn variant="text" @click="onCancel">Cancel</v-btn>
+      <v-btn 
+        color="primary" 
         type="submit" 
-        class="btn btn-primary" 
-        :disabled="isSubmitting || (!isEditing && !formData.world_id) || !formData.name.trim()"
+        :loading="isSubmitting"
+        :disabled="!formData.name.trim()"
        >
         {{ isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Character') }}
-      </button>
+      </v-btn>
     </div>
   </form>
 </template>
@@ -58,30 +61,33 @@
 import { defineComponent, ref, reactive, watch, computed } from 'vue';
 import type { PropType } from 'vue';
 import * as charactersApi from '@/services/api/characters';
+// Assume types will include tags eventually
 import type { Character, CharacterCreate, CharacterUpdate } from '@/types/character';
-import type { World } from '@/types/world';
+import type { CharacterTagType } from '@/types/characterTagType'; // Corrected import path
+// Import Vuetify components used
+import { VTextField, VTextarea, VSelect, VBtn, VAlert } from 'vuetify/components';
 
 interface CharacterFormData {
   name: string;
   description: string | null;
-  world_id: number | null; // Only for creating
+  // world_id is no longer part of the form data, it comes from the required prop
 }
 
 export default defineComponent({
   name: 'CreateCharacterForm',
+  components: { VTextField, VTextarea, VSelect, VBtn, VAlert }, // Register Vuetify components
   props: {
-    // worldId is only needed when creating a new character outside a specific world context
     worldId: {
       type: Number,
-      default: null, // Make it optional
+      required: true, // worldId is now required as context is fixed
     },
     characterToEdit: {
       type: Object as PropType<Character | null>,
       default: null,
     },
-    // Pass available worlds for selection when creating
-    availableWorlds: {
-        type: Array as PropType<World[]>,
+    // Removed availableWorlds prop
+    availableTagTypes: {
+        type: Array as PropType<CharacterTagType[]>,
         default: () => [],
     },
   },
@@ -89,11 +95,16 @@ export default defineComponent({
   setup(props, { emit }) {
     const isSubmitting = ref(false);
     const formError = ref<string | null>(null);
+    const selectedTagTypeIds = ref<number[]>([]); // For selected tag IDs
+
+    // Basic required rule for Vuetify fields
+    const rules = {
+      required: (value: string) => !!value || 'This field is required.',
+    };
 
     const formData = reactive<CharacterFormData>({
       name: '',
       description: null,
-      world_id: props.worldId, // Pre-fill if worldId prop is provided
     });
 
     const isEditing = computed(() => !!props.characterToEdit);
@@ -105,15 +116,16 @@ export default defineComponent({
         if (character) {
           formData.name = character.name;
           formData.description = character.description;
-          formData.world_id = character.world_id; // Store world_id for context if needed, but not changeable
+          // Pre-fill selected tags if editing and character has tags
+          selectedTagTypeIds.value = character.tags?.map(tag => tag.character_tag_type_id) || [];
         } else {
-          // Reset form for creation, potentially pre-filling worldId from prop
+          // Reset form for creation
           formData.name = '';
           formData.description = null;
-          formData.world_id = props.worldId;
+          selectedTagTypeIds.value = []; // Clear tags for new character
         }
       },
-      { immediate: true }
+      { immediate: true, deep: true } // Use deep watch if character.tags is nested?
     );
 
     const onCancel = () => {
@@ -123,6 +135,7 @@ export default defineComponent({
     const handleSaveCharacter = async () => {
       formError.value = null;
       if (!formData.name.trim()) {
+        // Validation should be handled by Vuetify rules, but keep a fallback
         formError.value = 'Character name is required.';
         return;
       }
@@ -131,37 +144,36 @@ export default defineComponent({
       try {
         let savedCharacter: Character;
         if (isEditing.value && props.characterToEdit) {
-          // Update
-          const characterDataToUpdate: CharacterUpdate = {};
-          if (formData.name !== props.characterToEdit.name) {
-            characterDataToUpdate.name = formData.name;
-          }
-          if (formData.description !== props.characterToEdit.description) {
-            characterDataToUpdate.description = formData.description;
+          // Update - Include tags in the update payload
+          const characterDataToUpdate: CharacterUpdate = {
+             // Assuming CharacterUpdate schema accepts tag_type_ids
+             // Only include fields if they changed
+          };
+          if (formData.name !== props.characterToEdit.name) characterDataToUpdate.name = formData.name;
+          if (formData.description !== props.characterToEdit.description) characterDataToUpdate.description = formData.description;
+          
+          // Check if tags changed
+          const originalTagIds = props.characterToEdit.tags?.map(t => t.character_tag_type_id).sort() || [];
+          const currentTagIds = [...selectedTagTypeIds.value].sort();
+          if (JSON.stringify(originalTagIds) !== JSON.stringify(currentTagIds)) {
+              characterDataToUpdate.tag_type_ids = selectedTagTypeIds.value;
           }
 
           if (Object.keys(characterDataToUpdate).length > 0) {
             savedCharacter = await charactersApi.updateCharacter(props.characterToEdit.id, characterDataToUpdate);
           } else {
-            // No changes detected, emit original character data or just cancel?
-            // Emitting saved with original data might be unexpected if nothing changed.
-            // Let's emit cancel in this case or just do nothing.
             console.log("No changes detected for update.");
-            emit('cancel'); // Emit cancel if no changes
+            emit('cancel'); 
             isSubmitting.value = false;
             return;
           }
         } else {
-          // Create
-          if (!formData.world_id) {
-            formError.value = 'Please select a world.';
-            isSubmitting.value = false;
-            return;
-          }
+          // Create - Include tags
           const newCharacterData: CharacterCreate = {
             name: formData.name,
             description: formData.description,
-            world_id: formData.world_id,
+            world_id: props.worldId, // Use the required prop
+            tag_type_ids: selectedTagTypeIds.value, // Add selected tag IDs
           };
           savedCharacter = await charactersApi.createCharacter(newCharacterData);
         }
@@ -179,6 +191,8 @@ export default defineComponent({
       isEditing,
       isSubmitting,
       formError,
+      selectedTagTypeIds,
+      rules,
       handleSaveCharacter,
       onCancel,
     };
@@ -187,7 +201,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Basic form styling, adapt as needed */
+/* Using Vuetify components, less custom styling might be needed */
 .character-form {
   padding: 1rem;
 }
@@ -198,66 +212,15 @@ export default defineComponent({
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
+  font-size: 0.875rem; /* Smaller label */
+  color: #495057;
 }
-.form-control {
-  display: block;
-  width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-textarea.form-control {
-  min-height: 80px;
-  resize: vertical;
-}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.5rem;
 }
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 0.8rem;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  margin-top: 1rem;
-}
-.info-message {
-    font-size: 0.9rem;
-    color: #6c757d;
-    margin-top: 0.5rem;
-}
-
-/* Re-use button styles if defined globally or copy from another component */
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-}
-.btn-primary:hover {
-  background-color: #0069d9;
-}
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-.btn-secondary:hover {
-  background-color: #5a6268;
-}
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
+/* Error message styling is handled by v-alert */
 </style> 

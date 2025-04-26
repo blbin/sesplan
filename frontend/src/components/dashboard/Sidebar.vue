@@ -1,27 +1,17 @@
 <template>
   <aside class="sidebar" :class="{ 'collapsed': isSidebarCollapsed }">
     <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-placeholder">SP</div>
-        <h2 v-show="!isSidebarCollapsed">Sesplan</h2>
-      </div>
+      <router-link to="/dashboard" class="logo-link">
+        <div class="logo">
+          <div class="logo-placeholder">SP</div>
+          <h2 v-show="!isSidebarCollapsed">Sesplan</h2>
+        </div>
+      </router-link>
       <button class="sidebar-toggle" @click="$emit('toggle-sidebar')">
         <span class="toggle-icon">{{ isSidebarCollapsed ? '→' : '←' }}</span>
       </button>
     </div>
     <nav class="sidebar-nav">
-      <router-link to="/dashboard" class="nav-item" active-class="active">
-        <i class="icon">📊</i>
-        <span v-show="!isSidebarCollapsed">Dashboard</span>
-      </router-link>
-      <div class="nav-item">
-        <i class="icon">📅</i>
-        <span v-show="!isSidebarCollapsed">Calendar</span>
-      </div>
-      <div class="nav-item">
-        <i class="icon">⚙️</i>
-        <span v-show="!isSidebarCollapsed">Settings</span>
-      </div>
       <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
         <i class="icon">🌍</i>
         <span v-show="!isSidebarCollapsed">Worlds</span>
@@ -80,6 +70,12 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
 }
 
 .logo {

@@ -12,11 +12,13 @@ class CharacterBase(BaseModel):
 # Schema for character creation
 class CharacterCreate(CharacterBase):
     world_id: int # Need to specify world when creating character
+    tag_type_ids: Optional[List[int]] = None # Added tag type IDs
 
 # Schema for character update
 class CharacterUpdate(CharacterBase):
     name: Optional[str] = None
     description: Optional[str] = None
+    tag_type_ids: Optional[List[int]] = None # Added tag type IDs
     # world_id: Optional[int] = None # Maybe allow moving characters? Not now.
 
 # Schema for reading character data

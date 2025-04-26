@@ -10,12 +10,14 @@ export interface CharacterBase {
 
 export interface CharacterCreate extends CharacterBase {
     world_id: number;
+    tag_type_ids?: number[]; // Added optional tag type IDs
 }
 
 // All fields are optional for update
 export interface CharacterUpdate {
     name?: string;
     description?: string | null;
+    tag_type_ids?: number[]; // Added optional tag type IDs
     // Cannot change world_id or user_id via update
 }
 
