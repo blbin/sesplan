@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from ... import crud, models, schemas
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 from ...models.world_user import RoleEnum as WorldRoleEnum # Import role enum
+from ...core.limiter import limiter # Import limiteru
+from ...core.config import settings # Import settings
 
 router = APIRouter(tags=["worlds"])
 
@@ -17,8 +19,10 @@ async def get_world_membership(world_id: int, user_id: int, db: Session = Depend
     ).first()
 
 @router.post("/", response_model=schemas.World, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
 def create_world(
     *,
+    request: Request, # Přidáno pro limiter
     db: Session = Depends(get_db),
     world_in: schemas.WorldCreate,
     current_user: models.User = Depends(get_current_user)
@@ -27,8 +31,26 @@ def create_world(
     world = crud.create_world(db=db, world=world_in, creator_id=current_user.id)
     return world
 
+@router.get("/public", response_model=List[schemas.World])
+@limiter.limit(settings.GENERIC_READ_LIMIT) # Přidán read limit
+def read_public_worlds(
+    *,
+    request: Request, # Přidáno pro limiter
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retrieve worlds where the current user is the OWNER."""
+    # Použijeme upravenou CRUD funkci
+    worlds = crud.get_worlds_by_owner(db, user_id=current_user.id, skip=skip, limit=limit)
+    return worlds
+
 @router.get("/", response_model=List[schemas.World])
+@limiter.limit(settings.GENERIC_READ_LIMIT) # Přidán read limit
 def read_worlds(
+    *,
+    request: Request, # Přidáno pro limiter
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
@@ -40,8 +62,10 @@ def read_worlds(
     return worlds
 
 @router.get("/{world_id}", response_model=schemas.World)
+@limiter.limit(settings.GENERIC_READ_LIMIT) # Přidán read limit
 async def read_world(
     *,
+    request: Request, # Přidáno pro limiter
     db: Session = Depends(get_db),
     world_id: int,
     current_user: models.User = Depends(get_current_user)
@@ -59,8 +83,10 @@ async def read_world(
     return world
 
 @router.put("/{world_id}", response_model=schemas.World)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
 async def update_world(
     *,
+    request: Request, # Přidáno pro limiter
     db: Session = Depends(get_db),
     world_id: int,
     world_in: schemas.WorldUpdate,
@@ -80,8 +106,10 @@ async def update_world(
     return world
 
 @router.delete("/{world_id}", response_model=schemas.World)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
 async def delete_world(
     *,
+    request: Request, # Přidáno pro limiter
     db: Session = Depends(get_db),
     world_id: int,
     current_user: models.User = Depends(get_current_user)
@@ -141,4 +169,84 @@ async def read_world_characters(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this world")
 
     characters = crud.get_all_characters_in_world(db, world_id=world_id, skip=skip, limit=limit)
-    return characters 
+    return characters
+
+@router.get("/{world_id}/members", response_model=List[schemas.WorldUserRead])
+@limiter.limit(settings.GENERIC_READ_LIMIT) # Přidán read limit
+async def read_world_members(
+    *,
+    request: Request, # Přidáno pro limiter
+    world_id: int,
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retrieve members of a world."""
+    world = crud.get_world(db, world_id=world_id)
+    if not world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+    if world.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    members = crud.get_world_members(db, world_id=world_id, skip=skip, limit=limit)
+    return members
+
+@router.post("/{world_id}/members", response_model=schemas.WorldUserRead)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
+async def add_world_member(
+    *,
+    request: Request, # Přidáno pro limiter
+    world_id: int,
+    user_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Add a member to a world."""
+    world = crud.get_world(db, world_id=world_id)
+    if not world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+    if world.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    member = crud.add_world_member(db, world_id=world_id, user_id=user_id)
+    return member
+
+@router.put("/{world_id}/members/{user_id}", response_model=schemas.WorldUserRead)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
+async def update_world_member_role(
+    *,
+    request: Request, # Přidáno pro limiter
+    world_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Update the role of a member in a world."""
+    world = crud.get_world(db, world_id=world_id)
+    if not world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+    if world.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    member = crud.update_world_member_role(db, world_id=world_id, user_id=user_id)
+    return member
+
+@router.delete("/{world_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
+async def remove_world_member(
+    *,
+    request: Request, # Přidáno pro limiter
+    world_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Remove a member from a world."""
+    world = crud.get_world(db, world_id=world_id)
+    if not world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+    if world.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    crud.remove_world_member(db, world_id=world_id, user_id=user_id) 

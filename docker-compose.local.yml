@@ -35,6 +35,14 @@ services:
     networks:
       - proxy
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - proxy
+    volumes:
+      - redis-data:/data
+
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/blbin/sesplan-backend:latest}
     build:
@@ -48,12 +56,18 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       DOMAIN: ${DOMAIN}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GEMINI_MODEL_NAME: ${GEMINI_MODEL_NAME}
+      REDIS_URL: ${REDIS_URL}
+      AI_REQUEST_LIMITS: ${AI_REQUEST_LIMITS}
+      AUTH_LOGIN_LIMIT: ${AUTH_LOGIN_LIMIT}
+      USER_REGISTER_LIMIT: ${USER_REGISTER_LIMIT}
+      GENERIC_READ_LIMIT: ${GENERIC_READ_LIMIT}
+      GENERIC_WRITE_LIMIT: ${GENERIC_WRITE_LIMIT}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.routers.backend.middlewares=redirect-to-https"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
       - "traefik.http.routers.backend-secure.rule=Host(`api.${DOMAIN}`)"
       - "traefik.http.routers.backend-secure.entrypoints=websecure"
       - "traefik.http.routers.backend-secure.tls.certresolver=letsencrypt"
@@ -67,6 +81,7 @@ services:
       - "traefik.http.middlewares.cors.headers.accessControlAllowOriginList=http://${DOMAIN},https://${DOMAIN},https://localhost:5173,https://api.localhost:5173,http://api.${DOMAIN},https://api.${DOMAIN}"
     depends_on:
       - postgres
+      - redis
     networks:
       - proxy
 
@@ -92,6 +107,7 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:
 
 networks:
   proxy:

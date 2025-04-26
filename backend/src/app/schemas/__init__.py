@@ -36,3 +36,5 @@ from .organization import Organization, OrganizationCreate, OrganizationUpdate
 from .organization_tag_type import OrganizationTagType, OrganizationTagTypeCreate, OrganizationTagTypeUpdate, OrganizationTagTypeBase
 # Import OrganizationTag schema
 from .organization_tag import OrganizationTag
+# Import WorldUser schemas
+from .world_user import WorldUserRead, WorldUserCreate, WorldUserUpdate

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -6,13 +6,20 @@ from app.schemas.user import UserCreate, User
 from app.crud import create_user, get_user, get_users, get_user_by_username
 from app.models.user import User as UserModel
 from app.core.security import get_current_active_user
+from app.core.limiter import limiter
+from app.core.config import settings
 
 # Use prefix but WITHOUT duplicating in the route paths
 router = APIRouter(tags=["users"])
 
 
 @router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
-def create_user_endpoint(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit(settings.USER_REGISTER_LIMIT)
+def create_user_endpoint(
+    request: Request,
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
     """Create new user"""
     # Check if username already exists
     existing_user = get_user_by_username(db, username=user.username)

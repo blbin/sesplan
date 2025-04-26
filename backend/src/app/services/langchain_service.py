@@ -81,7 +81,7 @@ List of existing names for {entity_type} in this world (DO NOT use these names):
 {existing_names_list}
 
 Please generate ONLY the raw JSON object containing the core details for the new entity. Do NOT include any markdown formatting like ```json or ``` around the JSON object.
-Your entire response must start directly with `{` and end directly with `}`.
+Your entire response must start directly with `{{` and end directly with `}}`.
 Ensure the generated JSON is valid and uses correct UTF-8 encoding for all characters.
 The JSON object must have the following keys:
 - "name": (string) The name of the {entity_type}. It must be unique and not in the list above.
