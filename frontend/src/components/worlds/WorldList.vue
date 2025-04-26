@@ -7,7 +7,8 @@
         <router-link :to="{ name: 'dashboard-world-detail', params: { worldId: world.id } }" class="world-name-link">
            <h2>{{ world.name }}</h2>
         </router-link>
-        <p class="world-description">{{ world.description || 'No description' }}</p>
+        <!-- Render truncated description using local markdown renderer -->
+        <p class="world-description" v-html="renderPreview(world.description, 100)"></p>
         <!-- Zobrazení kampaní -->
         <div v-if="world.campaigns && world.campaigns.length > 0" class="world-campaigns">
           <strong>Campaigns:</strong>
@@ -42,6 +43,27 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import type { World } from '@/types/world';
+import MarkdownIt from 'markdown-it';
+
+// Initialize markdown-it instance at the module level (like in useWorldDetail)
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+});
+
+// Function to render a truncated markdown preview as inline HTML
+// Adapted from useWorldDetail.ts
+const renderPreview = (markdown: string | null | undefined, maxLength: number): string => {
+  if (!markdown) {
+    return '<em>No description</em>'; // Keep the placeholder
+  }
+  let truncatedMd = markdown.length > maxLength
+      ? markdown.substring(0, maxLength) + '...'
+      : markdown;
+  // Use renderInline to avoid block elements like <p>
+  return md.renderInline(truncatedMd);
+};
 
 // Define Props
 defineProps<{
