@@ -135,7 +135,17 @@
                 {{ getItemLocationName(item.location_id || null) }}
               </template>
               <template v-slot:item.character_id="{ item }">
-                {{ item.assigned_character_name || (item.character_id ? `Unknown (ID: ${item.character_id})` : 'Unassigned') }}
+                 <!-- Use a span styled as a link with a click handler -->
+                 <span 
+                   v-if="item.character_id && item.assigned_character_name" 
+                   class="text-primary text-decoration-underline cursor-pointer" 
+                   @click="navigateToCharacter($event, item.character_id)"
+                 >
+                   {{ item.assigned_character_name }}
+                 </span>
+                 <span v-else>
+                   {{ item.assigned_character_name || (item.character_id ? `Unknown (ID: ${item.character_id})` : 'Unassigned') }}
+                 </span>
               </template>
             </WorldEntityTable>
         </v-window-item>
@@ -659,6 +669,18 @@ const handleCharacterRowClick = (character: Character) => goToDetailView(charact
 const handleLocationRowClick = (item: Location) => goToDetailView(item, 'location');
 const handleOrganizationRowClick = (item: Organization) => goToDetailView(item, 'organization');
 const handleItemRowClick = (item: Item) => goToDetailView(item, 'item');
+
+// --- New method to handle character navigation ---
+const navigateToCharacter = (event: MouseEvent, characterId: number | null) => {
+  event.stopPropagation(); // Explicitly stop event propagation
+  if (characterId && numericWorldId.value) {
+    router.push({ 
+      name: 'CharacterDetail', 
+      params: { worldId: numericWorldId.value, characterId: characterId },
+      query: { fromTab: currentTab.value } // Preserve the tab context
+    });
+  }
+};
 
 // --- Slot Helpers (using unfiltered lists) ---
     const getParentLocationName = (parentId: number | null): string => {
