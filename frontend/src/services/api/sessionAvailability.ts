@@ -59,9 +59,28 @@ export const setMyAvailability = async (
 
 /**
  * Delete the current user's availability for a specific slot.
+ * @param sessionId ID session
+ * @param slotId ID slotu
+ * @param timeFrom Volitelný začátek intervalu k odstranění
+ * @param timeTo Volitelný konec intervalu k odstranění
  */
-export const deleteMyAvailability = async (sessionId: number, slotId: number): Promise<void> => {
-    await api.delete(`${BASE_URL}/${sessionId}/slots/${slotId}/availabilities/me`);
+export const deleteMyAvailability = async (
+    sessionId: number, 
+    slotId: number, 
+    timeFrom?: string, 
+    timeTo?: string
+): Promise<void> => {
+    let url = `${BASE_URL}/${sessionId}/slots/${slotId}/availabilities/me`;
+    let params = {};
+    
+    if (timeFrom && timeTo) {
+        params = {
+            time_from: timeFrom,
+            time_to: timeTo
+        };
+    }
+    
+    await api.delete(url, { params });
     // No content returned on success (204)
 };
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
-from typing import List, Annotated 
+from typing import List, Annotated, Optional
+from datetime import datetime
 
 from ... import crud, models, schemas
 from ...db.session import get_db
@@ -125,30 +126,55 @@ def set_my_availability(
 
 @router.delete(
     "/slots/{slot_id}/availabilities/me", 
-    status_code=status.HTTP_204_NO_CONTENT, # Or return deleted object?
-    dependencies=[Depends(verify_campaign_membership)] # Membership check - OK
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_campaign_membership)]
 )
 def delete_my_availability(
     session_id: Annotated[int, Path(description="The ID of the session (for permission check)")],
     slot_id: Annotated[int, Path(description="The ID of the slot to delete availability from")],
+    time_from: Optional[datetime] = None,
+    time_to: Optional[datetime] = None,
     db_slot: models.SessionSlot = Depends(get_session_slot), # Ensure slot exists
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Delete the current user's availability for a specific slot. Requires campaign membership."""
+    """Delete the current user's availability for a specific slot.
+    
+    Pokud jsou zadány parametry time_from a time_to, budou smazány všechny záznamy,
+    které se s daným časovým intervalem překrývají. Jinak bude smazána jedna dostupnost.
+    
+    Requires campaign membership.
+    """
     if db_slot.session_id != session_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Slot does not belong to the specified session")
     if db_slot.id != slot_id: 
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Path slot ID mismatch")
 
-    # Call the updated CRUD function which now returns a boolean
-    deleted = crud.delete_user_availability(db=db, user_id=current_user.id, slot_id=slot_id)
-    # Optional: Could log if deletion happened or not, but not strictly necessary for 204
-    # if not deleted:
-    #     print(f"Attempted to delete non-existent availability for user {current_user.id} in slot {slot_id}")
-    # pass # Silently succeed if already deleted or never existed
+    # Kontrola časové validity, pokud jsou zadány časové parametry
+    if time_from is not None and time_to is not None:
+        if time_from >= time_to:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="time_from must be before time_to"
+            )
+        
+        # Kontrola, že časový interval je v rámci slotu
+        if time_from < db_slot.slot_from or time_to > db_slot.slot_to:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Time interval must be within the session slot boundaries"
+            )
 
-    return None # Return 204 No Content regardless of whether it was deleted now or before
+    # Call the updated CRUD function which now supports interval-based deletion
+    deleted = crud.delete_user_availability(
+        db=db, 
+        user_id=current_user.id, 
+        slot_id=slot_id,
+        time_from=time_from,
+        time_to=time_to
+    )
+
+    return None # Return 204 No Content
 
 @router.get(
     "/slots/{slot_id}/availabilities", 

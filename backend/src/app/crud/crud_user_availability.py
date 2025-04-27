@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
+from datetime import datetime
 
 from .. import models, schemas
 from fastapi import HTTPException, status
@@ -102,11 +103,48 @@ def set_user_availability(
             detail="Failed to save availability record due to an unexpected database error."
         )
 
-def delete_user_availability(db: Session, user_id: int, slot_id: int) -> bool:
-    """Delete a specific user's availability for a specific slot. Returns True if deleted, False otherwise."""
-    db_availability = get_user_availability(db, user_id=user_id, slot_id=slot_id)
-    if db_availability:
-        db.delete(db_availability)
+def delete_user_availability(db: Session, user_id: int, slot_id: int, time_from: Optional[datetime] = None, time_to: Optional[datetime] = None) -> bool:
+    """Delete a specific user's availability for a specific slot.
+    
+    Args:
+        db: Database session
+        user_id: ID uživatele
+        slot_id: ID slotu
+        time_from: Volitelný začátek intervalu pro smazání
+        time_to: Volitelný konec intervalu pro smazání
+        
+    Pokud jsou time_from a time_to zadány, budou smazány všechny záznamy,
+    které se s tímto intervalem překrývají. Jinak bude smazán jeden konkrétní záznam.
+    
+    Returns:
+        True pokud byl alespoň jeden záznam smazán, jinak False
+    """
+    if time_from is not None and time_to is not None:
+        # Smazání podle časového intervalu
+        overlapping_records = (
+            db.query(models.UserAvailability)
+            .filter(
+                models.UserAvailability.user_id == user_id,
+                models.UserAvailability.slot_id == slot_id,
+                models.UserAvailability.available_from < time_to,  # Začátek záznamu je před koncem intervalu
+                models.UserAvailability.available_to > time_from,  # Konec záznamu je po začátku intervalu
+            )
+            .all()
+        )
+        
+        if not overlapping_records:
+            return False
+            
+        for record in overlapping_records:
+            db.delete(record)
+        
         db.commit()
-        return True # Indicate successful deletion
-    return False # Indicate nothing was deleted 
+        return True
+    else:
+        # Původní implementace - smazání jednoho záznamu
+        db_availability = get_user_availability(db, user_id=user_id, slot_id=slot_id)
+        if db_availability:
+            db.delete(db_availability)
+            db.commit()
+            return True
+        return False 

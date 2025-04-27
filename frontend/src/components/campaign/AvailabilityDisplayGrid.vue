@@ -274,8 +274,10 @@
       classes.push('interactive-cell');
     }
     
-    if (isDragging.value && selection.cells.has(`${date}-${time}`))
+    // Zvýraznění výběru během tažení
+    if (isDragging.value && selection.cells.has(`${date}-${time}`)) {
       classes.push(selection.isAdding ? 'selecting' : 'deselecting');
+    }
       
     return classes;
   }
@@ -312,13 +314,27 @@
     error.value = '';
     
     try {
+      // Ověření platnosti data
+      if (!date || !time) {
+        throw new Error('Neplatné datum nebo čas');
+      }
+      
       const year = parseInt(date.split('-')[0]);
       const month = parseInt(date.split('-')[1]) - 1;
       const day = parseInt(date.split('-')[2]);
       const hour = parseInt(time.split(':')[0]);
       const minute = parseInt(time.split(':')[1]);
       
+      if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) {
+        throw new Error('Neplatný formát data nebo času');
+      }
+      
       const startDate = new Date(year, month, day, hour, minute);
+      
+      if (isNaN(startDate.getTime())) {
+        throw new Error('Neplatné datum');
+      }
+      
       const endDate = new Date(startDate.getTime() + TIME_INCREMENT * 60 * 1000);
       
       if (isAdding) {
@@ -333,12 +349,18 @@
         );
         showSuccessMessage('Dostupnost byla úspěšně uložena');
       } else {
-        await availabilityApi.deleteMyAvailability(props.sessionId, slotId);
+        await availabilityApi.deleteMyAvailability(
+          props.sessionId, 
+          slotId, 
+          startDate.toISOString(), 
+          endDate.toISOString()
+        );
         showSuccessMessage('Dostupnost byla úspěšně odstraněna');
       }
       
       emit('availability-changed');
     } catch (e: any) {
+      console.error('Chyba při nastavování dostupnosti:', e);
       error.value = e.response?.data?.detail || e.message || 'Chyba při ukládání dostupnosti';
     } finally {
       isProcessing.value = false;
@@ -349,6 +371,12 @@
   // Výběr drag & drop
   function handleMouseDown(date: string, time: string) {
     if (!isActiveCell(date, time) || props.isGm || isProcessing.value) return;
+    
+    // Kontrola platnosti data a času
+    if (!date || !time || date.split('-').length !== 3 || time.split(':').length !== 2) {
+      console.error('Neplatný formát data nebo času při mousedown:', { date, time });
+      return;
+    }
     
     isDragging.value = true;
     const key = `${date}-${time}`;
@@ -363,13 +391,29 @@
   
   function handleMouseOver(date: string, time: string) {
     if (!isDragging.value || !selection.startCell) return;
-    if (getSlotId(date, time) !== selection.slotId) return;
+    
+    // Kontrola, zda jsme ve stejném slotu
+    const currentSlotId = getSlotId(date, time);
+    if (currentSlotId !== selection.slotId) return;
+    
+    // Aktualizace výběru
     updateSelection(selection.startCell, { date, time });
   }
   
   async function handleMouseUp() {
+    if (!isDragging.value || selection.cells.size === 0) {
+      reset();
+      isDragging.value = false;
+      return;
+    }
+    
+    if (!selection.startCell || !selection.slotId) {
+      reset();
+      isDragging.value = false;
+      return;
+    }
+    
     isDragging.value = false;
-    if (!selection.startCell || !selection.slotId) return reset();
     processSelection();
   }
   
@@ -385,7 +429,21 @@
       
       // Roztřídění podle data
       for (const cellKey of selection.cells) {
-        const [date, time] = cellKey.split('-').slice(0, 2);
+        const parts = cellKey.split('-');
+        if (parts.length < 2) {
+          console.error("Neplatný formát klíče buňky:", cellKey);
+          continue;
+        }
+        
+        // Rekonstrukce data a času (může být více pomlček v datu)
+        const time = parts.pop()!; // Poslední část je čas
+        const date = parts.join('-'); // Zbytek je datum
+        
+        if (!date || !time) {
+          console.error("Nepodařilo se extrahovat datum a čas z klíče:", cellKey);
+          continue;
+        }
+        
         if (!selectionByDay.has(date)) {
           selectionByDay.set(date, []);
         }
@@ -394,6 +452,12 @@
       
       // Zpracování pro každý den zvlášť
       for (const [date, times] of selectionByDay.entries()) {
+        // Ověření formátu data
+        if (date.split('-').length !== 3) {
+          console.error("Neplatný formát data:", date);
+          continue;
+        }
+        
         // Seřadíme časy pro konzistentní zpracování
         times.sort();
         
@@ -403,27 +467,50 @@
         let currentEnd: Date | null = null;
         
         for (const time of times) {
-          const year = parseInt(date.split('-')[0]);
-          const month = parseInt(date.split('-')[1]) - 1;
-          const day = parseInt(date.split('-')[2]);
-          const hour = parseInt(time.split(':')[0]);
-          const minute = parseInt(time.split(':')[1]);
-          
-          const timePoint = new Date(year, month, day, hour, minute);
-          const endPoint = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
-          
-          if (!currentStart) {
-            // První interval
-            currentStart = timePoint;
-            currentEnd = endPoint;
-          } else if (timePoint.getTime() === currentEnd!.getTime()) {
-            // Navazující interval - rozšíříme existující
-            currentEnd = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
-          } else {
-            // Nový nespojitý interval - uložíme předchozí a začneme nový
-            intervals.push({ start: currentStart, end: currentEnd! });
-            currentStart = timePoint;
-            currentEnd = endPoint;
+          try {
+            // Ověření formátu času
+            if (time.split(':').length !== 2) {
+              console.error("Neplatný formát času:", time);
+              continue;
+            }
+            
+            const year = parseInt(date.split('-')[0]);
+            const month = parseInt(date.split('-')[1]) - 1;
+            const day = parseInt(date.split('-')[2]);
+            const hour = parseInt(time.split(':')[0]);
+            const minute = parseInt(time.split(':')[1]);
+            
+            // Ověření platnosti složek data a času
+            if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) {
+              console.error("Neplatné složky data a času:", { date, time, year, month, day, hour, minute });
+              continue;
+            }
+            
+            const timePoint = new Date(year, month, day, hour, minute);
+            
+            // Ověření platnosti data
+            if (isNaN(timePoint.getTime())) {
+              console.error("Invalid date created:", { date, time, year, month, day, hour, minute });
+              continue;
+            }
+            
+            const endPoint = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
+            
+            if (!currentStart) {
+              // První interval
+              currentStart = timePoint;
+              currentEnd = endPoint;
+            } else if (timePoint.getTime() === currentEnd!.getTime()) {
+              // Navazující interval - rozšíříme existující
+              currentEnd = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
+            } else {
+              // Nový nespojitý interval - uložíme předchozí a začneme nový
+              intervals.push({ start: currentStart, end: currentEnd! });
+              currentStart = timePoint;
+              currentEnd = endPoint;
+            }
+          } catch (err) {
+            console.error("Error processing time:", { date, time, error: err });
           }
         }
         
@@ -432,27 +519,35 @@
           intervals.push({ start: currentStart, end: currentEnd });
         }
         
-        // Pro každý interval vytvoříme dostupnost
+        // Pro každý interval zpracujeme dle režimu (přidání/odebrání)
         for (const interval of intervals) {
           if (selection.isAdding) {
-        await availabilityApi.setMyAvailability(
+            // Přidání nového intervalu
+            try {
+              await availabilityApi.setMyAvailability(
+                props.sessionId, 
+                selection.slotId!,
+                {
+                  available_from: interval.start.toISOString(),
+                  available_to: interval.end.toISOString(),
+                  note: null
+                }
+              );
+            } catch (e: any) {
+              // Pokud dojde k chybě překryvu (409), ignorujeme ji a pokračujeme dál
+              if (e.response?.status !== 409) {
+                throw e; // Ostatní chyby přeposíláme dál
+              }
+            }
+          } else {
+            // Přímo použijeme novou funkci API pro mazání v časovém intervalu
+            await availabilityApi.deleteMyAvailability(
               props.sessionId, 
               selection.slotId!,
-              {
-                available_from: interval.start.toISOString(),
-                available_to: interval.end.toISOString(),
-                note: null
-              }
-        );
-      } else {
-            // Pro odebrání dostupnosti musíme použít deleteMyAvailability,
-            // ale v současné implementaci API to není tak jednoduché
-            // Řešením je proto nejprve stáhnout všechny dostupnosti a pak
-            // najít ty, které se překrývají s odebíraným intervalem
-            
-            // Toto je zjednodušené řešení - odstraníme celý slot
-            await availabilityApi.deleteMyAvailability(props.sessionId, selection.slotId!);
-      }
+              interval.start.toISOString(),
+              interval.end.toISOString()
+            );
+          }
         }
       }
       
@@ -471,23 +566,27 @@
     selection.cells.clear();
     const daysList = days.value.map(d => d.date);
     const timesList = timeSlots.value;
-    const d0 = daysList.indexOf(from.date), d1 = daysList.indexOf(to.date);
-    const t0 = timesList.indexOf(from.time), t1 = timesList.indexOf(to.time);
-    for (const d of range(Math.min(d0, d1), Math.max(d0, d1))) {
-      for (const t of range(Math.min(t0, t1), Math.max(t0, t1))) {
-      const dateStr = daysList[d];
-      const timeStr = timesList[t];
+    
+    const d0 = daysList.indexOf(from.date);
+    const d1 = daysList.indexOf(to.date);
+    const t0 = timesList.indexOf(from.time);
+    const t1 = timesList.indexOf(to.time);
+    
+    // Kontrola platnosti indexů
+    if (d0 === -1 || d1 === -1 || t0 === -1 || t1 === -1) {
+      console.error("Invalid indices in selection:", { from, to, d0, d1, t0, t1 });
+      return;
+    }
+    
+    for (let d = Math.min(d0, d1); d <= Math.max(d0, d1); d++) {
+      for (let t = Math.min(t0, t1); t <= Math.max(t0, t1); t++) {
+        const dateStr = daysList[d];
+        const timeStr = timesList[t];
         if (isActiveCell(dateStr, timeStr) && getSlotId(dateStr, timeStr) === selection.slotId) {
-        selection.cells.add(`${dateStr}-${timeStr}`);
+          selection.cells.add(`${dateStr}-${timeStr}`);
+        }
       }
     }
-  }
-  }
-  
-  function range(a: number, b: number) {
-    const arr = [];
-    for (let i = a; i <= b; i++) arr.push(i);
-    return arr;
   }
   
   function reset() {
@@ -570,10 +669,16 @@
   
   .selecting {
     background: rgba(76,175,80,0.5) !important;
+    box-shadow: inset 0 0 0 2px rgba(76,175,80,0.8);
+    position: relative;
+    z-index: 1;
   }
   
   .deselecting {
     background: rgba(244,67,54,0.2) !important;
+    box-shadow: inset 0 0 0 2px rgba(244,67,54,0.5);
+    position: relative;
+    z-index: 1;
   }
   
   .text-error {
