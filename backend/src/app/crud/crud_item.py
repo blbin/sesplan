@@ -1,7 +1,10 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, outerjoin
+from sqlalchemy import select, label
 from typing import List, Optional
 from ..models.item import Item
-from ..schemas.item import ItemCreate, ItemUpdate
+from ..models.character import Character
+from ..models.item_tag import ItemTag
+from ..schemas.item import ItemCreate, ItemUpdate, Item as ItemSchema
 
 def get_item(db: Session, item_id: int) -> Optional[Item]:
     """Získá konkrétní item podle jeho ID."""
@@ -16,12 +19,34 @@ def get_items_by_world(
     limit: int = 100,
 ) -> List[Item]:
     """Získá seznam itemů patřících ke světu, volitelně filtrovaných podle postavy nebo lokace."""
-    query = db.query(Item).filter(Item.world_id == world_id)
+    stmt = (
+        select(
+            Item, 
+            label('assigned_character_name', Character.name)
+        )
+        .outerjoin(Character, Item.character_id == Character.id)
+        .filter(Item.world_id == world_id)
+        .options(joinedload(Item.tags).joinedload(ItemTag.tag_type))
+    )
+
     if character_id is not None:
-        query = query.filter(Item.character_id == character_id)
+        stmt = stmt.filter(Item.character_id == character_id)
     if location_id is not None:
-        query = query.filter(Item.location_id == location_id)
-    return query.offset(skip).limit(limit).all()
+        stmt = stmt.filter(Item.location_id == location_id)
+    
+    stmt = stmt.order_by(Item.id)
+    
+    stmt = stmt.offset(skip).limit(limit)
+    
+    results = db.execute(stmt).unique().all()
+
+    items_with_names = []
+    for item_obj, char_name in results:
+        item_dto = ItemSchema.from_orm(item_obj)
+        item_dto.assigned_character_name = char_name
+        items_with_names.append(item_dto)
+
+    return items_with_names
 
 def create_item(db: Session, item: ItemCreate) -> Item:
     """Vytvoří nový item v databázi."""

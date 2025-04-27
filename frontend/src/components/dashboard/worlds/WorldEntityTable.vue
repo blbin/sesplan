@@ -383,10 +383,4 @@ watch(assignableUsers, (newValue) => {
     opacity: 1;
 }
 
-/* Style for assigned user column if needed */
-/* For example, to ensure v-select doesn't overflow */
-:deep(.v-data-table__td.assigned-user-cell) {
-    /* Adjust as needed */
-}
-
 </style> 

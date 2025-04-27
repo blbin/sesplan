@@ -135,7 +135,7 @@
                 {{ getItemLocationName(item.location_id || null) }}
               </template>
               <template v-slot:item.character_id="{ item }">
-                {{ getItemCharacterName(item.character_id || null) }}
+                {{ item.assigned_character_name || (item.character_id ? `Unknown (ID: ${item.character_id})` : 'Unassigned') }}
               </template>
             </WorldEntityTable>
         </v-window-item>
@@ -440,7 +440,7 @@ const itemHeaders = ref([
   { title: 'Name', key: 'name', sortable: true },
   { title: 'Description', key: 'description', sortable: false },
   { title: 'Location', key: 'location_id', sortable: true },
-  { title: 'Owner', key: 'character_id', sortable: true },
+  { title: 'Owner', key: 'assigned_character_name', sortable: true },
   { title: 'Tags', key: 'tags', sortable: false },
 ]);
 
@@ -675,11 +675,6 @@ const handleItemRowClick = (item: Item) => goToDetailView(item, 'item');
       if (!locationId) return 'Not specified';
   const location = allLocations.value.find(loc => loc.id === locationId);
       return location ? location.name : `Unknown (ID: ${locationId})`;
-    };
-    const getItemCharacterName = (characterId: number | null): string => {
-      if (!characterId) return 'Unassigned';
-  const character = allCharacters.value.find(char => char.id === characterId);
-      return character ? character.name : `Unknown (ID: ${characterId})`;
     };
 
 </script>

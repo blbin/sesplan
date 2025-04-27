@@ -29,4 +29,5 @@ export interface Item extends ItemBase {
   created_at: string; // Assuming ISO date strings from API
   updated_at: string;
   tags?: ItemTag[]; // Optional list of tags associated with the item
+  assigned_character_name?: string; // Added character name from backend
 } 

@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from .item_tag import ItemTag # Import ItemTag schema
+from .character import CharacterBase # Correct import for character name
 
 # Základní schéma s poli sdílenými mezi vytvářením a čtením
 class ItemBase(BaseModel):
@@ -37,6 +38,7 @@ class ItemInDBBase(ItemBase):
 # Schéma pro vracení itemu klientovi (může se v budoucnu lišit od DB schématu)
 class Item(ItemInDBBase):
     tags: List[ItemTag] = [] # Add the tags field
+    assigned_character_name: Optional[str] = None # Added field for character name
 
 # Schéma pro reprezentaci itemu v databázi
 class ItemInDB(ItemInDBBase):
