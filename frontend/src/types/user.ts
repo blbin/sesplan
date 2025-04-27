@@ -10,3 +10,11 @@ export interface UserCreate {
   email: string;
   password: string;
 } 
+
+/**
+ * Simplified user information for embedding.
+ */
+export interface UserSimple {
+  id: number;
+  username: string;
+} 

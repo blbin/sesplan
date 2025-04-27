@@ -312,10 +312,6 @@ provide('isCurrentUserGM', isCurrentUserGM);
   padding: 1rem;
 }
 
-.campaign-content {
-  /* Add styles if needed for the main content area */
-}
-
 .not-found {
   text-align: center;
 }

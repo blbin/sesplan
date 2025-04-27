@@ -9,6 +9,11 @@ export const getCampaignMembers = async (campaignId: number): Promise<UserCampai
     return response.data;
 };
 
+export const getCurrentUserMembership = async (campaignId: number): Promise<UserCampaignRead> => {
+    const response = await api.get<UserCampaignRead>(`${BASE_URL}/${campaignId}/members/me`);
+    return response.data;
+};
+
 export const updateCampaignMemberRole = async (
     campaignId: number,
     userId: number,

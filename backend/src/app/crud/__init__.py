@@ -14,15 +14,6 @@ from .crud_session import get_session, get_sessions_by_campaign, create_session,
 from .crud_location import get_location, get_locations_by_world, create_location, update_location, delete_location
 # Import Item CRUD
 from .crud_item import get_item, get_items_by_world, create_item, update_item, delete_item
-# Import Availability CRUD
-from .crud_availability import (
-    get_availability, 
-    get_availability_by_user_and_session, 
-    get_availabilities_by_session, 
-    create_availability, 
-    set_user_session_availability,
-    delete_all_user_session_availability
-)
 # Import Event CRUD
 from .crud_event import get_event, get_events_by_world, create_event, update_event, delete_event
 # Import LocationTagType CRUD
@@ -43,3 +34,7 @@ from .crud_organization import get_organization, get_organizations_by_world, cre
 from .crud_organization_tag_type import get_organization_tag_type, get_organization_tag_types_by_world, create_organization_tag_type, update_organization_tag_type, delete_organization_tag_type, get_organization_tag_type_by_name
 # Import OrganizationTag CRUD
 from .crud_organization_tag import add_tag_to_organization, remove_tag_from_organization, get_tags_for_organization, get_organization_tag_association
+# Import SessionSlot CRUD (Added)
+from .crud_session_slot import get_slot, get_slots_by_session, create_session_slot, update_session_slot, delete_session_slot
+# Import UserAvailability CRUD (Added)
+from .crud_user_availability import get_user_availability, get_availabilities_by_slot, get_all_availabilities_by_session, set_user_availability, delete_user_availability

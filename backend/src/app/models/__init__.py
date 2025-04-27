@@ -1,4 +1,4 @@
-from .availability import Availability
+# from .availability import Availability # Removed
 from .campaign import Campaign
 from .campaign_invite import CampaignInvite
 from .character import Character
@@ -20,14 +20,16 @@ from .organization_tag import OrganizationTag
 from .organization_tag_type import OrganizationTagType
 from .session import Session
 from .session_character import SessionCharacter
+from .session_slot import SessionSlot
 from .user import User
+from .user_availability import UserAvailability
 from .user_campaign import UserCampaign
 from .world import World
 from .world_invite import WorldInvite
 from .world_user import WorldUser
 
 __all__ = [
-    "Availability",
+    # "Availability", # Removed
     "Campaign",
     "CampaignInvite",
     "Character",
@@ -49,7 +51,9 @@ __all__ = [
     "OrganizationTagType",
     "Session",
     "SessionCharacter",
+    "SessionSlot",
     "User",
+    "UserAvailability",
     "UserCampaign",
     "World",
     "WorldInvite",

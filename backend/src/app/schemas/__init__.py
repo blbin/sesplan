@@ -14,8 +14,6 @@ from .session import Session, SessionCreate, SessionUpdate
 from .location import Location, LocationCreate, LocationUpdate
 # Import Item schemas
 from .item import Item, ItemCreate, ItemUpdate
-# Import Availability schemas
-from .availability import Availability, AvailabilityCreate, AvailabilityUpdate
 # Import Event schemas
 from .event import Event, EventCreate, EventUpdate
 # Import LocationTagType schemas
@@ -38,3 +36,7 @@ from .organization_tag_type import OrganizationTagType, OrganizationTagTypeCreat
 from .organization_tag import OrganizationTag
 # Import WorldUser schemas
 from .world_user import WorldUserRead, WorldUserCreate, WorldUserUpdate
+# Import SessionSlot schemas
+from .session_slot import SessionSlot, SessionSlotCreate, SessionSlotUpdate
+# Import UserAvailability schemas
+from .user_availability import UserAvailability, UserAvailabilityCreateUpdate

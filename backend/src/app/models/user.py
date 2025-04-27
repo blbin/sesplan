@@ -16,8 +16,10 @@ class User(Base):
     characters = relationship("Character", back_populates="user")
     world_associations = relationship("WorldUser", back_populates="user")
     campaign_associations = relationship("UserCampaign", back_populates="user")
-    availabilities = relationship("Availability", back_populates="user")
     images = relationship("Image", back_populates="user")
+    
+    # New relationship for user availability responses
+    user_availabilities = relationship("UserAvailability", back_populates="user")
 
     # Removed relationships based on owner_id
     # owned_worlds = relationship("World", back_populates="owner")

@@ -17,5 +17,12 @@ class Session(Base):
     # Relationships
     campaign = relationship("Campaign", back_populates="sessions")
     character_associations = relationship("SessionCharacter", back_populates="session", cascade="all, delete-orphan")
-    availabilities = relationship("Availability", back_populates="session", cascade="all, delete-orphan")
     journal_entries = relationship("JournalEntry", back_populates="session") # ondelete="SET NULL" handled in JournalEntry 
+    
+    # New relationship for availability slots
+    availability_slots = relationship(
+        "SessionSlot",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    ) 

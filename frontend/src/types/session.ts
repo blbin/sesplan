@@ -1,11 +1,13 @@
 // import type { Optional } from './common'; // Assuming Optional exists or handle nullable types directly
+import type { SessionSlot } from './session_slot'; // Added
 
-// Base properties
+// Base properties shared by create/update/read
 export interface SessionBase {
     title: string;
     description?: string | null;
     summary?: string | null;
     date_time?: string | null; // Use string for dates coming from JSON
+    // availability_slots?: SessionSlot[]; // Moved to Session interface, not needed in base/create
 }
 
 // For creating a session
@@ -25,7 +27,8 @@ export interface SessionUpdate {
 export interface Session extends SessionBase {
     id: number;
     campaign_id: number;
-    created_at: string; // ISO Date string
-    updated_at: string; // ISO Date string
+    created_at: string; // ISO Date string - Belongs here
+    updated_at: string; // ISO Date string - Belongs here
+    availability_slots?: SessionSlot[]; // Optional relationship data
     // Add relationships here later if needed (e.g., characters, entries)
 } 

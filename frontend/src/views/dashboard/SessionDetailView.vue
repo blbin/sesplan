@@ -40,19 +40,41 @@
 
       </div>
 
-      <!-- Availability Grid Section -->
+      <!-- New Availability Section -->
       <section class="detail-section availability-section">
-        <h2>Dostupnost hráčů</h2>
-        <p v-if="availabilitiesLoading">Načítání dostupností...</p>
-        <p v-else-if="availabilitiesError" class="text-error">Chyba načítání dostupností: {{ availabilitiesError }}</p>
-        <AvailabilityInputGrid
-          v-else-if="currentUserId !== undefined && session"
-          :session-id="session.id"
-          :all-availabilities="allAvailabilities"
+        <h2>Dostupnost</h2>
+
+        <!-- GM Slot Management -->
+        <div v-if="isCurrentUserGM">
+          <h3>Spravovat časové sloty</h3>
+          <GMAvailabilityManager 
+            :session-id="numericSessionId"
+            :existing-slots="sessionSlots"
+            @slots-updated="loadAvailabilityData" 
+          />
+        </div>
+        
+        <!-- Availability Grid -->
+        <div v-if="!availabilityLoading && !availabilityError">
+          <AvailabilityDisplayGrid
+            v-if="currentUserId && sessionSlots.length > 0"
+            :session-id="numericSessionId"
           :current-user-id="currentUserId"
-          @availability-updated="handleAvailabilityUpdate"
-        />
-        <p v-else>Pro zobrazení dostupnosti musíte být přihlášen.</p>
+            :is-gm="!!isCurrentUserGM"
+            :slots="sessionSlots"
+            :user-availabilities="userAvailabilities"
+            @availability-changed="handleAvailabilityChange" 
+          />
+          <p v-else-if="sessionSlots.length === 0 && !isCurrentUserGM">
+            Zatím nebyly definovány žádné časové sloty pro zadání dostupnosti.
+          </p>
+           <p v-else-if="sessionSlots.length === 0 && isCurrentUserGM">
+            Zatím jste nedefinovali žádné časové sloty. Můžete je přidat výše.
+          </p>
+          <p v-else>Pro zadání dostupnosti musíte být přihlášen.</p>
+        </div>
+        <p v-else-if="availabilityLoading">Načítání dostupnosti...</p>
+        <p v-else-if="availabilityError" class="text-error">Chyba načítání dostupnosti: {{ availabilityError }}</p>
       </section>
 
     </div>
@@ -65,13 +87,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import * as sessionsApi from '@/services/api/sessions';
-import * as availabilityService from '@/services/api/availabilityService';
+import * as availabilityApi from '@/services/api/sessionAvailability';
 import * as campaignMembersApi from '@/services/api/campaignMembers';
 import type { Session } from '@/types/session';
-import type { Availability } from '@/types/availability';
+import type { SessionSlot } from '@/types/session_slot';
+import type { UserAvailability } from '@/types/user_availability';
 import type { UserCampaignRead } from '@/types/user_campaign';
 import { useAuthStore } from '@/store/auth.store';
-import AvailabilityInputGrid from '@/components/campaign/AvailabilityInputGrid.vue';
+import { CampaignRoleEnum } from '@/types/campaign_role';
+import GMAvailabilityManager from '@/components/campaign/GMAvailabilityManager.vue';
+import AvailabilityDisplayGrid from '@/components/campaign/AvailabilityDisplayGrid.vue';
 
 // --- Props Definition --- 
 const props = defineProps<{ 
@@ -84,25 +109,30 @@ const authStore = useAuthStore();
 const session = ref<Session | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const allAvailabilities = ref<Availability[]>([]);
-const availabilitiesLoading = ref(false);
-const availabilitiesError = ref<string | null>(null);
+const sessionSlots = ref<SessionSlot[]>([]);
+const userAvailabilities = ref<UserAvailability[]>([]);
+const availabilityLoading = ref(true);
+const availabilityError = ref<string | null>(null);
 const currentUserMembership = ref<UserCampaignRead | null>(null);
 const membershipLoading = ref(false);
 
 // --- Computed Properties --- 
 const currentUserId = computed(() => authStore.user?.id);
+const numericSessionId = computed(() => Number(props.sessionId));
+const isCurrentUserGM = computed(() => {
+  return currentUserMembership.value?.role === CampaignRoleEnum.GM;
+});
 
 // --- Methods --- 
 const loadSessionDetail = async () => {
-  if (!props.sessionId) return;
+  if (!numericSessionId.value) return;
   loading.value = true;
   error.value = null;
   session.value = null;
   try {
-    session.value = await sessionsApi.getSessionById(Number(props.sessionId));
-    if (session.value && !currentUserMembership.value) { 
-         await loadCurrentUserMembership(session.value.campaign_id || Number(props.campaignId));
+    session.value = await sessionsApi.getSessionById(numericSessionId.value);
+    if (session.value && !currentUserMembership.value && !membershipLoading.value) { 
+         await loadCurrentUserMembership(session.value.campaign_id);
     }
   } catch (err: any) {
     error.value = err.message || 'Failed to load session details';
@@ -112,37 +142,42 @@ const loadSessionDetail = async () => {
   }
 };
 
-const loadAvailabilities = async () => {
-    if (!props.sessionId) return;
-    availabilitiesLoading.value = true;
-    availabilitiesError.value = null;
+const loadAvailabilityData = async () => {
+    if (!numericSessionId.value) return;
+    availabilityLoading.value = true;
+    availabilityError.value = null;
     try {
-        allAvailabilities.value = await availabilityService.availabilityService.getAvailabilities(Number(props.sessionId));
+        [sessionSlots.value, userAvailabilities.value] = await Promise.all([
+            availabilityApi.getSlots(numericSessionId.value),
+            availabilityApi.getAllSessionAvailabilities(numericSessionId.value)
+        ]);
     } catch (err: any) {
-        availabilitiesError.value = err.message || 'Failed to load availabilities';
-        console.error("Load Availabilities Error:", err);
+        availabilityError.value = err.message || 'Failed to load availability data';
+        console.error("Load Availability Data Error:", err);
+        sessionSlots.value = [];
+        userAvailabilities.value = [];
     } finally {
-        availabilitiesLoading.value = false;
+        availabilityLoading.value = false;
     }
 };
 
 const loadCurrentUserMembership = async (campId: number) => {
     if (!currentUserId.value || !campId) return;
     membershipLoading.value = true;
-    currentUserMembership.value = null; // Reset before loading
+    currentUserMembership.value = null;
     try {
-        const members = await campaignMembersApi.getCampaignMembers(campId);
-        currentUserMembership.value = members.find(m => m.user_id === currentUserId.value) || null;
+        currentUserMembership.value = await campaignMembersApi.getCurrentUserMembership(campId);
     } catch (err: any) {
-        console.error("Could not load campaign members:", err);
+        console.error("Could not load current user membership:", err);
+        error.value = err.response?.data?.detail || err.message || 'Failed to load membership details';
     } finally {
         membershipLoading.value = false;
     }
 };
 
-const handleAvailabilityUpdate = () => {
-    console.log("Availability updated, refreshing...");
-    loadAvailabilities();
+const handleAvailabilityChange = () => {
+    console.log("Availability changed, refreshing data...");
+    loadAvailabilityData();
 };
 
 const formatDate = (dateString: string | null | undefined) => {
@@ -168,7 +203,7 @@ const formatFullDateTime = (dateString: string | null | undefined) => {
 // --- Lifecycle Hooks --- 
 onMounted(() => {
   loadSessionDetail();
-  loadAvailabilities();
+  loadAvailabilityData();
 });
 
 // --- Watchers --- 
@@ -177,7 +212,7 @@ watch(
   (newId) => {
     if (newId) {
       loadSessionDetail();
-      loadAvailabilities();
+      loadAvailabilityData();
     }
   },
   { immediate: false } 
@@ -185,7 +220,7 @@ watch(
  watch(
   () => props.campaignId,
   (newCampId) => {
-      if (newCampId && !currentUserMembership.value && !membershipLoading.value) {
+      if (newCampId && !currentUserMembership.value && !membershipLoading.value && !loading.value && session.value?.campaign_id === Number(newCampId)) {
           loadCurrentUserMembership(Number(newCampId));
       }
   },
@@ -285,6 +320,12 @@ watch(
 
 .availability-section h2 {
     margin-bottom: 1rem;
+}
+.availability-section h3 {
+    font-size: 1.1rem;
+    color: #666;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
 }
 .text-error {
     color: rgb(var(--v-theme-error));

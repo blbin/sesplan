@@ -18,6 +18,43 @@ async def verify_gm_permission(campaign_id: int, current_user: models.User = Dep
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions (GM required)")
     return membership # Můžeme vrátit členství pro případné další použití
 
+# Helper function to check campaign membership (any role)
+async def verify_campaign_membership(
+    session_id: int, # We get session_id from the path
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dependency to verify if the current user is a member of the session's parent campaign."""
+    # 1. Get the session to find the campaign ID
+    db_session = crud.get_session(db, session_id=session_id)
+    if not db_session:
+        # Session existence is implicitly checked here
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    
+    # 2. Check membership in the parent campaign
+    membership = crud.get_campaign_membership(db, campaign_id=db_session.campaign_id, user_id=current_user.id)
+    if not membership:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this session's campaign")
+    # No need to return anything, just raise exception on failure
+
+# Dependency to verify GM permission based on session_id (Added)
+async def verify_gm_for_session(
+    session_id: int, # Get session_id from path
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dependency that verifies the current user is GM for the session's campaign."""
+    # 1. Get session
+    db_session = crud.get_session(db, session_id=session_id)
+    if not db_session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    
+    # 2. Check GM permission for the parent campaign
+    membership = crud.get_campaign_membership(db, campaign_id=db_session.campaign_id, user_id=current_user.id)
+    if not membership or membership.role != CampaignRoleEnum.GM:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions (GM required for this session's campaign)")
+    # Return the session? Or membership? Or nothing? Let's return nothing for now.
+
 # Závislost pro ověření vlastnictví světa
 async def verify_world_owner(
     world_id: int, # world_id přijde z Path nebo z těla požadavku, ne přímo jako parametr Path() zde

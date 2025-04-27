@@ -141,6 +141,39 @@ async def read_campaign_members(
     members = crud.get_campaign_members(db, campaign_id=campaign_id, skip=skip, limit=limit)
     return members
 
+# New endpoint to get current user's membership
+@member_router.get("/me", response_model=schemas.UserCampaignRead)
+async def read_my_campaign_membership(
+    *,
+    campaign_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Get the current user's membership details for a specific campaign."""
+    # Verify the campaign exists and user is a member (any role)
+    # We can use the existing dependency for this
+    # await get_campaign_and_verify_member(campaign_id=campaign_id, db=db, current_user=current_user)
+    # Or call the CRUD function directly as it's simpler here
+    membership = crud.get_campaign_membership(db, campaign_id=campaign_id, user_id=current_user.id)
+    if not membership:
+        # Check if campaign exists before raising 403? Maybe just 403 is enough.
+        # db_campaign = crud.get_campaign(db, campaign_id=campaign_id)
+        # if not db_campaign:
+        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
+    
+    # Need to reload with user details for the response model
+    # (assuming get_campaign_membership doesn't eager load user)
+    reloaded_membership = (
+        db.query(models.UserCampaign)
+        .options(joinedload(models.UserCampaign.user))
+        .filter(models.UserCampaign.id == membership.id)
+        .first()
+    )
+    if not reloaded_membership:
+         raise HTTPException(status_code=500, detail="Failed to load membership details")
+    return reloaded_membership
+
 @member_router.put("/{user_id}", response_model=schemas.UserCampaignRead)
 async def update_member_role(
     *,

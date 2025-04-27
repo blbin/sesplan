@@ -14,8 +14,6 @@ from . import sessions
 from . import locations
 # Import routeru pro itemy
 from . import items
-# Import routeru pro availability
-from . import availability
 # Import routeru pro organizations
 from . import organizations
 # Import routeru pro location_tag_types
@@ -29,6 +27,7 @@ from . import item_tags
 # Import routeru pro organization tag types
 from . import organization_tag_types
 from . import generation
+from . import session_availability
 
 router = APIRouter()
 
@@ -64,11 +63,11 @@ router.include_router(
     tags=["organization-tag-types"]
 )
 
-# Attach the availability router directly to the main router
+# Attach the session_availability router directly
 router.include_router(
-    availability.router, 
-    prefix="/sessions/{session_id}/availabilities", 
-    tags=["availability"]
+    session_availability.router,
+    prefix="/sessions/{session_id}",
+    tags=["session-availability"]
 )
 
 # Registrace obecného routeru pro pozvánky (přijetí/smazání)
