@@ -47,46 +47,60 @@ def set_user_availability(
     user_id: int, 
     availability_in: schemas.UserAvailabilityCreateUpdate
 ) -> models.UserAvailability:
-    """Create or update a user's availability for a slot."""
+    """Create a user's availability for a slot.
+    Allows multiple entries per user/slot, but prevents overlapping time intervals.
+    """
 
     # Validate availability times against the slot times
-    if (availability_in.available_from < slot.slot_from or 
+    if (
+        availability_in.available_from < slot.slot_from or 
         availability_in.available_to > slot.slot_to or 
-        availability_in.available_to <= availability_in.available_from): # Redundant due to schema validation, but safe
+        availability_in.available_to <= availability_in.available_from
+    ): 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Availability times must be within the session slot boundaries and valid."
         )
 
-    # Check if availability already exists for this user/slot
-    db_availability = get_user_availability(db, user_id=user_id, slot_id=slot.id)
-
-    if db_availability:
-        # Update existing availability
-        update_data = availability_in.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_availability, field, value)
-        db.add(db_availability)
-    else:
-        # Create new availability
-        db_availability = models.UserAvailability(
-            **availability_in.model_dump(),
-            user_id=user_id,
-            slot_id=slot.id
+    # Get all existing availability for this user/slot
+    existing_availabilities = (
+        db.query(models.UserAvailability)
+        .filter(
+            models.UserAvailability.user_id == user_id,
+            models.UserAvailability.slot_id == slot.id
         )
-        db.add(db_availability)
-        
+        .all()
+    )
+    
+    # Check for overlap with existing intervals
+    new_start = availability_in.available_from
+    new_end = availability_in.available_to
+    for existing in existing_availabilities:
+        # Overlap condition: (StartA < EndB) and (EndA > StartB)
+        if new_start < existing.available_to and new_end > existing.available_from:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"New availability interval from {new_start} to {new_end} overlaps with existing interval from {existing.available_from} to {existing.available_to}."
+            )
+
+    # No overlap found, create the new availability record
+    new_availability = models.UserAvailability(
+        **availability_in.model_dump(),
+        user_id=user_id,
+        slot_id=slot.id
+    )
+    
+    db.add(new_availability)
     try:
         db.commit()
-        db.refresh(db_availability)
-    except IntegrityError: # Catch potential race conditions if unique constraint fails
+        db.refresh(new_availability)
+        return new_availability
+    except IntegrityError: # Should not happen often now, but keep for safety
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Availability record could not be created or updated. It might already exist."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, # Changed from 409 as unique constraint is gone
+            detail="Failed to save availability record due to an unexpected database error."
         )
-    
-    return db_availability
 
 def delete_user_availability(db: Session, user_id: int, slot_id: int) -> bool:
     """Delete a specific user's availability for a specific slot. Returns True if deleted, False otherwise."""

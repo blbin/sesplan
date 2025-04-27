@@ -23,5 +23,5 @@ class UserAvailability(Base):
     user = relationship("User", back_populates="user_availabilities")
     slot = relationship("SessionSlot", back_populates="user_availabilities")
 
-    # Constraint: A user can only have one availability record per slot
-    __table_args__ = (UniqueConstraint('user_id', 'slot_id', name='uq_user_slot_availability'),) 
+    # Constraint: A user can only have one availability record per slot - REMOVED
+    # __table_args__ = (UniqueConstraint('user_id', 'slot_id', name='uq_user_slot_availability'),) 

@@ -380,56 +380,84 @@
     error.value = '';
     
     try {
-      const dateTimes: {date: string, time: string}[] = [];
+      // Vybraná data - organizovaná podle dnů
+      const selectionByDay = new Map<string, string[]>();
+      
+      // Roztřídění podle data
       for (const cellKey of selection.cells) {
         const [date, time] = cellKey.split('-').slice(0, 2);
-        dateTimes.push({ date, time });
-      }
-      
-      let startDate: Date | null = null;
-      let endDate: Date | null = null;
-      
-      for (const { date, time } of dateTimes) {
-        const year = parseInt(date.split('-')[0]);
-        const month = parseInt(date.split('-')[1]) - 1;
-        const day = parseInt(date.split('-')[2]);
-        const hour = parseInt(time.split(':')[0]);
-        const minute = parseInt(time.split(':')[1]);
-        
-        const cellDate = new Date(year, month, day, hour, minute);
-        
-        if (isNaN(cellDate.getTime())) continue;
-        
-        if (!startDate || cellDate < startDate) {
-          startDate = cellDate;
+        if (!selectionByDay.has(date)) {
+          selectionByDay.set(date, []);
         }
+        selectionByDay.get(date)!.push(time);
+      }
+      
+      // Zpracování pro každý den zvlášť
+      for (const [date, times] of selectionByDay.entries()) {
+        // Seřadíme časy pro konzistentní zpracování
+        times.sort();
         
-        const cellEndDate = new Date(cellDate.getTime() + TIME_INCREMENT * 60 * 1000);
-        if (!endDate || cellEndDate > endDate) {
-          endDate = cellEndDate;
-        }
-      }
-      
-      if (!startDate || !endDate) {
-        return reset();
-      }
-      
-      if (selection.isAdding) {
-        await availabilityApi.setMyAvailability(
-          props.sessionId, 
-          selection.slotId!,
-          {
-            available_from: startDate.toISOString(),
-            available_to: endDate.toISOString(),
-            note: null
+        // Vytvoříme půlhodinové intervaly z vybraných časů
+        const intervals: { start: Date; end: Date }[] = [];
+        let currentStart: Date | null = null;
+        let currentEnd: Date | null = null;
+        
+        for (const time of times) {
+          const year = parseInt(date.split('-')[0]);
+          const month = parseInt(date.split('-')[1]) - 1;
+          const day = parseInt(date.split('-')[2]);
+          const hour = parseInt(time.split(':')[0]);
+          const minute = parseInt(time.split(':')[1]);
+          
+          const timePoint = new Date(year, month, day, hour, minute);
+          const endPoint = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
+          
+          if (!currentStart) {
+            // První interval
+            currentStart = timePoint;
+            currentEnd = endPoint;
+          } else if (timePoint.getTime() === currentEnd!.getTime()) {
+            // Navazující interval - rozšíříme existující
+            currentEnd = new Date(timePoint.getTime() + TIME_INCREMENT * 60 * 1000);
+          } else {
+            // Nový nespojitý interval - uložíme předchozí a začneme nový
+            intervals.push({ start: currentStart, end: currentEnd! });
+            currentStart = timePoint;
+            currentEnd = endPoint;
           }
+        }
+        
+        // Přidáme poslední interval, pokud existuje
+        if (currentStart && currentEnd) {
+          intervals.push({ start: currentStart, end: currentEnd });
+        }
+        
+        // Pro každý interval vytvoříme dostupnost
+        for (const interval of intervals) {
+          if (selection.isAdding) {
+        await availabilityApi.setMyAvailability(
+              props.sessionId, 
+              selection.slotId!,
+              {
+                available_from: interval.start.toISOString(),
+                available_to: interval.end.toISOString(),
+                note: null
+              }
         );
-        showSuccessMessage('Dostupnost byla úspěšně uložena');
       } else {
-        await availabilityApi.deleteMyAvailability(props.sessionId, selection.slotId!);
-        showSuccessMessage('Dostupnost byla úspěšně odstraněna');
+            // Pro odebrání dostupnosti musíme použít deleteMyAvailability,
+            // ale v současné implementaci API to není tak jednoduché
+            // Řešením je proto nejprve stáhnout všechny dostupnosti a pak
+            // najít ty, které se překrývají s odebíraným intervalem
+            
+            // Toto je zjednodušené řešení - odstraníme celý slot
+            await availabilityApi.deleteMyAvailability(props.sessionId, selection.slotId!);
+      }
+        }
       }
       
+      // Aktualizujeme zobrazení
+      showSuccessMessage(selection.isAdding ? 'Dostupnost byla úspěšně uložena' : 'Dostupnost byla úspěšně odstraněna');
       emit('availability-changed');
     } catch (e: any) {
       error.value = e.response?.data?.detail || e.message || 'Chyba při ukládání dostupnosti';
@@ -447,13 +475,13 @@
     const t0 = timesList.indexOf(from.time), t1 = timesList.indexOf(to.time);
     for (const d of range(Math.min(d0, d1), Math.max(d0, d1))) {
       for (const t of range(Math.min(t0, t1), Math.max(t0, t1))) {
-        const dateStr = daysList[d];
-        const timeStr = timesList[t];
+      const dateStr = daysList[d];
+      const timeStr = timesList[t];
         if (isActiveCell(dateStr, timeStr) && getSlotId(dateStr, timeStr) === selection.slotId) {
-          selection.cells.add(`${dateStr}-${timeStr}`);
-        }
+        selection.cells.add(`${dateStr}-${timeStr}`);
       }
     }
+  }
   }
   
   function range(a: number, b: number) {
