@@ -141,10 +141,14 @@ def delete_my_availability(
     if db_slot.id != slot_id: 
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Path slot ID mismatch")
 
-    deleted_availability = crud.delete_user_availability(db=db, user_id=current_user.id, slot_id=slot_id)
-    if not deleted_availability:
-        pass # Silently succeed if already deleted
-    return None # Return 204 No Content
+    # Call the updated CRUD function which now returns a boolean
+    deleted = crud.delete_user_availability(db=db, user_id=current_user.id, slot_id=slot_id)
+    # Optional: Could log if deletion happened or not, but not strictly necessary for 204
+    # if not deleted:
+    #     print(f"Attempted to delete non-existent availability for user {current_user.id} in slot {slot_id}")
+    # pass # Silently succeed if already deleted or never existed
+
+    return None # Return 204 No Content regardless of whether it was deleted now or before
 
 @router.get(
     "/slots/{slot_id}/availabilities", 

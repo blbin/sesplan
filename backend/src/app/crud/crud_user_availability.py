@@ -88,12 +88,11 @@ def set_user_availability(
     
     return db_availability
 
-def delete_user_availability(db: Session, user_id: int, slot_id: int) -> Optional[models.UserAvailability]:
-    """Delete a specific user's availability for a specific slot."""
+def delete_user_availability(db: Session, user_id: int, slot_id: int) -> bool:
+    """Delete a specific user's availability for a specific slot. Returns True if deleted, False otherwise."""
     db_availability = get_user_availability(db, user_id=user_id, slot_id=slot_id)
     if db_availability:
-        deleted_copy = models.UserAvailability(**schemas.UserAvailability.from_orm(db_availability).model_dump()) # Make a copy for return
         db.delete(db_availability)
         db.commit()
-        return deleted_copy # Return the copy of the deleted object
-    return None # Return None if nothing was deleted 
+        return True # Indicate successful deletion
+    return False # Indicate nothing was deleted 
