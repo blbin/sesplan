@@ -22,7 +22,7 @@
                 {{ campaign.name }}
               </router-link>
             </h2>
-            <p>{{ campaign.description || 'No description' }}</p>
+            <p v-html="renderMarkdownPreview(campaign.description)"></p>
             <small class="world-info">World: {{ getWorldName(campaign.world_id) }}</small>
           </div>
           <div class="item-actions">
@@ -57,7 +57,11 @@
           </div>
           <div class="form-group">
             <label for="campaignDescription">Description:</label>
-            <textarea id="campaignDescription" v-model="campaignForm.description"></textarea>
+            <MarkdownEditor 
+              id="campaignDescription" 
+              v-model="campaignForm.description"
+              :label="'Campaign Description'" 
+            />
           </div>
           <div class="modal-actions">
             <button type="button" @click="closeModal" class="btn btn-secondary">Cancel</button>
@@ -92,16 +96,28 @@ import * as campaignsApi from '@/services/api/campaigns';
 import * as worldsApi from '@/services/api/worlds'; // Potřebujeme pro načtení světů
 import type { Campaign, CampaignCreate, CampaignUpdate } from '@/types/campaign';
 import type { World } from '@/types/world'; // Potřebujeme typ World
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue'; // Import MarkdownEditor
+import MarkdownIt from 'markdown-it'; // Import MarkdownIt
+
+// Initialize markdown-it instance
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+});
 
 // Typ pro formulář kampaně
 interface CampaignFormData {
   name: string;
-  description: string | null;
+  description: string;
   world_id: number | null; // Musí být null initialně pro select
 }
 
 export default defineComponent({
   name: 'CampaignsView',
+  components: {
+     MarkdownEditor,
+  },
   setup() {
     const campaigns = ref<Campaign[]>([]);
     const availableWorlds = ref<World[]>([]);
@@ -118,7 +134,7 @@ export default defineComponent({
 
     const campaignForm = reactive<CampaignFormData>({
       name: '',
-      description: null,
+      description: '',
       world_id: null // Důležité pro select
     });
 
@@ -151,7 +167,7 @@ export default defineComponent({
 
     const resetForm = () => {
       campaignForm.name = '';
-      campaignForm.description = null;
+      campaignForm.description = '';
       campaignForm.world_id = null; // Resetovat i world_id
       editingCampaign.value = null;
       formError.value = null;
@@ -175,7 +191,7 @@ export default defineComponent({
      const openEditModal = (campaign: Campaign) => {
       editingCampaign.value = campaign;
       campaignForm.name = campaign.name;
-      campaignForm.description = campaign.description;
+      campaignForm.description = campaign.description || '';
       campaignForm.world_id = campaign.world_id; // Nastavit pro informaci, i když se nemění
       showModal.value = true;
     };
@@ -194,7 +210,7 @@ export default defineComponent({
            if (campaignForm.name !== editingCampaign.value.name) {
                campaignDataToUpdate.name = campaignForm.name;
            }
-           if (campaignForm.description !== editingCampaign.value.description) {
+           if (campaignForm.description !== (editingCampaign.value.description || '')) {
                campaignDataToUpdate.description = campaignForm.description;
            }
 
@@ -220,7 +236,7 @@ export default defineComponent({
            }
            const newCampaignData: CampaignCreate = {
                name: campaignForm.name,
-               description: campaignForm.description,
+               description: campaignForm.description.trim() ? campaignForm.description : null,
                world_id: campaignForm.world_id // world_id je nyní číslo
            };
            const newCampaign = await campaignsApi.createCampaign(newCampaignData);
@@ -251,6 +267,17 @@ export default defineComponent({
       }
     };
 
+    // Method to render markdown preview (inline and truncated)
+    const renderMarkdownPreview = (markdown: string | null | undefined, maxLength: number = 100): string => {
+        if (!markdown) {
+            return '<em class="text-muted">No description</em>'; // Use muted text style
+        }
+        let truncatedMd = markdown.length > maxLength
+            ? markdown.substring(0, maxLength) + '...'
+            : markdown;
+        // Use renderInline to avoid block elements like <p>
+        return md.renderInline(truncatedMd);
+    };
 
     onMounted(() => {
         loadCampaigns();
@@ -277,6 +304,7 @@ export default defineComponent({
       confirmDelete,
       handleDeleteCampaign,
       getWorldName,
+      renderMarkdownPreview, // Expose the preview function
     };
   }
 });
@@ -344,6 +372,12 @@ export default defineComponent({
   color: #6c757d;
 }
 
+/* Add muted style for no description */
+.text-muted {
+  color: #6c757d;
+  font-style: italic;
+}
+
 .item-info .world-info { /* Styl pro World Info */
     font-size: 0.85rem; /* Mírně zvětšíme */
     color: #6c757d; /* Změníme barvu */
@@ -388,7 +422,10 @@ export default defineComponent({
 }
 .modal {
   background-color: white; padding: 2rem; border-radius: 0.5rem;
-  min-width: 300px; max-width: 500px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  min-width: 300px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #343a40; }
 .form-group { margin-bottom: 1rem; }
