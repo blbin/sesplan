@@ -50,6 +50,7 @@
             @delete="requestCharacterDelete"
             @generateAI="openAIGenerator('character')"
             @rowClick="handleCharacterRowClick"
+            @update:assignableUsers="(users) => currentAssignableUsers = users"
           />
         </v-window-item>
 
@@ -230,10 +231,12 @@
           <CreateCharacterForm
                v-if="numericWorldId && showCharacterForm"
                :worldId="numericWorldId"
-            :characterToEdit="characterToEdit" 
+               :characterToEdit="characterToEdit" 
                :availableTagTypes="characterTagTypes"
-            @saved="handleCharacterSaved"
-            @cancel="closeCharacterModal"
+               :is-owner="isCurrentUserOwner"
+               :assignable-users="currentAssignableUsers"
+               @saved="handleCharacterSaved"
+               @cancel="closeCharacterModal"
           />
            </v-card-text>
          </v-card>
@@ -363,6 +366,7 @@ import type { Organization } from '@/types/organization';
 import type { Item } from '@/types/item';
 import type { ItemTagType } from '@/types/itemTagType';
 import type { CharacterTagType } from '@/types/characterTagType';
+import type { UserSimple } from '@/services/api/worlds';
 
 // Import Vuetify components
 import {
@@ -469,6 +473,9 @@ const aiEntityType = ref<EntityType>('character');
     const availableExamples = ref<any[]>([]);
     const loadingExamples = ref(false);
 
+// --- Assignable Users State ---
+const currentAssignableUsers = ref<UserSimple[]>([]);
+
 // --- Modal Control & Save Handlers ---
 const openAddLocationModal = () => { locationToEdit.value = null; showLocationForm.value = true; };
 const openEditLocationModal = (loc: Location) => { locationToEdit.value = { ...loc }; showLocationForm.value = true; };
@@ -485,9 +492,22 @@ const openEditItemModal = (item: Item) => { itemToEdit.value = { ...item }; show
 const closeItemModal = () => { showItemForm.value = false; itemToEdit.value = null; };
 const handleItemSaved = () => { closeItemModal(); itemTableRef.value?.refreshData(); };
 
-const openCharacterFormModal = (char: Character | null = null) => { characterToEdit.value = char ? { ...char } : null; showCharacterForm.value = true; };
-const closeCharacterModal = () => { showCharacterForm.value = false; characterToEdit.value = null; };
-const handleCharacterSaved = () => { closeCharacterModal(); characterTableRef.value?.refreshData(); };
+const openCharacterFormModal = (character: Character | null = null) => {
+  console.log("Opening character form for:", character);
+  characterToEdit.value = character; 
+  showCharacterForm.value = true;
+};
+
+const closeCharacterModal = () => {
+  showCharacterForm.value = false;
+  characterToEdit.value = null;
+};
+
+const handleCharacterSaved = (savedCharacter: Character) => {
+  console.log('Character saved:', savedCharacter);
+  closeCharacterModal();
+  characterTableRef.value?.refreshData();
+};
 
 // --- Delete ---
 const requestDelete = (item: any, type: EntityType) => {
@@ -496,7 +516,7 @@ const requestDelete = (item: any, type: EntityType) => {
   deleteError.value = null;
   showDeleteConfirm.value = true;
 };
-const requestCharacterDelete = (item: Character) => requestDelete(item, 'character');
+const requestCharacterDelete = (character: Character) => requestDelete(character, 'character');
 const requestLocationDelete = (item: Location) => requestDelete(item, 'location');
 const requestOrganizationDelete = (item: Organization) => requestDelete(item, 'organization');
 const requestItemDelete = (item: Item) => requestDelete(item, 'item');
@@ -635,7 +655,7 @@ const goToDetailView = (item: any, type: EntityType) => {
     router.push({ name: routeName, params, query: { fromTab: currentTab.value } }); 
   }
 };
-const handleCharacterRowClick = (item: Character) => goToDetailView(item, 'character');
+const handleCharacterRowClick = (character: Character) => goToDetailView(character, 'character');
 const handleLocationRowClick = (item: Location) => goToDetailView(item, 'location');
 const handleOrganizationRowClick = (item: Organization) => goToDetailView(item, 'organization');
 const handleItemRowClick = (item: Item) => goToDetailView(item, 'item');

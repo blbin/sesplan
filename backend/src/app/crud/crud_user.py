@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import List
 
 from app.models.user import User
 from app.schemas.user import UserCreate
@@ -18,6 +19,13 @@ def get_user_by_username(db: Session, username: str):
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     """Get a list of users with pagination"""
     return db.query(User).offset(skip).limit(limit).all()
+
+
+def get_users_by_ids(db: Session, user_ids: List[int]) -> List[User]:
+    """Get multiple users by their IDs."""
+    if not user_ids:
+        return []
+    return db.query(User).filter(User.id.in_(user_ids)).all()
 
 
 def create_user(db: Session, user: UserCreate):

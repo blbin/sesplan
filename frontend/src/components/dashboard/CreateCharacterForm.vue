@@ -12,31 +12,37 @@
     </div>
     <div class="form-group">
       <label for="characterDescription">Description</label>
-      <v-textarea 
-        v-model="formData.description"
-        variant="outlined"
-        density="compact"
-        rows="4"
+      <MarkdownEditor 
+        v-model="formData.description as string"
         id="characterDescription"
+        label="Character Description" 
       />
     </div>
 
-    <!-- Tags Selection -->
-    <div class="form-group">
-      <label for="characterTags">Tags</label>
-      <v-select
-        id="characterTags"
-        v-model="selectedTagTypeIds"
-        :items="availableTagTypes"
-        item-title="name"
-        item-value="id"
-        label="Select tags"
-        multiple
-        chips
-        closable-chips
-        variant="outlined"
-        density="compact"
-      ></v-select>
+    <!-- Assign User Select (Only for Owner) -->
+    <div class="form-group" v-if="isOwner">
+        <label for="characterAssignUser">Assign User</label>
+        <v-select
+            v-model="formData.user_id"
+            :items="assignableUserOptions"
+            label="Select user to assign"
+            item-title="username"
+            item-value="id"
+            id="characterAssignUser"
+            density="compact"
+            variant="outlined"
+            clearable
+            hide-details
+            :disabled="!isOwner || !assignableUsers || assignableUsers.length === 0"
+            >
+            <template v-slot:no-data>
+                <v-list-item>
+                <v-list-item-title>
+                    No users available in world campaigns.
+                </v-list-item-title>
+                </v-list-item>
+            </template>
+        </v-select>
     </div>
 
     <v-alert v-if="formError" type="error" variant="tonal" density="compact" class="mb-4">
@@ -61,41 +67,46 @@
 import { defineComponent, ref, reactive, watch, computed } from 'vue';
 import type { PropType } from 'vue';
 import * as charactersApi from '@/services/api/characters';
-// Assume types will include tags eventually
 import type { Character, CharacterCreate, CharacterUpdate } from '@/types/character';
-import type { CharacterTagType } from '@/types/characterTagType'; // Corrected import path
+import type { UserSimple } from '@/services/api/worlds'; // Import UserSimple
+// Removed CharacterTagType import
 // Import Vuetify components used
-import { VTextField, VTextarea, VSelect, VBtn, VAlert } from 'vuetify/components';
+import { VTextField, VBtn, VAlert, VSelect, VListItem, VListItemTitle } from 'vuetify/components'; // Removed VTextarea, VSelect
+import MarkdownEditor from '@/components/common/MarkdownEditor.vue'; // Import MarkdownEditor
 
 interface CharacterFormData {
   name: string;
   description: string | null;
-  // world_id is no longer part of the form data, it comes from the required prop
+  user_id: number | null; // Add user_id
 }
 
 export default defineComponent({
   name: 'CreateCharacterForm',
-  components: { VTextField, VTextarea, VSelect, VBtn, VAlert }, // Register Vuetify components
+  components: { VTextField, VBtn, VAlert, VSelect, VListItem, VListItemTitle, MarkdownEditor }, // Added MarkdownEditor, removed VTextarea, VSelect
   props: {
     worldId: {
       type: Number,
-      required: true, // worldId is now required as context is fixed
+      required: true, 
     },
     characterToEdit: {
       type: Object as PropType<Character | null>,
       default: null,
     },
-    // Removed availableWorlds prop
-    availableTagTypes: {
-        type: Array as PropType<CharacterTagType[]>,
-        default: () => [],
+    // Removed availableTagTypes prop
+    isOwner: {
+        type: Boolean,
+        default: false,
     },
+    assignableUsers: {
+        type: Array as PropType<UserSimple[]>,
+        default: () => [],
+    }
   },
   emits: ['saved', 'cancel'],
   setup(props, { emit }) {
     const isSubmitting = ref(false);
     const formError = ref<string | null>(null);
-    const selectedTagTypeIds = ref<number[]>([]); // For selected tag IDs
+    // Removed selectedTagTypeIds
 
     // Basic required rule for Vuetify fields
     const rules = {
@@ -104,28 +115,34 @@ export default defineComponent({
 
     const formData = reactive<CharacterFormData>({
       name: '',
-      description: null,
+      description: '',
+      user_id: null, // Initialize user_id
     });
 
     const isEditing = computed(() => !!props.characterToEdit);
 
-    // Initialize form when characterToEdit changes (for editing)
+    // Computed property for v-select items
+    const assignableUserOptions = computed(() => {
+        return props.assignableUsers.map(user => ({
+            id: user.id,
+            username: user.username
+        }));
+    });
+
     watch(
       () => props.characterToEdit,
       (character) => {
         if (character) {
           formData.name = character.name;
-          formData.description = character.description;
-          // Pre-fill selected tags if editing and character has tags
-          selectedTagTypeIds.value = character.tags?.map(tag => tag.character_tag_type_id) || [];
+          formData.description = character.description || '';
+          formData.user_id = character.user_id || null; // Set user_id
         } else {
-          // Reset form for creation
           formData.name = '';
-          formData.description = null;
-          selectedTagTypeIds.value = []; // Clear tags for new character
+          formData.description = '';
+          formData.user_id = null; // Reset user_id
         }
       },
-      { immediate: true, deep: true } // Use deep watch if character.tags is nested?
+      { immediate: true }
     );
 
     const onCancel = () => {
@@ -135,7 +152,6 @@ export default defineComponent({
     const handleSaveCharacter = async () => {
       formError.value = null;
       if (!formData.name.trim()) {
-        // Validation should be handled by Vuetify rules, but keep a fallback
         formError.value = 'Character name is required.';
         return;
       }
@@ -144,23 +160,18 @@ export default defineComponent({
       try {
         let savedCharacter: Character;
         if (isEditing.value && props.characterToEdit) {
-          // Update - Include tags in the update payload
-          const characterDataToUpdate: CharacterUpdate = {
-             // Assuming CharacterUpdate schema accepts tag_type_ids
-             // Only include fields if they changed
-          };
+          const characterDataToUpdate: Partial<CharacterUpdate> = {};
           if (formData.name !== props.characterToEdit.name) characterDataToUpdate.name = formData.name;
-          if (formData.description !== props.characterToEdit.description) characterDataToUpdate.description = formData.description;
-          
-          // Check if tags changed
-          const originalTagIds = props.characterToEdit.tags?.map(t => t.character_tag_type_id).sort() || [];
-          const currentTagIds = [...selectedTagTypeIds.value].sort();
-          if (JSON.stringify(originalTagIds) !== JSON.stringify(currentTagIds)) {
-              characterDataToUpdate.tag_type_ids = selectedTagTypeIds.value;
+          if (formData.description !== (props.characterToEdit.description || '')) characterDataToUpdate.description = formData.description;
+          // Add user_id change if user is owner
+          if (props.isOwner && formData.user_id !== (props.characterToEdit.user_id || null)) {
+              // Cast to any to bypass strict type checking for user_id potentially not being in Partial<CharacterUpdate>
+              (characterDataToUpdate as any).user_id = formData.user_id;
           }
-
+          
+          // Only call API if there are changes
           if (Object.keys(characterDataToUpdate).length > 0) {
-            savedCharacter = await charactersApi.updateCharacter(props.characterToEdit.id, characterDataToUpdate);
+            savedCharacter = await charactersApi.updateCharacter(props.characterToEdit.id, characterDataToUpdate as CharacterUpdate);
           } else {
             console.log("No changes detected for update.");
             emit('cancel'); 
@@ -168,14 +179,24 @@ export default defineComponent({
             return;
           }
         } else {
-          // Create - Include tags
           const newCharacterData: CharacterCreate = {
             name: formData.name,
             description: formData.description,
-            world_id: props.worldId, // Use the required prop
-            tag_type_ids: selectedTagTypeIds.value, // Add selected tag IDs
+            world_id: props.worldId,
+            // user_id cannot be set on creation via this form (assignment happens later)
+            // user_id: props.isOwner ? formData.user_id : null, // Or maybe allow setting on create?
           };
           savedCharacter = await charactersApi.createCharacter(newCharacterData);
+          // If assignment is needed immediately after creation (and user is owner):
+          if (props.isOwner && formData.user_id !== null) {
+             try {
+                await charactersApi.assignCharacterUser(savedCharacter.id, { user_id: formData.user_id });
+                savedCharacter.user_id = formData.user_id; // Update local object
+             } catch (assignErr) {
+                console.error("Failed to assign user after creation:", assignErr);
+                // Optionally inform the user about the assignment failure
+             }
+          }
         }
         emit('saved', savedCharacter);
       } catch (err: any) {
@@ -191,8 +212,8 @@ export default defineComponent({
       isEditing,
       isSubmitting,
       formError,
-      selectedTagTypeIds,
       rules,
+      assignableUserOptions,
       handleSaveCharacter,
       onCancel,
     };

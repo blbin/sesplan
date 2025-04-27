@@ -5,7 +5,7 @@ from typing import List
 from ... import crud, models, schemas
 from ...db.session import get_db
 from ...auth.auth import get_current_user
-from ..dependencies import get_journal_and_verify_owner # Import the dependency
+from ..dependencies import verify_journal_read_access, verify_journal_write_access
 
 router = APIRouter(tags=["journals"])
 
@@ -14,10 +14,10 @@ router = APIRouter(tags=["journals"])
 
 @router.get("/{journal_id}", response_model=schemas.Journal)
 def read_journal(
-    # Use the dependency to get journal and verify ownership
-    db_journal: models.Journal = Depends(get_journal_and_verify_owner)
+    # Use the new dependency for read access
+    db_journal: models.Journal = Depends(verify_journal_read_access)
 ):
-    """Get a specific journal by ID. Requires ownership of the parent character."""
+    """Get a specific journal by ID. Requires assigned user or world owner/admin."""
     return db_journal
 
 @router.put("/{journal_id}", response_model=schemas.Journal)
@@ -25,9 +25,10 @@ def update_journal(
     *, # Enforce keyword-only arguments
     journal_in: schemas.JournalUpdate,
     db: Session = Depends(get_db),
-    db_journal: models.Journal = Depends(get_journal_and_verify_owner) # Get/verify journal
+    # Use the new dependency for write access
+    db_journal: models.Journal = Depends(verify_journal_write_access) 
 ):
-    """Update a journal (e.g., name, description). Requires ownership of the parent character."""
+    """Update a journal (e.g., name, description). Requires world owner/admin."""
     updated_journal = crud.update_journal(db=db, db_journal=db_journal, journal_in=journal_in)
     return updated_journal
 

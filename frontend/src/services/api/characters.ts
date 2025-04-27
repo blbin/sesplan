@@ -2,6 +2,11 @@
 import { api } from '../auth.service';
 import type { Character, CharacterCreate, CharacterUpdate } from '@/types/character';
 
+// Define the type for the assignment payload
+interface CharacterAssignUserPayload {
+    user_id: number | null;
+}
+
 const BASE_URL = '/V1/characters';
 const WORLD_BASE_URL = '/V1/worlds'; // For the nested endpoint
 
@@ -39,4 +44,10 @@ export const updateCharacter = async (id: number, characterData: CharacterUpdate
 // Delete a character
 export const deleteCharacter = async (id: number): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
+};
+
+// Assign a user to a character
+export const assignCharacterUser = async (characterId: number, payload: CharacterAssignUserPayload): Promise<Character> => {
+    const response = await api.patch<Character>(`${BASE_URL}/${characterId}/assign_user`, payload);
+    return response.data;
 }; 

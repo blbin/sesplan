@@ -18,6 +18,7 @@ export interface CharacterUpdate {
     name?: string;
     description?: string | null;
     tag_type_ids?: number[]; // Added optional tag type IDs
+    user_id?: number | null; // Add optional user_id for assignment
     // Cannot change world_id or user_id via update
 }
 

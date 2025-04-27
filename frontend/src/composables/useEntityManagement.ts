@@ -8,6 +8,7 @@ import * as characterTagTypeApi from '@/services/api/characterTagTypeService';
 import * as locationTagTypeApi from '@/services/api/locationTagTypeService';
 import * as organizationTagTypeApi from '@/services/api/organizationTagTypeService';
 import * as itemTagTypeApi from '@/services/api/itemTagTypeService';
+import * as worldsApi from '@/services/api/worlds';
 
 // Define types for entities and tags if they are not globally defined
 // Re-using types from the original component for now
@@ -20,6 +21,7 @@ import type { CharacterTagType } from '@/types/characterTagType';
 import type { LocationTagType } from '@/types/locationTagType';
 import type { OrganizationTagType } from '@/types/organizationTagType';
 import type { ItemTagType } from '@/types/itemTagType';
+import type { UserSimple } from '@/services/api/worlds';
 
 // Generic type for entity and tag management
 type Entity = Character | Location | Organization | Item;
@@ -56,7 +58,8 @@ export type EntityType = keyof typeof apiMap;
 export function useEntityManagement<E extends Entity, TT extends TagType>(
   worldIdProp: Ref<string | number | undefined>,
   entityType: EntityType,
-  fetchTagTypesFlag: boolean = false // Add flag to control tag type fetching
+  fetchTagTypesFlag: boolean = false,
+  isOwnerRef: Ref<boolean> = ref(false)
 ) {
   const items = ref<E[]>([]) as Ref<E[]>;
   const tagTypes = ref<TT[]>([]) as Ref<TT[]>;
@@ -70,6 +73,11 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
   // Search and Filter state
   const search = ref('');
   const selectedTagIds = ref<number[]>([]);
+
+  // Refs for assignable users (only relevant for characters)
+  const assignableUsers = ref<UserSimple[]>([]);
+  const assignableUsersLoading = ref(false);
+  const assignableUsersError = ref<string | undefined>(undefined);
 
   const numericWorldId = computed(() => {
     const id = Number(worldIdProp.value);
@@ -114,6 +122,23 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
     } finally {
       tagTypesLoading.value = false;
     }
+  };
+
+  const fetchAssignableUsers = async (worldId: number) => {
+      if (entityType !== 'character') return; // Only fetch for characters
+      console.log(`[useEntityManagement:character] Fetching assignable users for world ID: ${worldId}`);
+      assignableUsersLoading.value = true;
+      assignableUsersError.value = undefined;
+      assignableUsers.value = [];
+      try {
+          assignableUsers.value = await worldsApi.getCampaignUsersInWorld(worldId);
+          console.log(`[useEntityManagement:character] Fetched ${assignableUsers.value.length} assignable users.`);
+      } catch (err: any) {
+          console.error(`[useEntityManagement:character] Fetch Assignable Users Error:`, err);
+          assignableUsersError.value = `Failed to load assignable users: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+      } finally {
+          assignableUsersLoading.value = false;
+      }
   };
 
   // --- Filtering Logic ---
@@ -207,11 +232,15 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
       console.log(`[useEntityManagement:${entityType}] worldIdProp changed:`, newId);
       const validId = Number(newId);
       if (!isNaN(validId) && validId > 0) {
-        // Fetch items always when ID is valid
-        fetchItems(validId); // Fetch items initially or on ID change
-        // Fetch tag types only if the flag is set
+        // Fetch items always
+        fetchItems(validId);
+        // Fetch tag types if flag is set
         if (fetchTagTypesFlag) {
           fetchTagTypes(validId);
+        }
+        // Fetch assignable users if entity is character AND user is owner
+        if (entityType === 'character' && isOwnerRef.value) {
+           fetchAssignableUsers(validId);
         }
       } else {
         // Reset state if the ID becomes invalid
@@ -224,10 +253,29 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
         tagTypesError.value = undefined;
         selectedTagIds.value = [];
         search.value = '';
+        assignableUsers.value = [];
+        assignableUsersError.value = undefined;
+        assignableUsersLoading.value = false;
       }
     },
-    { immediate: true } // Ensure fetch runs on initial load
+    { immediate: true }
   );
+
+  // Watcher for isOwner change (only relevant for characters)
+   watch(
+     isOwnerRef,
+     (newIsOwner, oldIsOwner) => {
+       // Fetch assignable users if owner status changes to true and we have a valid world ID
+       if (entityType === 'character' && newIsOwner && !oldIsOwner && numericWorldId.value) {
+         console.log(`[useEntityManagement:character] isOwner changed to true, fetching assignable users.`);
+         fetchAssignableUsers(numericWorldId.value);
+       }
+       // Optionally clear assignable users if owner status becomes false?
+       // else if (entityType === 'character' && !newIsOwner) {
+       //   assignableUsers.value = [];
+       // }
+     }
+   );
 
   // --- Manual Refresh Function ---
   const refreshData = () => {
@@ -235,9 +283,13 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
           console.log(`[useEntityManagement:${entityType}] Manual refresh triggered.`);
           // Re-fetch items
           fetchItems(numericWorldId.value);
-          // Re-fetch tag types only if the flag is set
+          // Re-fetch tag types if flag is set
           if (fetchTagTypesFlag) {
             fetchTagTypes(numericWorldId.value);
+          }
+          // Re-fetch assignable users if applicable
+          if (entityType === 'character' && isOwnerRef.value) {
+             fetchAssignableUsers(numericWorldId.value);
           }
       } else {
         console.warn(`[useEntityManagement:${entityType}] Cannot refresh data, worldId is invalid.`);
@@ -246,28 +298,28 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
 
   return {
     // Data
-    items: filteredItems, // Return the computed filtered list
-    allItems: items, // Expose original unfiltered items ref if needed
+    items: filteredItems,
+    allItems: items,
     tagTypes,
-
-    // State
+    assignableUsers,
+    // Loading States
     loading,
-    error,
     tagTypesLoading,
-    tagTypesError,
+    assignableUsersLoading,
     isDeleting,
+    // Error States
+    error,
+    tagTypesError,
+    assignableUsersError,
     deleteError,
-
-    // Filters & Search
+    // Filters/Search
     search,
     selectedTagIds,
     addTagToFilter,
-
     // Helpers
     getTagTypeName,
-
     // Actions
     deleteItem,
-    refreshData, // Expose the manual refresh function
+    refreshData,
   };
 } 

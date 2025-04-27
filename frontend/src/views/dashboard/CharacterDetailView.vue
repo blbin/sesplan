@@ -8,7 +8,17 @@
     <div v-else-if="character" class="character-content">
       <header class="view-header">
         <h1>{{ character.name }}</h1>
-        <router-link v-if="character.world_id" :to="{ name: 'dashboard-world-detail', params: { worldId: character.world_id } }" class="btn btn-secondary">Back to World</router-link>
+        <router-link 
+          v-if="character.world_id" 
+          :to="{ 
+            name: 'dashboard-world-detail', 
+            params: { worldId: character.world_id },
+            query: { tab: 'characters' }
+          }" 
+          class="btn btn-secondary"
+         >
+           Back to World (Characters)
+         </router-link>
         <button @click="openEditCharacterModal" class="btn btn-primary">Edit Character</button>
       </header>
 
@@ -52,10 +62,25 @@
         </div>
         <!-- End Inline Description Edit -->
 
-        <p class="mt-4"><strong>World ID:</strong> {{ character.world_id }}</p>
-        <p><strong>Owner ID:</strong> {{ character.user_id }}</p>
+        <!-- Display World Name or ID -->
+        <p class="mt-4">
+           <strong>World:</strong> 
+           <span v-if="detailsLoading"> Loading...</span>
+           <router-link v-else-if="world" :to="{ name: 'dashboard-world-detail', params: { worldId: world.id } }">{{ world.name }}</router-link>
+           <span v-else-if="detailsError && !world"> Error loading world</span>
+           <span v-else>{{ character.world_id }} (Not found)</span>
+        </p>
+        <!-- Display Owner Username or ID -->
+        <p>
+           <strong>Owner:</strong> 
+           <span v-if="detailsLoading"> Loading...</span>
+           <span v-else-if="owner">{{ owner.username }}</span>
+           <span v-else-if="detailsError && !owner"> Error loading owner</span>
+           <span v-else>{{ character.user_id }} (Not found)</span>
+        </p>
         <p><strong>Created:</strong> {{ formatDate(character.created_at) }}</p>
         <p><strong>Last Updated:</strong> {{ formatDate(character.updated_at) }}</p>
+        <div v-if="detailsError" class="error-message small">{{ detailsError }}</div>
       </div>
 
       <!-- Character Tags Section -->
@@ -93,37 +118,26 @@
 
        <!-- Related Sections (Journal, Items etc.) -->
        <div class="related-sections">
-            <!-- Journal Entries Section -->
-            <section class="journal-entries-section details-section">
-              <div class="section-header">
-                 <h3>{{ character.journal ? character.journal.name : 'Journal' }}</h3>
-                 <button v-if="character.journal" @click="openAddEntryModal" class="btn btn-primary btn-sm">Add Entry</button>
-              </div>
-              <p v-if="entriesLoading" class="loading-message small">Loading entries...</p>
-              <p v-else-if="entriesError" class="error-message small">{{ entriesError }}</p>
-              <p v-else-if="entries.length === 0">No entries in this journal yet.</p>
-              <ul v-else class="item-list entry-list">
-                 <li v-for="entry in entries" :key="entry.id" class="item-list-item">
-                    <div class="item-info">
-                       <h4>{{ entry.title || 'Untitled Entry' }}</h4>
-                       <p class="entry-content">{{ entry.content }}</p>
-                       <small class="entry-meta">Created: {{ formatDate(entry.created_at) }} | Updated: {{ formatDate(entry.updated_at) }}</small>
-                    </div>
-                    <div class="item-actions">
-                       <button @click="openEditEntryModal(entry)" class="btn btn-secondary btn-sm">Edit</button>
-                       <button @click="confirmDeleteEntry(entry)" class="btn btn-danger btn-sm">Delete</button>
-                    </div>
-                 </li>
-              </ul>
+            <section class="journal-section details-section">
+               <CharacterJournalTab v-if="numericCharacterId" :character-id="numericCharacterId" />
             </section>
-            <!-- Placeholder for other sections -->
-            <section class="details-section">
+            <!-- Items Section -->
+            <section class="details-section items-section">
                 <h3>Items</h3>
-                <p>Item management coming soon.</p>
-            </section>
-            <section class="details-section">
-                <h3>Relationships</h3>
-                <p>Character relationship tracking coming soon.</p>
+                <div v-if="itemsLoading" class="loading-message small">Loading items...</div>
+                <div v-else-if="itemsError" class="error-message small">{{ itemsError }}</div>
+                <div v-else-if="characterItems.length === 0" class="info-message small">This character has no items.</div>
+                <ul v-else class="item-list">
+                    <li v-for="item in characterItems" :key="item.id" class="item-list-item">
+                        <div class="item-info">
+                            <!-- TODO: Link to item detail when available -->
+                            <h4>{{ item.name }}</h4> 
+                            <p v-if="item.description">{{ item.description }}</p>
+                        </div>
+                        <!-- TODO: Add actions (unequip/drop?) when implemented -->
+                    </li>
+                </ul>
+                <!-- TODO: Add button to add existing/create new item? -->
             </section>
        </div>
 
@@ -255,214 +269,216 @@
         </div>
     </div>
 
-    <!-- Add/Edit Journal Entry Modal -->
-    <div v-if="showEntryModal" class="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-        <h2>{{ editingEntry ? 'Edit Journal Entry' : 'Add New Journal Entry' }}</h2>
-          <button @click="closeEntryModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-        <form @submit.prevent="handleSaveEntry">
-          <div class="form-group">
-            <label for="entryTitle">Title (Optional):</label>
-              <input type="text" id="entryTitle" v-model="entryForm.title" class="form-control">
-          </div>
-          <div class="form-group">
-            <label for="entryContent">Content:</label>
-              <textarea id="entryContent" v-model="entryForm.content" required class="form-control"></textarea>
-          </div>
-            <div class="form-actions">
-            <button type="button" @click="closeEntryModal" class="btn btn-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="!entryForm.content.trim()">
-              {{ editingEntry ? 'Save Changes' : 'Create Entry' }}
-            </button>
-          </div>
-           <p v-if="entryError" class="error-message">{{ entryError }}</p>
-        </form>
-        </div>
-      </div>
-    </div>
-
-     <!-- Delete Journal Entry Confirmation Modal -->
-    <div v-if="entryToDelete" class="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-          <h2>Confirm Delete Entry</h2>
-          <button @click="entryToDelete = null" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-        <p>Are you sure you want to delete this journal entry?</p>
-        <p v-if="entryToDelete.title"><strong>Title:</strong> {{ entryToDelete.title }}</p>
-           <div class="form-actions">
-            <button type="button" @click="entryToDelete = null" class="btn btn-secondary">Cancel</button>
-            <button type="button" @click="handleDeleteEntry" class="btn btn-danger">Delete</button>
-          </div>
-           <p v-if="deleteEntryError" class="error-message">{{ deleteEntryError }}</p>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, reactive, computed } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import * as charactersApi from '@/services/api/characters';
-import * as journalEntriesApi from '@/services/api/journalEntries';
 import * as characterTagTypeApi from '@/services/api/characterTagTypeService'; // Import Character Tag Type API
 import * as characterTagApi from '@/services/api/characterTagService'; // Import Character Tag API
+import * as itemsApi from '@/services/api/items'; // Import items API
+import * as worldsApi from '@/services/api/worlds'; // Import worlds API
+import * as usersApi from '@/services/api/users'; // Import users API
 import type { Character, CharacterUpdate } from '@/types/character';
-import type { JournalEntry, JournalEntryCreate, JournalEntryUpdate } from '@/types/journal_entry';
 import type { CharacterTagType } from '@/types/characterTagType'; // Import Character Tag Type
 import CreateCharacterForm from '@/components/dashboard/CreateCharacterForm.vue'; // Updated path
 import MarkdownEditor from '@/components/common/MarkdownEditor.vue'; // Import editor
 import MarkdownIt from 'markdown-it'; // Import renderer
-
-interface JournalEntryFormData {
-    title: string | null;
-    content: string;
-}
+import CharacterJournalTab from '@/components/dashboard/CharacterJournalTab.vue'; // Import the new component
+import { VBtn, VProgressCircular, VAlert } from 'vuetify/components'; // Add necessary Vuetify components
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue';
+import type { Item } from '@/types/item'; // Import Item type
+import type { World } from '@/types/world'; // Import World type
+import type { User } from '@/types/user'; // Import User type
 
 export default defineComponent({
   name: 'CharacterDetailView',
-  components: { CreateCharacterForm, MarkdownEditor },
-  props: {
-    characterId: {
-      type: [String, Number],
-      required: true,
-    },
+  components: {
+    VBtn, VProgressCircular, VAlert, // Register Vuetify components
+    CreateCharacterForm,
+    ConfirmDeleteModal,
+    CharacterJournalTab, 
+    MarkdownEditor, // Register MarkdownEditor
   },
-  setup(props) {
+  setup() {
+    const route = useRoute();
     const character = ref<Character | null>(null);
-    const entries = ref<JournalEntry[]>([]);
     const loading = ref(true);
-    const entriesLoading = ref(false);
     const error = ref<string | null>(null);
-    const entriesError = ref<string | null>(null);
-    const entryError = ref<string | null>(null);
-    const deleteEntryError = ref<string | null>(null);
-
-    const showEntryModal = ref(false);
-    const editingEntry = ref<JournalEntry | null>(null);
-    const entryToDelete = ref<JournalEntry | null>(null);
-
-    // Character edit modal
-    const showEditCharacterModal = ref(false);
-
-    // State for character tag editing
-    const showTagEditDialog = ref(false);
-    const availableTagTypes = ref<CharacterTagType[]>([]);
-    const tagTypesLoading = ref(false);
-    const tagTypesError = ref<string | null>(null);
-    const selectedTagTypeIds = ref<number[]>([]); 
-    const isSavingTags = ref(false);
-    const tagSyncError = ref<string | null>(null);
-
-    // State for tag type management
-    const showTagTypeDialog = ref(false);
-    const editingTagType = ref<CharacterTagType | null>(null);
-    const tagTypeName = ref('');
-    const isSavingTagType = ref(false);
-    const tagTypeDialogError = ref<string | null>(null);
-
-    // State for delete tag type confirmation
-    const showDeleteTagTypeConfirm = ref(false);
-    const tagTypeToDelete = ref<CharacterTagType | null>(null);
-    const isDeletingTagType = ref(false);
-    const deleteTagTypeError = ref<string | null>(null);
-
-    // --- Inline Description Editing State ---
+    
+    // Description Editing State
     const isEditingDescription = ref(false);
     const editableDescription = ref('');
     const isSavingDescription = ref(false);
     const saveDescriptionError = ref<string | null>(null);
 
-    // --- Computed Properties ---
-    // Initialize markdown-it
-    const md = new MarkdownIt({
-      html: false, 
-      linkify: true,
-      typographer: true,
+    // Tag related state
+    const showTagEditDialog = ref(false); // Restore
+    const availableTagTypes = ref<CharacterTagType[]>([]);
+    const tagTypesLoading = ref(false);
+    const tagTypesError = ref<string | null>(null);
+    const selectedTagTypeIds = ref<number[]>([]);
+    const isSavingTags = ref(false);
+    const tagSyncError = ref<string | null>(null);
+
+    // Tag Type Management Modal State
+    const showTagTypeDialog = ref(false);
+    const editingTagType = ref<CharacterTagType | null>(null);
+    const isSavingTagType = ref(false);
+    const tagTypeName = ref(''); // Added for the form inside the modal
+    const tagTypeDialogError = ref<string | null>(null);
+
+    // Delete Tag Type Confirmation Modal State
+    const showDeleteTagTypeConfirm = ref(false);
+    const tagTypeToDelete = ref<CharacterTagType | null>(null);
+    const isDeletingTagType = ref(false);
+    const deleteTagTypeError = ref<string | null>(null);
+
+    // Character Edit Modal State
+    const showEditCharacterModal = ref(false);
+
+    // Items State
+    const characterItems = ref<Item[]>([]);
+    const itemsLoading = ref(false);
+    const itemsError = ref<string | null>(null);
+
+    // State for loaded World and User data
+    const world = ref<World | null>(null);
+    const owner = ref<User | null>(null);
+    const detailsLoading = ref(false); // Combined loading state for world/user
+    const detailsError = ref<string | null>(null);
+
+    const characterIdRef = computed(() => route.params.characterId as string | undefined);
+    const numericCharacterId = computed(() => {
+      const id = Number(characterIdRef.value);
+      return !isNaN(id) && id > 0 ? id : null;
     });
 
-    // Computed property for rendering description
+    // Initialize markdown-it (assuming it's defined above or imported)
+    const md = new MarkdownIt({ html: false, linkify: true, typographer: true }); 
     const renderedDescription = computed(() => {
-      if (character.value?.description) {
-        return md.render(character.value.description);
+      return character.value?.description ? md.render(character.value.description) : '<p><em>No description provided.</em></p>';
+    });
+    const isDescriptionChanged = computed(() => character.value?.description !== editableDescription.value);
+
+    // --- Fetching Data ---
+    const fetchCharacterDetails = async () => {
+      if (!numericCharacterId.value) {
+          error.value = "Invalid Character ID.";
+          loading.value = false;
+          return;
       }
-      return '<p><em>No description provided.</em></p>';
-    });
-
-    // Computed to check if description changed
-    const isDescriptionChanged = computed(() => {
-      const currentDesc = character.value?.description ?? '';
-      const editedDesc = editableDescription.value.trim() === '' ? '' : editableDescription.value;
-      return currentDesc !== editedDesc;
-    });
-
-    const entryForm = reactive<JournalEntryFormData>({
-        title: null,
-        content: '',
-    });
-    
-    const currentJournalId = computed(() => character.value?.journal?.id);
-    const currentWorldId = computed(() => character.value?.world_id);
-    const numericCharacterId = computed(() => Number(props.characterId));
-
-    const fetchCharacter = async (id: number) => {
       loading.value = true;
       error.value = null;
-      character.value = null;
-      entries.value = [];
-      entriesError.value = null;
+      world.value = null; // Reset world/owner
+      owner.value = null;
+      detailsError.value = null;
       try {
-        character.value = await charactersApi.getCharacterById(id);
+        character.value = await charactersApi.getCharacterById(numericCharacterId.value);
+        console.log('Character data received from API:', character.value); 
+        
+        // Fetch world and owner details in parallel after character is loaded
         if (character.value) {
-            if (currentJournalId.value) {
-                await fetchEntries(currentJournalId.value);
-            }
-            if (currentWorldId.value) {
-                await fetchTagTypes(currentWorldId.value); // Fetch tag types for the world
-            }
+             detailsLoading.value = true;
+             const worldId = character.value.world_id;
+             const ownerId = character.value.user_id;
+             
+             const promises = [];
+             if (worldId) {
+                 promises.push(worldsApi.getWorldById(worldId));
+             } else {
+                 promises.push(Promise.resolve(null)); // Placeholder if no worldId
+             }
+             if (ownerId) {
+                 promises.push(usersApi.getUserById(ownerId));
+             } else {
+                 promises.push(Promise.resolve(null)); // Placeholder if no ownerId
+             }
+
+             // Also fetch items
+             promises.push(fetchCharacterItems()); // Assuming this returns a promise
+             // Also fetch available tag types (needs worldId)
+             if(worldId) {
+                promises.push(loadAvailableTagTypes(worldId)); // Pass worldId
+             } else {
+                console.warn("Cannot load tag types, worldId missing from character.");
+             }
+
+             try {
+                 const results = await Promise.allSettled(promises);
+                 
+                 // Process World result
+                 if (results[0].status === 'fulfilled' && results[0].value) {
+                     world.value = results[0].value as World;
+                 } else if (results[0].status === 'rejected') {
+                     console.error("Fetch World Error:", results[0].reason);
+                     detailsError.value = 'Failed to load world details. ';
+                 }
+
+                 // Process Owner result
+                 if (results[1].status === 'fulfilled' && results[1].value) {
+                     owner.value = results[1].value as User;
+                 } else if (results[1].status === 'rejected') {
+                     console.error("Fetch Owner Error:", results[1].reason);
+                     detailsError.value = (detailsError.value || '') + 'Failed to load owner details.';
+                 }
+
+                 // Errors from fetchCharacterItems and loadAvailableTagTypes are handled internally in those functions
+
+             } catch (settledError) {
+                  // This catch block is less likely needed with Promise.allSettled
+                  console.error("Error processing details promises:", settledError);
+                  detailsError.value = "An unexpected error occurred loading details.";
+             } finally {
+                 detailsLoading.value = false;
+             }
         }
+        // ... tag pre-filling, description setup (can stay here) ...
+        selectedTagTypeIds.value = character.value?.tags?.map(t => t.character_tag_type_id) || [];
+        editableDescription.value = character.value?.description || '';
+
       } catch (err: any) {
-        console.error("Fetch Character Error:", err);
-        if (err.response?.status === 404) {
-            error.value = 'Character not found.';
-        } else {
-            error.value = `Failed to load character: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
+        error.value = `Failed to load character: ${err.response?.data?.detail || err.message}`;
+        console.error("Load Character Error:", err);
       } finally {
-        loading.value = false;
+        loading.value = false; // Main character loading finished
       }
     };
 
-    const fetchEntries = async (journalId: number) => {
-        entriesLoading.value = true;
-        entriesError.value = null;
-        try {
-            entries.value = await journalEntriesApi.getEntriesByJournal(journalId);
-        } catch (err: any) {
-             console.error("Fetch Entries Error:", err);
-             entriesError.value = `Failed to load journal entries: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        } finally {
-            entriesLoading.value = false;
-        }
-    };
-
-    const fetchTagTypes = async (worldId: number) => {
+    // Modified loadAvailableTagTypes to accept worldId
+    const loadAvailableTagTypes = async (worldId: number) => {
         if (!worldId) return;
         tagTypesLoading.value = true;
         tagTypesError.value = null;
         try {
             availableTagTypes.value = await characterTagTypeApi.getCharacterTagTypes(worldId);
         } catch (err: any) {
-            console.error('Error fetching character tag types:', err);
-            tagTypesError.value = err.message || 'Failed to load character tag types';
-            availableTagTypes.value = []; 
+            console.error('Error loading character tag types:', err);
+            tagTypesError.value = `Failed to load tag types: ${err.message}`;
         } finally {
             tagTypesLoading.value = false;
+        }
+    };
+
+    const fetchCharacterItems = async () => {
+        if (!character.value || !character.value.world_id) {
+            itemsError.value = "Cannot load items: Character or World ID missing.";
+            return;
+        }
+        itemsLoading.value = true;
+        itemsError.value = null;
+        try {
+            characterItems.value = await itemsApi.getItemsByWorld(
+                character.value.world_id, 
+                character.value.id // Filter by character ID
+            );
+        } catch (err: any) {
+            console.error("Fetch Character Items Error:", err);
+            itemsError.value = `Failed to load items: ${err.message}`;
+        } finally {
+            itemsLoading.value = false;
         }
     };
 
@@ -475,330 +491,213 @@ export default defineComponent({
         }
     };
 
-    // Journal Entry Modal Functions
-    const resetEntryForm = () => {
-        entryForm.title = null;
-        entryForm.content = '';
-        editingEntry.value = null;
-        entryError.value = null;
-    };
-    
-    const openAddEntryModal = () => {
-        resetEntryForm();
-        showEntryModal.value = true;
-    };
-
-    const openEditEntryModal = (entry: JournalEntry) => {
-        editingEntry.value = entry;
-        entryForm.title = entry.title;
-        entryForm.content = entry.content;
-        entryError.value = null;
-        showEntryModal.value = true;
-    };
-    
-    const closeEntryModal = () => {
-        showEntryModal.value = false;
-        resetEntryForm();
-    };
-
-    const handleSaveEntry = async () => {
-        if (!currentJournalId.value) {
-            entryError.value = "Cannot save entry: Journal ID is missing.";
-            return;
-        }
-        entryError.value = null;
-
-        try {
-            if (editingEntry.value) {
-                const entryUpdateData: JournalEntryUpdate = {};
-                if (entryForm.title !== editingEntry.value.title) {
-                    entryUpdateData.title = entryForm.title;
-                }
-                if (entryForm.content !== editingEntry.value.content) {
-                    entryUpdateData.content = entryForm.content;
-                }
-                if (Object.keys(entryUpdateData).length > 0) {
-                    const updatedEntry = await journalEntriesApi.updateJournalEntry(
-                        editingEntry.value.id,
-                        entryUpdateData
-                    );
-                    const index = entries.value.findIndex(e => e.id === updatedEntry.id);
-                    if (index !== -1) {
-                        entries.value[index] = updatedEntry;
-                    }
-                }
-            } else {
-                const entryCreateData: JournalEntryCreate = {
-                    title: entryForm.title,
-                    content: entryForm.content,
-                    journal_id: currentJournalId.value
-                };
-                const newEntry = await journalEntriesApi.createJournalEntry(entryCreateData);
-                entries.value.push(newEntry);
-            }
-            closeEntryModal();
-        } catch (err: any) {
-            console.error("Save Entry Error:", err);
-            entryError.value = `Failed to save entry: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
-    };
-
-    const confirmDeleteEntry = (entry: JournalEntry) => {
-        entryToDelete.value = entry;
-        deleteEntryError.value = null;
-    };
-
-    const handleDeleteEntry = async () => {
-        if (!entryToDelete.value) return;
-        deleteEntryError.value = null;
-        try {
-            await journalEntriesApi.deleteJournalEntry(entryToDelete.value.id);
-            entries.value = entries.value.filter(e => e.id !== entryToDelete.value!.id);
-            entryToDelete.value = null; // Close confirmation modal
-        } catch (err: any) {
-             console.error("Delete Entry Error:", err);
-             deleteEntryError.value = `Failed to delete entry: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
-    };
-
-    // Edit Character Modal Functions
-    const openEditCharacterModal = () => {
-      showEditCharacterModal.value = true;
-    };
-
-    const closeEditCharacterModal = () => {
-      showEditCharacterModal.value = false;
-    };
-
-    const handleCharacterSaved = () => {
-      closeEditCharacterModal();
-      fetchCharacter(numericCharacterId.value); // Refresh character details
-    };
-
-    // Tag Assignment Modal Functions
-     const openTagEditDialog = () => {
-       if (!character.value || currentWorldId.value === undefined) return;
-       selectedTagTypeIds.value = character.value.tags?.map(t => t.character_tag_type_id) || [];
-       if (availableTagTypes.value.length === 0 || tagTypesError.value) {
-         fetchTagTypes(currentWorldId.value);
-       }
-       tagSyncError.value = null;
-       showTagEditDialog.value = true;
-     };
- 
-     const closeTagEditDialog = () => {
-       showTagEditDialog.value = false;
-     };
- 
-     const saveTags = async () => {
-       if (!character.value) return;
-       isSavingTags.value = true;
-       tagSyncError.value = null;
- 
-       const originalTagTypeIds = character.value.tags?.map(t => t.character_tag_type_id) || [];
-       const currentTagTypeIds = new Set(selectedTagTypeIds.value);
-       const originalTagTypeIdsSet = new Set(originalTagTypeIds);
- 
-       const tagsToAdd = selectedTagTypeIds.value.filter(id => !originalTagTypeIdsSet.has(id));
-       const tagsToRemove = originalTagTypeIds.filter(id => !currentTagTypeIds.has(id));
- 
-       const addPromises = tagsToAdd.map(tagTypeId => 
-         characterTagApi.addTagToCharacter(numericCharacterId.value, tagTypeId)
-       );
-       const removePromises = tagsToRemove.map(tagTypeId => 
-         characterTagApi.removeTagFromCharacter(numericCharacterId.value, tagTypeId)
-       );
- 
-       try {
-         await Promise.all([...addPromises, ...removePromises]);
-         closeTagEditDialog();
-         fetchCharacter(numericCharacterId.value); // Refresh character to show updated tags
-       } catch (err: any) {
-         console.error("Error syncing character tags:", err);
-         tagSyncError.value = `Failed to sync tags: ${err.message || 'Unknown error'}`;
-       } finally {
-         isSavingTags.value = false;
-       }
-     };
-
-     // Tag Type Management Modal Functions
-    const openAddTagTypeDialog = () => {
-      editingTagType.value = null;
-      tagTypeName.value = '';
-      tagTypeDialogError.value = null;
-      showTagTypeDialog.value = true;
-    };
-
-    const openEditTagTypeDialog = (tagType: CharacterTagType) => {
-      editingTagType.value = { ...tagType };
-      tagTypeName.value = tagType.name;
-      tagTypeDialogError.value = null;
-      showTagTypeDialog.value = true;
-    };
-
-    const closeTagTypeDialog = () => {
-      showTagTypeDialog.value = false;
-      editingTagType.value = null;
-      tagTypeName.value = '';
-      tagTypeDialogError.value = null;
-    };
-
-    const saveTagType = async () => {
-      if (!tagTypeName.value || !currentWorldId.value) return;
-      isSavingTagType.value = true;
-      tagTypeDialogError.value = null;
-
-      try {
-        if (editingTagType.value) {
-          // Update
-          const updateData = { name: tagTypeName.value };
-          const updated = await characterTagTypeApi.updateCharacterTagType(currentWorldId.value, editingTagType.value.id, updateData);
-          const index = availableTagTypes.value.findIndex(t => t.id === updated.id);
-          if (index !== -1) availableTagTypes.value[index] = updated;
-        } else {
-          // Create
-          const createData = { name: tagTypeName.value };
-          const created = await characterTagTypeApi.createCharacterTagType(currentWorldId.value, createData);
-          availableTagTypes.value.push(created);
-        }
-        closeTagTypeDialog();
-        // Refresh tag types in case they are needed elsewhere or for the edit dialog
-        if (currentWorldId.value) fetchTagTypes(currentWorldId.value);
-      } catch (err: any) {
-        console.error('Error saving character tag type:', err);
-        tagTypeDialogError.value = err.response?.data?.detail || err.message || 'Failed to save tag type';
-      } finally {
-        isSavingTagType.value = false;
-      }
-    };
-
-    // Delete Tag Type Confirmation Modal Functions
-    const confirmDeleteTagType = (tagType: CharacterTagType) => {
-      tagTypeToDelete.value = tagType;
-      deleteTagTypeError.value = null;
-      showDeleteTagTypeConfirm.value = true;
-    };
-
-    const cancelDeleteTagType = () => {
-      showDeleteTagTypeConfirm.value = false;
-      tagTypeToDelete.value = null;
-      deleteTagTypeError.value = null;
-    };
-
-    const executeDeleteTagType = async () => {
-      if (!tagTypeToDelete.value || !currentWorldId.value) return;
-      isDeletingTagType.value = true;
-      deleteTagTypeError.value = null;
-      try {
-        await characterTagTypeApi.deleteCharacterTagType(currentWorldId.value, tagTypeToDelete.value.id);
-        availableTagTypes.value = availableTagTypes.value.filter(t => t.id !== tagTypeToDelete.value?.id);
-        cancelDeleteTagType(); // Close modal on success
-        // Refresh character details in case a deleted tag type was assigned
-        fetchCharacter(numericCharacterId.value);
-      } catch (err: any) {
-        console.error('Error deleting character tag type:', err);
-        deleteTagTypeError.value = err.response?.data?.detail || err.message || 'Failed to delete tag type';
-      } finally {
-        isDeletingTagType.value = false;
-      }
-    };
-
-    // --- Functions for Inline Description Editing ---
+    // --- Description Editing Functions ---
     const startEditingDescription = () => {
-      if (!character.value) return;
-      editableDescription.value = character.value.description ?? '';
-      saveDescriptionError.value = null;
-      isEditingDescription.value = true;
+        editableDescription.value = character.value?.description || '';
+        isEditingDescription.value = true;
+        saveDescriptionError.value = null;
     };
 
     const cancelDescriptionEdit = () => {
-      isEditingDescription.value = false;
-      saveDescriptionError.value = null;
+        isEditingDescription.value = false;
+        saveDescriptionError.value = null;
     };
 
     const saveDescription = async () => {
-      if (!character.value || !isDescriptionChanged.value) return;
-
-      isSavingDescription.value = true;
-      saveDescriptionError.value = null;
-      const newDescription = editableDescription.value.trim() === '' ? null : editableDescription.value;
-      
-      try {
-        const updatePayload: CharacterUpdate = { 
-          description: newDescription
-          // Ensure other required fields for update are NOT included if not changed
-        };
-        const updatedCharacter = await charactersApi.updateCharacter(Number(props.characterId), updatePayload);
-        
-        // Update local state
-        character.value = { ...character.value, ...updatedCharacter }; // Merge in case API returns partial data
-        isEditingDescription.value = false;
-        
-      } catch (err: any) {
-        console.error("Error saving description:", err);
-        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
-      } finally {
-        isSavingDescription.value = false;
-      }
+        if (!numericCharacterId.value || !isDescriptionChanged.value) return;
+        isSavingDescription.value = true;
+        saveDescriptionError.value = null;
+        try {
+            const updatePayload: CharacterUpdate = { description: editableDescription.value };
+            const updatedCharacter = await charactersApi.updateCharacter(numericCharacterId.value, updatePayload);
+            // Update local state
+            if (character.value) {
+                character.value.description = updatedCharacter.description;
+                character.value.updated_at = updatedCharacter.updated_at;
+            }
+            isEditingDescription.value = false;
+        } catch (err: any) {
+            console.error('Error saving description:', err);
+            saveDescriptionError.value = `Failed to save: ${err.message}`;
+        } finally {
+            isSavingDescription.value = false;
+        }
     };
 
-    // Watcher for characterId prop changes
-    watch(
-      () => props.characterId,
-      (newId) => {
-      if (newId) {
-        fetchCharacter(Number(newId));
-        } else {
-          character.value = null;
-          error.value = "Character ID is missing.";
-          loading.value = false;
-      }
-      },
-      { immediate: true }
-    );
+    // --- Character Edit Modal Functions ---
+    const openEditCharacterModal = () => { showEditCharacterModal.value = true; };
+    const closeEditCharacterModal = () => { showEditCharacterModal.value = false; };
+    const handleCharacterSaved = () => {
+        closeEditCharacterModal();
+        fetchCharacterDetails(); 
+    };
+
+    // --- Tag Assignment Modal Functions ---
+    const openTagEditDialog = () => {
+        if (!character.value || !character.value.world_id) return;
+        selectedTagTypeIds.value = character.value.tags?.map(t => t.character_tag_type_id) || [];
+        // Load types if needed
+        if (availableTagTypes.value.length === 0 || tagTypesError.value) {
+          loadAvailableTagTypes(character.value.world_id); // Ensure correct function name is used
+        }
+        tagSyncError.value = null;
+        showTagEditDialog.value = true; 
+    };
+    
+    const closeTagEditDialog = () => { showTagEditDialog.value = false; };
+
+    const saveTags = async () => {
+        if (!character.value) return;
+        isSavingTags.value = true;
+        tagSyncError.value = null;
+
+        const originalTagTypeIds = new Set(character.value.tags?.map(t => t.character_tag_type_id) || []);
+        const currentTagTypeIds = new Set(selectedTagTypeIds.value);
+
+        const tagsToAdd = selectedTagTypeIds.value.filter(id => !originalTagTypeIds.has(id));
+        const tagsToRemove = [...originalTagTypeIds].filter(id => !currentTagTypeIds.has(id));
+
+        const addPromises = tagsToAdd.map(tagTypeId => 
+          characterTagApi.addTagToCharacter(character.value!.id, tagTypeId)
+        );
+        const removePromises = tagsToRemove.map(tagTypeId => 
+          characterTagApi.removeTagFromCharacter(character.value!.id, tagTypeId)
+        );
+        
+        try {
+            await Promise.all([...addPromises, ...removePromises]);
+            closeTagEditDialog();
+            fetchCharacterDetails(); // Refresh character to show updated tags
+        } catch (err: any) {
+            console.error("Error syncing character tags:", err);
+            tagSyncError.value = `Failed to save tags: ${err.message || 'Unknown error'}`;
+        } finally {
+            isSavingTags.value = false;
+        }
+    };
+
+    // --- Tag Type Management Functions ---
+    const openAddTagTypeDialog = () => {
+        editingTagType.value = null;
+        tagTypeName.value = '';
+        tagTypeDialogError.value = null;
+        showTagTypeDialog.value = true;
+    };
+
+    const openEditTagTypeDialog = (tagType: CharacterTagType) => {
+        editingTagType.value = tagType;
+        tagTypeName.value = tagType.name;
+        tagTypeDialogError.value = null;
+        showTagTypeDialog.value = true;
+    };
+
+    const closeTagTypeDialog = () => { 
+        showTagTypeDialog.value = false; 
+        editingTagType.value = null;
+        tagTypeName.value = ''; // Clear name on close
+    };
+
+    const saveTagType = async () => {
+        if (!tagTypeName.value || !character.value?.world_id) {
+            tagTypeDialogError.value = "Character or World ID is missing.";
+            return;
+        }
+        const worldId = character.value.world_id; // Guaranteed to be number here
+        isSavingTagType.value = true;
+        tagTypeDialogError.value = null;
+        try {
+            if (editingTagType.value) {
+                const updateData = { name: tagTypeName.value };
+                await characterTagTypeApi.updateCharacterTagType(worldId, editingTagType.value.id, updateData);
+            } else {
+                const createData = { name: tagTypeName.value };
+                await characterTagTypeApi.createCharacterTagType(worldId, createData);
+            }
+            closeTagTypeDialog();
+            await loadAvailableTagTypes(worldId); // Ensure correct function name is used
+        } catch (err: any) {
+            console.error('Error saving character tag type:', err);
+            tagTypeDialogError.value = `Save failed: ${err.message}`;
+        } finally {
+            isSavingTagType.value = false;
+        }
+    };
+
+    // --- Delete Tag Type Functions ---
+    const confirmDeleteTagType = (tagType: CharacterTagType) => {
+        tagTypeToDelete.value = tagType;
+        deleteTagTypeError.value = null;
+        showDeleteTagTypeConfirm.value = true;
+    };
+
+    const cancelDeleteTagType = () => {
+        showDeleteTagTypeConfirm.value = false;
+        tagTypeToDelete.value = null;
+    };
+
+    const executeDeleteTagType = async () => {
+        if (!tagTypeToDelete.value || !character.value?.world_id) {
+            deleteTagTypeError.value = "Cannot delete: Character, World ID, or Tag Type is missing.";
+            return;
+        }
+        const worldId = character.value.world_id; // Guaranteed to be number here
+        isDeletingTagType.value = true;
+        deleteTagTypeError.value = null;
+        try {
+            await characterTagTypeApi.deleteCharacterTagType(worldId, tagTypeToDelete.value.id);
+            cancelDeleteTagType(); 
+            await loadAvailableTagTypes(worldId); // Ensure correct function name is used
+            fetchCharacterDetails(); 
+        } catch (err: any) {
+            console.error('Error deleting character tag type:', err);
+            deleteTagTypeError.value = `Delete failed: ${err.message}`;
+        } finally {
+            isDeletingTagType.value = false;
+        }
+    };
+
+    // --- Lifecycle Hook ---
+    onMounted(() => {
+      fetchCharacterDetails(); // This now fetches character, world, owner, items, and tag types
+    });
 
     return {
       character,
-      entries,
       loading,
-      entriesLoading,
       error,
-      entriesError,
-      formatDate,
-      // Journal Entry Modals
-      showEntryModal,
-      editingEntry,
-      entryForm,
-      entryError,
-      openAddEntryModal,
-      openEditEntryModal,
-      closeEntryModal,
-      handleSaveEntry,
-      entryToDelete,
-      deleteEntryError,
-      confirmDeleteEntry,
-      handleDeleteEntry,
-      // Edit Character Modal
-      showEditCharacterModal,
-      openEditCharacterModal,
-      closeEditCharacterModal,
-      handleCharacterSaved,
-      // Tag Assignment Modal
-      showTagEditDialog,
+      numericCharacterId,
+      formatDate, 
+      // Description Editing
+      renderedDescription,
+      isEditingDescription,
+      editableDescription,
+      isSavingDescription,
+      saveDescriptionError,
+      startEditingDescription,
+      cancelDescriptionEdit,
+      saveDescription,
+      isDescriptionChanged,
+      // Tag Assignment
       availableTagTypes,
       tagTypesLoading,
       tagTypesError,
       selectedTagTypeIds,
       isSavingTags,
       tagSyncError,
-      openTagEditDialog,
-      closeTagEditDialog,
-      saveTags,
-      // Tag Type Management Modals
+      showTagEditDialog, 
+      openTagEditDialog, 
+      closeTagEditDialog, 
+      saveTags, 
+      // Character Edit Modal
+      showEditCharacterModal,
+      openEditCharacterModal,
+      closeEditCharacterModal,
+      handleCharacterSaved,
+      // Tag Type Management
       showTagTypeDialog,
       editingTagType,
-      tagTypeName,
       isSavingTagType,
+      tagTypeName,
       tagTypeDialogError,
       openAddTagTypeDialog,
       openEditTagTypeDialog,
@@ -812,16 +711,15 @@ export default defineComponent({
       confirmDeleteTagType,
       cancelDeleteTagType,
       executeDeleteTagType,
-      // --- Inline Description Editing Exports ---
-      isEditingDescription,
-      editableDescription,
-      isSavingDescription,
-      saveDescriptionError,
-      startEditingDescription,
-      cancelDescriptionEdit,
-      saveDescription,
-      isDescriptionChanged,
-      renderedDescription,
+      // Items
+      characterItems,
+      itemsLoading,
+      itemsError,
+      // World and Owner Details
+      world,             // Add world
+      owner,             // Add owner
+      detailsLoading,    // Add detailsLoading
+      detailsError,      // Add detailsError
     };
   },
 });
@@ -1201,4 +1099,22 @@ textarea.form-control {
 .mt-4 {
     margin-top: 1.5rem; 
 }
+
+.items-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    color: #495057;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+ }
+
+ .info-message.small {
+    font-size: 0.9rem;
+    color: #6c757d;
+    padding: 0.5rem 0;
+ }
+
+ /* Reusing item list styles */
+
 </style> 

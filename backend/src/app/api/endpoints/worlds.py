@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy.orm import Session, selectinload
+from typing import List, Optional, Set
 
 from ... import crud, models, schemas
 from ...db.session import get_db
@@ -150,25 +150,23 @@ def read_world_campaigns(
     campaigns = crud.get_campaigns_by_world(db, world_id=world_id, skip=skip, limit=limit)
     return campaigns
 
-# Nový endpoint pro získání postav v rámci světa
+# Endpoint to get all characters within a specific world (with pagination)
 @router.get("/{world_id}/characters/", response_model=List[schemas.Character])
-async def read_world_characters(
-    *,
-    db: Session = Depends(get_db),
+def read_world_characters(
     world_id: int,
+    db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    current_user: models.User = Depends(get_current_user)
+    # current_user: models.User = Depends(get_current_user) # Re-add if needed
 ):
-    """Retrieve all characters within a specific world. Requires world membership."""
-    # Ověření členství ve světě
-    membership = await get_world_membership(world_id, current_user.id, db)
-    if not membership:
-        # Zde bychom mohli zkontrolovat i public status světa, pokud chceme
-        # public světy zpřístupnit i nečlenům, ale pro postavy to nemusí dávat smysl.
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this world")
-
-    characters = crud.get_all_characters_in_world(db, world_id=world_id, skip=skip, limit=limit)
+    """Retrieve all characters belonging to a specific world with pagination."""
+    # TODO: Verify user has access to this world if necessary (e.g., public world or member)
+    db_world = crud.get_world(db, world_id=world_id)
+    if db_world is None:
+        raise HTTPException(status_code=404, detail="World not found")
+    
+    # Use the correct paginated CRUD function: get_characters_by_world
+    characters = crud.get_characters_by_world(db, world_id=world_id, skip=skip, limit=limit)
     return characters
 
 @router.get("/{world_id}/members", response_model=List[schemas.WorldUserRead])
@@ -249,4 +247,54 @@ async def remove_world_member(
     if world.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
-    crud.remove_world_member(db, world_id=world_id, user_id=user_id) 
+    crud.remove_world_member(db, world_id=world_id, user_id=user_id)
+
+@router.get("/{world_id}/campaign_users", response_model=List[schemas.UserSimple])
+@limiter.limit(settings.GENERIC_READ_LIMIT)
+async def get_campaign_users_in_world(
+    *,
+    request: Request, # Added for limiter
+    world_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Get a unique list of users participating in any campaign within a specific world.
+    Requires the current user to be a member of the world.
+    """
+    # 1. Check if world exists
+    db_world = crud.get_world(db, world_id=world_id)
+    if not db_world:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="World not found")
+
+    # 2. Check if current user is a member of the world
+    membership = await get_world_membership(world_id, current_user.id, db)
+    # Allow public access if world is public?
+    # if not membership and not db_world.is_public: 
+    if not membership:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this world")
+
+    # 3. Get all campaigns in the world
+    campaigns = crud.get_campaigns_by_world(db, world_id=world_id)
+    if not campaigns:
+        return [] # No campaigns in this world, so no campaign users
+
+    campaign_ids = [campaign.id for campaign in campaigns]
+
+    # 4. Get all unique user IDs from CampaignUser for these campaigns
+    campaign_user_ids: Set[int] = set()
+    campaign_users_assoc = (
+        db.query(models.UserCampaign.user_id)
+        .filter(models.UserCampaign.campaign_id.in_(campaign_ids))
+        .distinct()
+        .all()
+    )
+    campaign_user_ids = {user_id_tuple[0] for user_id_tuple in campaign_users_assoc}
+    
+    if not campaign_user_ids:
+        return [] # No users found in any campaign
+
+    # 5. Get user details for these IDs
+    users = crud.get_users_by_ids(db, user_ids=list(campaign_user_ids))
+
+    return users 

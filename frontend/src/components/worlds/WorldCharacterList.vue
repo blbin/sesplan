@@ -16,7 +16,14 @@
          <div class="entity-info">
            <router-link :to="{ name: 'CharacterDetail', params: { characterId: character.id } }" class="entity-name-link">
              <span class="entity-name">{{ character.name }}</span>
-                </router-link>
+           </router-link>
+           <!-- Display Assigned User -->
+           <span v-if="character.user_id" class="assigned-user-info">
+             Assigned to: {{ getUserDisplayName(character.user_id) }}
+           </span>
+           <span v-else class="assigned-user-info text-muted">
+             Not assigned
+           </span>
            <div class="entity-details">
               <div 
                 v-if="character.description"
@@ -28,32 +35,63 @@
               <span class="entity-date">Created: {{ formatDate(character.created_at) }}</span>
             </div>
          </div>
-         <!-- Actions Placeholder -->
-         <!-- <div class="entity-actions"> ... </div> -->
+         <!-- User Assignment Select (only for world owner) -->
+         <div v-if="isOwner" class="entity-actions">
+             <v-select
+                 v-model="character.user_id"
+                 :items="assignableUserOptions"
+                 :loading="assignableUsersLoading || assignmentLoading[character.id]"
+                 :disabled="assignableUsersLoading || assignmentLoading[character.id]"
+                 @update:modelValue="(newUserId) => handleAssignUser(character.id, newUserId)"
+                 label="Assign User"
+                 item-title="username"
+                 item-value="id"
+                 density="compact"
+                 clearable
+                 hide-details
+                 style="min-width: 200px;"
+             ></v-select>
+              <v-progress-circular
+                  v-if="assignmentLoading[character.id]"
+                  indeterminate
+                  size="20"
+                  class="ml-2"
+              ></v-progress-circular>
+         </div>
       </li>
     </ul>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, defineProps, toRefs } from 'vue';
+import { ref, watch, defineProps, toRefs, computed, reactive } from 'vue';
 import * as charactersApi from '@/services/api/characters';
+import * as worldsApi from '@/services/api/worlds'; // Import worlds API
 import type { Character } from '@/types/character';
+import type { UserSimple } from '@/services/api/worlds'; // Import UserSimple type
 import MarkdownIt from 'markdown-it'; // Import markdown-it
 import { formatDate } from '@/utils/dateFormatter'; // Import formatDate
+// Import Vuetify components if not globally registered
+// import { VSelect, VProgressCircular } from 'vuetify/components'; // Example
 
 const props = defineProps<{
   worldId: number | string;
-  // Remove unused canManage prop
-  // canManage: boolean; 
+  isOwner: boolean; // Add prop to indicate if the current user is the world owner
 }>();
 
-// Remove canManage from toRefs
-const { worldId } = toRefs(props);
+const { worldId, isOwner } = toRefs(props);
 
 const characters = ref<Character[]>([]);
 const charactersLoading = ref(false);
 const charactersError = ref<string | undefined>(undefined);
+
+// State for assignable users
+const assignableUsers = ref<UserSimple[]>([]);
+const assignableUsersLoading = ref(false);
+const assignableUsersError = ref<string | undefined>(undefined);
+
+// State for assignment loading indicator per character
+const assignmentLoading = reactive<Record<number, boolean>>({});
 
 // Initialize markdown-it instance
 const md = new MarkdownIt({ html: false, linkify: true });
@@ -70,6 +108,7 @@ const renderDescriptionPreview = (markdown: string | null): string => {
   return md.render(truncatedMd);
 };
 
+// Fetch characters for the world
 const fetchWorldCharacters = async (id: number | string) => {
     const numericWorldId = Number(id);
     if (isNaN(numericWorldId)) {
@@ -80,34 +119,115 @@ const fetchWorldCharacters = async (id: number | string) => {
     charactersError.value = undefined;
     characters.value = [];
     try {
+        // Use getAllWorldCharacters which should return characters with user_id
         characters.value = await charactersApi.getAllWorldCharacters(numericWorldId);
     } catch (err: any) {
         console.error("Fetch World Characters Error:", err);
-        if (err.response?.status === 403) {
-             charactersError.value = 'You do not have permission to view characters in this world.';
-        } else if (err.response?.status === 404) {
-             charactersError.value = 'Character endpoint not found for this world.'; // Or simply "No characters found."
-        } else {
-             charactersError.value = `Failed to load characters: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        }
+        charactersError.value = `Failed to load characters: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
     } finally {
         charactersLoading.value = false;
     }
 };
 
-// Watch for worldId changes to load characters
+// Fetch users assignable to characters in this world
+const fetchAssignableUsers = async (id: number | string) => {
+    const numericWorldId = Number(id);
+    if (isNaN(numericWorldId)) {
+        assignableUsersError.value = "Invalid World ID.";
+        return;
+    }
+    assignableUsersLoading.value = true;
+    assignableUsersError.value = undefined;
+    assignableUsers.value = [];
+    try {
+        assignableUsers.value = await worldsApi.getCampaignUsersInWorld(numericWorldId);
+    } catch (err: any) {
+        console.error("Fetch Assignable Users Error:", err);
+        assignableUsersError.value = `Failed to load users for assignment: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+        // Optionally show a user-friendly message in the UI
+    } finally {
+        assignableUsersLoading.value = false;
+    }
+};
+
+// Computed property for v-select items, adding an "Unassigned" option
+const assignableUserOptions = computed(() => {
+    // Format users for v-select
+    const users = assignableUsers.value.map((user: UserSimple) => ({
+        id: user.id,
+        username: user.username // Use username for display
+    }));
+    // Add an explicit "Unassigned" option represented by null
+    // v-select with 'clearable' handles the null value automatically
+    return users;
+});
+
+// Method to get display name for assigned user
+const getUserDisplayName = (userId: number | null): string => {
+    if (userId === null) return 'Not assigned';
+    const user = assignableUsers.value.find((u: UserSimple) => u.id === userId);
+    return user ? user.username : `User ID: ${userId}`; // Fallback if user not found in list
+};
+
+// Method to handle user assignment via v-select change
+const handleAssignUser = async (characterId: number, newUserId: number | null) => {
+    console.log(`Assigning user ${newUserId} to character ${characterId}`);
+    assignmentLoading[characterId] = true;
+    try {
+        const payload = { user_id: newUserId };
+        const updatedCharacter = await charactersApi.assignCharacterUser(characterId, payload);
+
+        // Update local character data
+        const index = characters.value.findIndex(c => c.id === characterId);
+        if (index !== -1) {
+            characters.value[index].user_id = updatedCharacter.user_id;
+            // Optionally refresh other character data if needed:
+            // characters.value[index] = { ...characters.value[index], ...updatedCharacter };
+        }
+        // TODO: Add user feedback (e.g., snackbar message)
+        console.log(`Successfully assigned user ${newUserId} to character ${characterId}`);
+
+    } catch (err: any) {
+        console.error("Assign User Error:", err);
+        // Revert the v-select value if the API call failed
+        const index = characters.value.findIndex(c => c.id === characterId);
+        if (index !== -1) {
+            // Force re-render or find a way to revert v-model if necessary
+             // Note: Directly mutating character.user_id might be reverted by v-model,
+             // consider refreshing the specific character data or the whole list.
+             // For now, logging the error. User might need to manually retry.
+             console.error("Failed to update UI after assignment error.");
+        }
+        // TODO: Add user feedback (e.g., snackbar message)
+         alert(`Error assigning user: ${err.response?.data?.detail || err.message || 'Unknown error'}`);
+    } finally {
+        assignmentLoading[characterId] = false;
+    }
+};
+
+// Watch for worldId changes to load characters and assignable users
 watch(
   worldId,
   (newId) => {
     if (newId) {
       fetchWorldCharacters(newId);
+      if (isOwner.value) { // Fetch assignable users only if the current user is the owner
+          fetchAssignableUsers(newId);
+      } else {
+          // Clear assignable users if not owner
+          assignableUsers.value = [];
+          assignableUsersError.value = undefined;
+      }
     } else {
       characters.value = [];
       charactersError.value = "No world selected.";
       charactersLoading.value = false;
+      assignableUsers.value = [];
+      assignableUsersError.value = undefined;
+      assignableUsersLoading.value = false;
     }
   },
-  { immediate: true } // Load characters immediately when the component mounts
+  { immediate: true } // Load data immediately when the component mounts
 );
 
 </script>
@@ -140,7 +260,7 @@ watch(
 .entity-list-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center; /* Align items vertically center */
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e9ecef;
 }
@@ -150,10 +270,9 @@ watch(
 }
 
 .entity-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  margin-right: 1rem;
+  /* Adjust flex properties if needed */
+  flex-grow: 1; /* Allow info to take available space */
+  margin-right: 1rem; /* Space between info and actions */
 }
 
 .entity-name-link {
@@ -264,5 +383,19 @@ watch(
   font-size: 0.875rem;
   line-height: 1.5;
   border-radius: 0.2rem;
+}
+
+.assigned-user-info {
+    font-size: 0.85rem;
+    color: #6c757d; /* Use muted color */
+    margin-top: 0.2rem; /* Add some space below the name */
+    display: block; /* Ensure it takes its own line if needed */
+}
+
+.entity-actions {
+  display: flex;
+  align-items: center; /* Center items vertically */
+  gap: 0.5rem;
+  flex-shrink: 0; /* Prevent actions from shrinking */
 }
 </style> 

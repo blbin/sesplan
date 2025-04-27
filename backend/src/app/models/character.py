@@ -6,7 +6,7 @@ class Character(Base):
     __tablename__ = "characters"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     world_id = Column(Integer, ForeignKey("worlds.id"), nullable=False, index=True)
     name = Column(String, nullable=False, index=True)
     description = Column(Text)

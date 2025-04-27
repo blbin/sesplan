@@ -1,7 +1,7 @@
 <template>
   <div class="characters-view">
     <header class="view-header">
-      <h1>Characters</h1>
+      <h1>My Characters</h1>
       <button @click="openAddModal" class="btn btn-primary">
         <i class="icon">+</i> Add New Character
       </button>
@@ -10,18 +10,17 @@
     <div class="list-container">
       <p v-if="loading">Loading characters...</p>
       <p v-else-if="error" class="error-message">{{ error }}</p>
-      <div v-else-if="characters.length === 0">No characters found for this world.</div>
-      <ul v-else class="item-list">
-        <li v-for="character in characters" :key="character.id" class="item-list-item">
-          <div class="item-info">
-            <h2>
-              <router-link :to="`/dashboard/characters/${character.id}`" class="item-link">
-                {{ character.name }}
-              </router-link>
-            </h2>
-            <p>{{ character.description || 'No description' }}</p>
+      <div v-else-if="characters.length === 0">You haven't created any characters yet.</div>
+      <ul v-else class="world-list">
+        <li v-for="character in characters" :key="character.id" class="world-list-item">
+          <div class="world-info">
+            <router-link :to="{ name: 'CharacterDetail', params: { characterId: character.id } }" class="world-name-link">
+               <h2>{{ character.name }}</h2>
+            </router-link>
+             <p class="world-description" v-html="renderMarkdownInline(character.description, 100)"></p>
+             <small class="world-meta">Created: {{ formatDate(character.created_at) }}</small>
           </div>
-          <div class="item-actions">
+          <div class="world-actions">
             <button @click="openEditModal(character)" class="btn btn-secondary btn-sm">Edit</button>
             <button @click="confirmDelete(character)" class="btn btn-danger btn-sm">Delete</button>
           </div>
@@ -30,77 +29,116 @@
     </div>
 
     <!-- Modal for Add/Edit Character -->
-    <div v-if="showModal && numericWorldId" class="modal-backdrop">
+    <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
-         <CreateCharacterForm
-            :worldId="numericWorldId"
-            :characterToEdit="editingCharacter"
-            :availableTagTypes="characterTagTypes"
-            @saved="handleCharacterSaved"
-            @cancel="closeModal"
-         />
+        <button @click="closeModal" class="close-button">&times;</button>
+
+        <div v-if="!editingCharacter && !selectedWorldIdForNewChar" class="modal-content">
+          <h2>Select World for New Character</h2>
+          <p v-if="loadingWorlds">Loading worlds...</p>
+          <p v-else-if="worldsError" class="error-message">{{ worldsError }}</p>
+          <ul v-else-if="userWorlds.length > 0" class="world-selection-list">
+             <li v-for="world in userWorlds" :key="world.id">
+                <button @click="selectWorldForNewCharacter(world.id)" class="world-select-button">
+                    {{ world.name }}
+                </button>
+            </li>
+          </ul>
+          <p v-else>You don't seem to own any worlds. Create a world first.</p>
+        </div>
+
+        <div v-else-if="editingCharacter || selectedWorldIdForNewChar" class="modal-content">
+          <h2>{{ editingCharacter ? 'Edit Character' : 'Add New Character' }}</h2>
+           <CreateCharacterForm
+             :worldId="formWorldId"
+             :characterToEdit="editingCharacter"
+             :isSaving="isSavingCharacter"
+             :error="formError" 
+             @saved="handleCharacterSaved"
+             @cancel="closeModal" 
+          />
+        </div>
+        
       </div>
     </div>
 
      <!-- Modal for Delete Confirmation -->
-    <div v-if="characterToDelete" class="modal-backdrop">
-      <div class="modal confirmation-modal">
-        <h2>Confirm Deletion</h2>
-        <p>Are you sure you want to delete the character "{{ characterToDelete?.name }}"?</p>
-         <div class="modal-actions">
-            <button type="button" @click="characterToDelete = null" class="btn btn-secondary">Cancel</button>
-            <button type="button" @click="handleDeleteCharacter" class="btn btn-danger">Delete</button>
-          </div>
-           <p v-if="deleteError" class="error-message">{{ deleteError }}</p>
-      </div>
-    </div>
+    <ConfirmDeleteModal
+        :show="!!characterToDelete"
+        itemType="character"
+        :itemName="characterToDelete?.name"
+        :isDeleting="isDeletingCharacter"
+        :error="deleteError"
+        @confirm="handleDeleteCharacter"
+        @cancel="characterToDelete = null"
+     />
 
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
 import * as charactersApi from '@/services/api/characters';
 import type { Character } from '@/types/character';
-import type { CharacterTagType } from '@/types/characterTagType';
+import { formatDate } from '@/utils/dateFormatter';
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal.vue';
+import * as worldsApi from '@/services/api/worlds';
+import type { World } from '@/types/world';
 import CreateCharacterForm from '@/components/dashboard/CreateCharacterForm.vue';
-import * as characterTagTypeApi from '@/services/api/characterTagTypeService';
+
+import MarkdownIt from 'markdown-it';
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
+const renderMarkdownInline = (markdown: string | null | undefined, maxLength: number): string => {
+  if (!markdown) { return '<em>No description</em>'; }
+  let truncatedMd = markdown.length > maxLength ? markdown.substring(0, maxLength) + '...' : markdown;
+  return md.renderInline(truncatedMd);
+};
 
 export default defineComponent({
   name: 'CharactersView',
-  components: { CreateCharacterForm },
+  components: { 
+      ConfirmDeleteModal,
+      CreateCharacterForm
+  },
   setup() {
-    const route = useRoute();
     const characters = ref<Character[]>([]);
-    const characterTagTypes = ref<CharacterTagType[]>([]);
+    const userWorlds = ref<World[]>([]);
+    
     const loading = ref(true);
-    const loadingTagTypes = ref(false);
+    const loadingWorlds = ref(false);
+    
     const error = ref<string | null>(null);
-    const tagTypesError = ref<string | null>(null);
+    const worldsError = ref<string | null>(null);
+    const formError = ref<string | null>(null);
     const deleteError = ref<string | null>(null);
+    const isDeletingCharacter = ref(false);
+    const isSavingCharacter = ref(false);
 
     const showModal = ref(false);
     const editingCharacter = ref<Character | null>(null);
     const characterToDelete = ref<Character | null>(null);
+    const selectedWorldIdForNewChar = ref<number | null>(null);
 
-    const worldIdRef = computed(() => route.params.worldId as string | undefined);
-    const numericWorldId = computed(() => {
-      const id = Number(worldIdRef.value);
-      return !isNaN(id) && id > 0 ? id : null;
+    // Computed property to safely determine worldId for the form
+    const formWorldId = computed(() => {
+        if (editingCharacter.value) {
+            // Assuming world_id is non-null on the Character type when editing
+            return editingCharacter.value.world_id; 
+        }
+        if (selectedWorldIdForNewChar.value !== null) {
+            return selectedWorldIdForNewChar.value;
+        }
+        // This state should not be reached due to the v-if/v-else-if logic in the template
+        console.error("Attempted to render CreateCharacterForm without a valid worldId.");
+        // Return a dummy value or handle appropriately, though it indicates a logic error
+        return -1; 
     });
 
     const loadCharacters = async () => {
-      if (!numericWorldId.value) {
-        error.value = "Invalid World ID.";
-        loading.value = false;
-        characters.value = [];
-        return;
-      }
       loading.value = true;
       error.value = null;
       try {
-        characters.value = await charactersApi.getAllWorldCharacters(numericWorldId.value);
+        characters.value = await charactersApi.getMyCharacters();
       } catch (err: any) {
         error.value = `Failed to load characters: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
         console.error("Load Characters Error:", err);
@@ -109,46 +147,50 @@ export default defineComponent({
       }
     };
 
-    const loadCharacterTagTypes = async () => {
-        if (!numericWorldId.value) return;
-        loadingTagTypes.value = true;
-        tagTypesError.value = null;
+    const loadUserWorlds = async () => {
+        loadingWorlds.value = true;
+        worldsError.value = null;
         try {
-            characterTagTypes.value = await characterTagTypeApi.getCharacterTagTypes(numericWorldId.value);
+            userWorlds.value = await worldsApi.getWorlds();
         } catch (err: any) {
-            tagTypesError.value = `Failed to load character tags: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-            console.error("Load Character Tag Types Error:", err);
+            worldsError.value = `Failed to load worlds: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
+            console.error("Load User Worlds Error:", err);
         } finally {
-            loadingTagTypes.value = false;
+            loadingWorlds.value = false;
         }
     };
 
     const closeModal = () => {
       showModal.value = false;
       editingCharacter.value = null;
+      selectedWorldIdForNewChar.value = null;
+      formError.value = null;
     };
 
      const openAddModal = () => {
-        if (!numericWorldId.value) return;
         editingCharacter.value = null;
+        selectedWorldIdForNewChar.value = null;
+        formError.value = null;
         showModal.value = true;
-        if (characterTagTypes.value.length === 0 && !loadingTagTypes.value) {
-            loadCharacterTagTypes();
+        if (userWorlds.value.length === 0 && !loadingWorlds.value) {
+            loadUserWorlds();
         }
     };
 
      const openEditModal = (character: Character) => {
-      if (!numericWorldId.value) return;
-      editingCharacter.value = character;
-      showModal.value = true;
-      if (characterTagTypes.value.length === 0 && !loadingTagTypes.value) {
-            loadCharacterTagTypes();
-        }
+        editingCharacter.value = character;
+        selectedWorldIdForNewChar.value = null;
+        formError.value = null;
+        showModal.value = true;
     };
 
     const handleCharacterSaved = (_savedCharacter: Character) => {
-        loadCharacters();
         closeModal();
+        loadCharacters(); 
+    };
+
+    const selectWorldForNewCharacter = (worldId: number) => {
+        selectedWorldIdForNewChar.value = worldId;
     };
 
     const confirmDelete = (character: Character) => {
@@ -158,45 +200,48 @@ export default defineComponent({
 
     const handleDeleteCharacter = async () => {
       if (!characterToDelete.value) return;
+      const idToDelete = characterToDelete.value.id;
       deleteError.value = null;
+      isDeletingCharacter.value = true;
       try {
-          await charactersApi.deleteCharacter(characterToDelete.value.id);
-          loadCharacters();
+          await charactersApi.deleteCharacter(idToDelete);
+          await loadCharacters();
           characterToDelete.value = null;
       } catch (err: any) {
            deleteError.value = `Delete failed: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
            console.error("Delete Character Error:", err);
+      } finally {
+          isDeletingCharacter.value = false;
       }
     };
 
-    onMounted(() => {
-        if (numericWorldId.value) {
-            loadCharacters();
-            loadCharacterTagTypes();
-        } else {
-            error.value = "World ID not found in route.";
-            loading.value = false;
-        }
-    });
+    onMounted(loadCharacters);
 
     return {
       characters,
-      characterTagTypes,
+      userWorlds,
       loading,
-      loadingTagTypes,
+      loadingWorlds,
       error,
-      tagTypesError,
+      worldsError,
+      formError,
       deleteError,
+      isDeletingCharacter,
+      isSavingCharacter,
       showModal,
       editingCharacter,
       characterToDelete,
-      numericWorldId,
+      selectedWorldIdForNewChar,
       closeModal,
       openAddModal,
       openEditModal,
       handleCharacterSaved,
+      selectWorldForNewCharacter,
       confirmDelete,
       handleDeleteCharacter,
+      renderMarkdownInline,
+      formatDate,
+      formWorldId,
     };
   }
 });
@@ -205,6 +250,7 @@ export default defineComponent({
 <style scoped>
 .characters-view {
   padding: 2rem;
+  background-color: #f8f9fa;
 }
 
 .view-header {
@@ -218,55 +264,130 @@ export default defineComponent({
 
 .view-header h1 {
   margin: 0;
+  color: #343a40;
 }
 
 .list-container {
   background-color: #fff;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.item-list {
+.world-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.item-list-item {
+.world-list-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 1rem 0;
+  align-items: flex-start;
+  padding: 1.5rem 0;
   border-bottom: 1px solid #e9ecef;
 }
-
-.item-list-item:last-child {
+.world-list-item:last-child {
   border-bottom: none;
 }
 
-.item-info h2 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.2rem;
+.world-info {
+    flex-grow: 1;
+    margin-right: 1rem;
 }
 
-.item-info p {
-  margin: 0 0 0.5rem 0;
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.item-link {
+.world-name-link {
     text-decoration: none;
-    color: #007bff;
+    color: inherit;
+    display: block;
+    margin-bottom: 0.25rem;
 }
-.item-link:hover {
-    text-decoration: underline;
+.world-name-link:hover {
+   text-decoration: none;
 }
 
-.item-actions {
+.world-name-link h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #343a40;
+    transition: color 0.2s ease;
+    display: inline-block;
+}
+.world-name-link:hover h2 {
+    color: #7851a9;
+}
+
+.world-description {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+.world-actions {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.world-meta {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+.error-message {
+  color: #dc3545;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+.btn .icon {
+ font-style: normal;
+}
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+.btn-primary {
+  background-color: #7851a9;
+  color: white;
+}
+.btn-primary:not(:disabled):hover {
+  background-color: #5f3f87;
+}
+.btn-secondary {
+  background-color: #6c757d;
+   color: white;
+}
+.btn-secondary:not(:disabled):hover {
+   background-color: #5a6268;
+}
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+.btn-danger:not(:disabled):hover {
+   background-color: #c82333;
+}
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
 }
 
 .modal-backdrop {
@@ -275,57 +396,80 @@ export default defineComponent({
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1050;
 }
 
 .modal {
   background-color: white;
   padding: 0;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   min-width: 400px;
-  max-width: 500px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  max-width: 600px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   overflow: hidden;
+  position: relative;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding: 0 1.5rem 1.5rem;
+.modal-content {
+    padding: 1.5rem 2rem;
 }
 
-.confirmation-modal {
-    padding: 2rem;
-    max-width: 450px;
-}
-
-.confirmation-modal p {
+.modal-content h2 {
+    margin-top: 0;
     margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+    color: #333;
 }
 
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 0.8rem;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  margin: 1rem 1.5rem;
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.close-button:hover {
+    color: #777;
 }
 
-.btn { padding: 0.5rem 1rem; border-radius: 0.3rem; cursor: pointer; border: none; font-weight: 500; }
-.btn-primary { background-color: #007bff; color: white; }
-.btn-primary:hover { background-color: #0056b3; }
-.btn-secondary { background-color: #6c757d; color: white; }
-.btn-secondary:hover { background-color: #5a6268; }
-.btn-danger { background-color: #dc3545; color: white; }
-.btn-danger:hover { background-color: #c82333; }
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+.world-selection-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.world-selection-list li {
+    margin-bottom: 0.5rem;
+}
+
+.world-select-button {
+    display: block;
+    width: 100%;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 1rem;
+    color: #343a40;
+}
+
+.world-select-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
 
 </style> 

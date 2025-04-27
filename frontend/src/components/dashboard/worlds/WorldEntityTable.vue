@@ -45,7 +45,7 @@
 
     <!-- Error Display -->
     <v-alert 
-      v-if="error || tagTypesError"
+      v-if="error || tagTypesError || assignableUsersError"
       type="error"
       variant="tonal"
       closable
@@ -53,11 +53,12 @@
     >
       <p v-if="error">{{ error }}</p>
       <p v-if="tagTypesError">{{ tagTypesError }}</p>
+      <p v-if="assignableUsersError">{{ assignableUsersError }}</p>
     </v-alert>
 
     <!-- Data Table -->
     <v-data-table
-      :headers="headersWithActions"
+      :headers="dynamicHeaders"
       :items="items"
       :loading="loading || tagTypesLoading || isDeleting"
       item-value="id"
@@ -120,6 +121,12 @@
         </v-chip>
       </template>
 
+      <!-- Item Slot for Assigned User (Characters only) -->
+      <template v-if="entityType === 'character'" v-slot:item.assigned_user="{ item }">
+        <!-- Always display the name -->
+        <span>{{ getUserDisplayName((item as any).user_id) }}</span>
+      </template>
+
       <!-- Item Slot for Actions (Edit/Delete) -->
       <template v-slot:item.actions="{ item }">
         <v-tooltip location="top">
@@ -154,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, defineExpose } from 'vue';
+import { computed, toRef, defineExpose, watch } from 'vue';
 import { useEntityManagement } from '@/composables/useEntityManagement';
 import type { EntityType } from '@/composables/useEntityManagement'; // Import as type
 import { useWorldDetail } from '@/composables/useWorldDetail'; // To check world loading state and get markdown renderer
@@ -167,7 +174,7 @@ import {
   VIcon, 
   VTooltip, 
   VAlert,
-  VSkeletonLoader 
+  VSkeletonLoader,
 } from 'vuetify/components';
 
 // Type for table headers - Use a more specific type if available from Vuetify
@@ -192,7 +199,7 @@ const props = defineProps<{
 }>();
 
 // Default props
-const { itemsPerPage = 10, fetchTagTypes = true } = props;
+const { itemsPerPage = 10 } = props;
 
 // Emits definition
 const emit = defineEmits<{
@@ -201,23 +208,32 @@ const emit = defineEmits<{
   (e: 'delete', item: any): void;
   (e: 'generateAI'): void;
   (e: 'rowClick', item: any): void;
+  (e: 'update:assignableUsers', newValue: any[]): void;
 }>();
 
 // Use the entity management composable
 const {
   items,
   tagTypes,
+  assignableUsers,
   loading,
   error,
   tagTypesLoading,
   tagTypesError,
-  isDeleting, // Need this for table loading state
+  assignableUsersError,
+  isDeleting,
   search,
   selectedTagIds,
   addTagToFilter,
   getTagTypeName,
+  deleteItem,
   refreshData,
-} = useEntityManagement(toRef(props, 'worldId'), props.entityType, fetchTagTypes);
+} = useEntityManagement(
+    toRef(props, 'worldId'), 
+    props.entityType, 
+    props.fetchTagTypes, 
+    toRef(props, 'isCurrentUserOwner')
+);
 
 // Use world detail composable for world loading state and markdown preview
 const { worldLoading, renderMarkdownPreview } = useWorldDetail(toRef(props, 'worldId'));
@@ -232,14 +248,28 @@ const singularEntityType = computed(() => {
   return props.title.endsWith('s') ? props.title.slice(0, -1) : props.title;
 });
 
-// Add the 'actions' column header dynamically
-const headersWithActions = computed(() => {
-    const actionsHeader: TableHeader = { title: 'Actions', key: 'actions', sortable: false, align: 'end' };
-    // Check if an actions column already exists
-    if (props.headers.some((h: TableHeader) => h.key === 'actions')) { // Add type to h
-        return props.headers;
+// Add the 'actions' and potentially 'assigned_user' column headers dynamically
+const dynamicHeaders = computed(() => {
+    let newHeaders = [...props.headers];
+
+    // Add Assigned User column for characters
+    if (props.entityType === 'character') {
+       const userHeader: TableHeader = { title: 'Assigned User', key: 'assigned_user', sortable: true, align: 'start' };
+       // Insert before actions if actions column exists, otherwise push
+       const actionsIndex = newHeaders.findIndex(h => h.key === 'actions');
+       if (actionsIndex !== -1) {
+           newHeaders.splice(actionsIndex, 0, userHeader);
+       } else {
+           newHeaders.push(userHeader);
+       }
     }
-    return [...props.headers, actionsHeader];
+
+    // Add Actions column if not present
+    const actionsHeader: TableHeader = { title: 'Actions', key: 'actions', sortable: false, align: 'end' };
+    if (!newHeaders.some((h: TableHeader) => h.key === 'actions')) {
+        newHeaders.push(actionsHeader);
+    }
+    return newHeaders;
 });
 
 // Helper to get the correct tag array from the item
@@ -264,17 +294,51 @@ const getTagTypeIdKey = (type: EntityType): string => {
   }
 };
 
+// --- User Assignment Helpers (Characters only) ---
+const getUserDisplayName = (userId: number | null): string => {
+    if (userId === null || props.entityType !== 'character') return '-'; // Display dash for unassigned or wrong type
+    const user = assignableUsers.value.find(u => u.id === userId);
+    return user ? user.username : `User ID: ${userId}`;
+};
+
 // --- Event Handlers ---
-const emitAdd = () => emit('add');
-const emitEdit = (item: any) => emit('edit', item);
-const emitDelete = (item: any) => emit('delete', item);
-const emitGenerateAI = () => emit('generateAI');
-const handleRowClick = (_event: Event, { item }: { item: any }) => {
-  if (_event.target && (_event.target as Element).closest('.action-icon')) {
-    return; 
+const emitAdd = () => {
+  emit('add');
+};
+
+const emitEdit = (item: any) => {
+  emit('edit', item);
+};
+
+const emitDelete = async (item: any) => {
+  // Get singular type directly from props
+  const singularType = props.entityType.charAt(0).toUpperCase() + props.entityType.slice(1);
+  if (confirm(`Are you sure you want to delete ${singularType} "${item.name}"?`)) {
+    await deleteItem(item.id);
+    emit('delete', item);
+  }
+};
+
+const emitGenerateAI = () => {
+  emit('generateAI');
+};
+
+const handleRowClick = (event: MouseEvent, { item }: { item: any }) => {
+  // Check if the click was on an interactive element within the row
+  const target = event.target as HTMLElement;
+  if (target.closest('.action-icon, .v-select, .clickable-tag')) {
+    return; // Don't navigate if clicking on an action/select/tag
   }
   emit('rowClick', item);
 };
+
+// --- Watchers (If needed, e.g., to emit assignable users) ---
+// Watch assignableUsers and emit an update event
+watch(assignableUsers, (newValue) => {
+    if (props.entityType === 'character') {
+        emit('update:assignableUsers', newValue);
+    }
+}, { deep: true }); // Use deep watch if necessary, depends on how assignableUsers is updated
 
 </script>
 
@@ -317,6 +381,12 @@ const handleRowClick = (_event: Event, { item }: { item: any }) => {
 
 .action-icon:hover {
     opacity: 1;
+}
+
+/* Style for assigned user column if needed */
+/* For example, to ensure v-select doesn't overflow */
+:deep(.v-data-table__td.assigned-user-cell) {
+    /* Adjust as needed */
 }
 
 </style> 

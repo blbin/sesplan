@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from typing import List
 
 from app.db.session import get_db
 from app.schemas.user import UserCreate, User
@@ -38,7 +39,7 @@ def read_users_me(current_user: UserModel = Depends(get_current_active_user)):
     return current_user
 
 
-@router.get("/", response_model=list[User])
+@router.get("/", response_model=List[User])
 def read_users(
         skip: int = 0,
         limit: int = 100,

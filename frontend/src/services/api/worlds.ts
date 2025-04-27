@@ -6,6 +6,12 @@ import type { World, WorldCreate, WorldUpdate } from '../../types/world';
 // Import Campaign type directly from campaign.ts
 import type { Campaign } from '../../types/campaign';
 
+// Define UserSimple type for the new function
+export interface UserSimple {
+    id: number;
+    username: string;
+}
+
 // Získání všech světů aktuálního uživatele
 export const getWorlds = async (): Promise<World[]> => {
     const response = await api.get<World[]>('/V1/worlds/'); // Použijeme 'api'
@@ -38,5 +44,11 @@ export const deleteWorld = async (id: number): Promise<void> => {
 // Získání kampaní pro daný svět
 export const getWorldCampaigns = async (worldId: number): Promise<Campaign[]> => {
     const response = await api.get<Campaign[]>(`/V1/worlds/${worldId}/campaigns/`);
+    return response.data;
+};
+
+// Get users participating in campaigns within a specific world
+export const getCampaignUsersInWorld = async (worldId: number): Promise<UserSimple[]> => {
+    const response = await api.get<UserSimple[]>(`/V1/worlds/${worldId}/campaign_users`);
     return response.data;
 };

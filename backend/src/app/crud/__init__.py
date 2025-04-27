@@ -1,4 +1,4 @@
-from .crud_user import get_user, get_user_by_username, get_users, create_user
+from .crud_user import get_user, get_user_by_username, get_users, create_user, get_users_by_ids
 from .crud_world import get_world, get_worlds_by_owner, create_world, update_world, delete_world
 from .crud_campaign import get_campaign, get_campaigns_by_world, get_campaigns_by_owner, create_campaign, update_campaign, delete_campaign
 from .crud_character import get_character, get_characters_by_world, get_characters_by_user, create_character, update_character, delete_character, get_all_characters_in_world

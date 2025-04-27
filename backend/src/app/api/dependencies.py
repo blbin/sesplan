@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
+from typing import Tuple, Optional
 
 # Use absolute imports from the 'app' package
 from app import crud, models
@@ -8,6 +9,7 @@ from app.auth.auth import get_current_user
 from app.models.user_campaign import CampaignRoleEnum
 # Import pro ověření vlastníka světa
 from app.models.world_user import RoleEnum as WorldRoleEnum, WorldUser 
+from app.crud.crud_world_user import get_world_membership_with_role # Import our function
 
 # Helper function to check campaign membership/role (GM)
 async def verify_gm_permission(campaign_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -99,36 +101,121 @@ async def get_session_and_verify_gm(
     
     return db_session
 
-# Závislost pro získání Journal a ověření vlastníka postavy
-async def get_journal_and_verify_owner(
+# Závislost pro získání Journal a ověření vlastníka postavy (STARÁ - NEPOUŽÍVAT)
+# async def get_journal_and_verify_owner(...)
+
+# Závislost pro získání Journal Entry a ověření vlastníka postavy (STARÁ - NEPOUŽÍVAT)
+# async def get_journal_entry_and_verify_owner(...)
+
+# --- Nové závislosti pro Journal & Journal Entry --- 
+
+async def get_journal_and_verify_permission(
     journal_id: int = Path(..., description="ID deníku"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
-) -> models.Journal:
+) -> Tuple[models.Journal, models.Character, Optional[models.WorldUser]]:
+    """Dependency to get journal, its character, and user's world membership."""
     db_journal = crud.get_journal(db, journal_id=journal_id)
     if not db_journal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journal not found")
     
-    # Získání postavy asociované s deníkem
     db_character = crud.get_character(db, character_id=db_journal.character_id)
-    if not db_character or db_character.user_id != current_user.id:
+    if not db_character:
+        # Should not happen if journal exists, but good practice
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character for this journal not found")
+
+    # Get world membership (if any)
+    world_membership = get_world_membership_with_role(db, world_id=db_character.world_id, user_id=current_user.id)
+
+    return db_journal, db_character, world_membership
+
+async def verify_journal_read_access(
+    context: Tuple[models.Journal, models.Character, Optional[models.WorldUser]] = Depends(get_journal_and_verify_permission),
+    current_user: models.User = Depends(get_current_user)
+) -> models.Journal:
+    """Verifies read access: Assigned user or World Owner/Admin."""
+    db_journal, db_character, world_membership = context
+    
+    # Check if assigned user
+    is_assigned_user = db_character.user_id == current_user.id
+    # Check if world owner or admin
+    is_world_manager = world_membership and world_membership.role in [WorldRoleEnum.OWNER, WorldRoleEnum.ADMIN]
+
+    if not (is_assigned_user or is_world_manager):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to access this journal")
         
     return db_journal
 
-# Závislost pro získání Journal Entry a ověření vlastníka postavy (přes Journal)
-async def get_journal_entry_and_verify_owner(
+async def verify_journal_write_access(
+    context: Tuple[models.Journal, models.Character, Optional[models.WorldUser]] = Depends(get_journal_and_verify_permission)
+) -> models.Journal:
+    """Verifies write access: World Owner/Admin only."""
+    db_journal, _, world_membership = context # Character not needed here
+    
+    # Check if world owner or admin
+    is_world_manager = world_membership and world_membership.role in [WorldRoleEnum.OWNER, WorldRoleEnum.ADMIN]
+
+    if not is_world_manager:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only world Owner or Admin can modify this journal")
+        
+    return db_journal
+
+# --- Závislosti pro Journal Entries --- 
+
+async def get_journal_entry_and_verify_permission(
     entry_id: int = Path(..., description="ID záznamu v deníku"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
-) -> models.JournalEntry:
+) -> Tuple[models.JournalEntry, models.Character, Optional[models.WorldUser]]:
+    """Dependency to get entry, its character, and user's world membership."""
     db_entry = crud.get_journal_entry(db, entry_id=entry_id)
     if not db_entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journal entry not found")
-        
-    # Ověření přes nadřazený deník
-    await get_journal_and_verify_owner(journal_id=db_entry.journal_id, db=db, current_user=current_user)
+
+    # Get context via the parent journal
+    try:
+        _, db_character, world_membership = await get_journal_and_verify_permission(
+            journal_id=db_entry.journal_id, db=db, current_user=current_user
+        )
+    except HTTPException as e:
+         # If journal access check fails, re-raise but maybe adjust message
+         # raise HTTPException(status_code=e.status_code, detail=f"Cannot access parent journal: {e.detail}")
+         # Or just let the original exception propagate
+         raise e
+
+    return db_entry, db_character, world_membership
+
+async def verify_journal_entry_read_access(
+    context: Tuple[models.JournalEntry, models.Character, Optional[models.WorldUser]] = Depends(get_journal_entry_and_verify_permission),
+    current_user: models.User = Depends(get_current_user)
+) -> models.JournalEntry:
+    """Verifies read access: Assigned user or World Owner/Admin."""
+    db_entry, db_character, world_membership = context
     
+    is_assigned_user = db_character.user_id == current_user.id
+    is_world_manager = world_membership and world_membership.role in [WorldRoleEnum.OWNER, WorldRoleEnum.ADMIN]
+
+    if not (is_assigned_user or is_world_manager):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to access this journal entry")
+        
+    return db_entry
+
+async def verify_journal_entry_write_access(
+    context: Tuple[models.JournalEntry, models.Character, Optional[models.WorldUser]] = Depends(get_journal_entry_and_verify_permission),
+    current_user: models.User = Depends(get_current_user)
+) -> models.JournalEntry:
+    """Verifies write access: Assigned Character User OR World Owner/Admin."""
+    db_entry, db_character, world_membership = context
+    
+    # Check if assigned user
+    is_assigned_user = db_character.user_id == current_user.id
+    # Check if world owner or admin
+    is_world_manager = world_membership and world_membership.role in [WorldRoleEnum.OWNER, WorldRoleEnum.ADMIN]
+
+    # Allow if either condition is met
+    if not (is_assigned_user or is_world_manager):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Character owner or world Owner/Admin required to modify this entry")
+        
     return db_entry
 
 # ----- Character Dependencies -----

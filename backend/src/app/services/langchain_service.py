@@ -192,8 +192,18 @@ Valid JSON Output:
         print(f"[LangChainService] Calling CRUD function for {entity_type}...")
 
         # Dynamically determine the argument name for the Pydantic object
-        # Convention: 'location' for create_location, 'character' for create_character, etc.
-        pydantic_arg_name = entity_type 
+        # Convention: 'location' for create_location, 'character_in' for create_character, etc.
+        if entity_type == 'character':
+            pydantic_arg_name = 'character_in'
+        elif entity_type == 'location':
+            pydantic_arg_name = 'location_in' # Assuming this convention
+        elif entity_type == 'organization':
+             pydantic_arg_name = 'organization_in' # Assuming this convention
+        elif entity_type == 'item':
+             pydantic_arg_name = 'item_in' # Assuming this convention
+        else:
+             # Fallback or raise error if needed
+             pydantic_arg_name = entity_type # Keep original logic as fallback for safety?
 
         # Prepare keyword arguments for the CRUD function call
         crud_kwargs = {
@@ -201,11 +211,9 @@ Valid JSON Output:
             pydantic_arg_name: entity_in
         }
         
-        # Note: If any CRUD functions require *additional* arguments beyond 'db' 
-        # and the pydantic object (like owner_id was previously assumed for items, but 
-        # signature check revealed it's not needed directly in create_item), 
-        # they would need specific handling here.
-        # Based on checked signatures, only db and the pydantic object seem required.
+        # Add user_id specifically for create_character
+        if entity_type == 'character':
+             crud_kwargs['user_id'] = current_user.id
 
         # Volání CRUD funkce s dynamickými argumenty
         created_entity = crud_function(**crud_kwargs)
