@@ -6,14 +6,10 @@
           <h2>About Sesplan</h2>
           <p class="lead">A modern tool to support role-playing games</p>
           <p>
-            Sesplan is a comprehensive platform designed for managing and supporting tabletop RPGs like
-            Dungeons & Dragons, Dračí Doupě, and Pathfinder. Our application provides Game Masters and players
-            with tools for planning, organizing, and running game sessions.
+            Sesplan is a versatile tool that gives you the freedom to create and manage your RPG campaigns and worlds without being tied to a specific game system. It provides space and tools for Game Masters and players alike to organize, plan, and record your adventures.
           </p>
           <p>
-            A key advantage is the integration of artificial intelligence, which helps generate game content
-            such as cities, NPCs, events, and character journal summaries. This simplifies game preparation
-            and allows GMs to focus more on the story and fun itself.
+            Optional artificial intelligence integration can help with inspiration and generating content such as location descriptions, characters, or events, as well as summarizing notes. This can ease your preparation and allow you to focus more on storytelling and the fun at the table.
           </p>
           <!--
           <div class="stats">
