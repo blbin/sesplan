@@ -1,6 +1,6 @@
 <template>
   <div class="grid-header">
-    <div class="time-col-header">Čas</div>
+    <div class="time-col-header">Time</div>
     <div v-for="day in days" :key="day.toISOString()" class="day-col-header">
       {{ formatDayHeader(day) }}
     </div>

@@ -99,11 +99,11 @@
 
       <!-- New Availability Section -->
       <section class="detail-section availability-section">
-        <h2>Dostupnost</h2>
+        <h2>Availability</h2>
 
         <!-- GM Slot Management -->
         <div v-if="isCurrentUserGM">
-          <h3>Spravovat časové sloty</h3>
+          <h3>Manage time slots</h3>
           <GMAvailabilityManager 
             :session-id="numericSessionId"
             :existing-slots="sessionSlots"
@@ -123,15 +123,15 @@
             @availability-changed="handleAvailabilityChange" 
           />
           <p v-else-if="sessionSlots.length === 0 && !isCurrentUserGM">
-            Zatím nebyly definovány žádné časové sloty pro zadání dostupnosti.
+            No time slots have been defined yet for availability input.
           </p>
            <p v-else-if="sessionSlots.length === 0 && isCurrentUserGM">
-            Zatím jste nedefinovali žádné časové sloty. Můžete je přidat výše.
+            You haven't defined any time slots yet. You can add them above.
           </p>
-          <p v-else>Pro zadání dostupnosti musíte být přihlášen.</p>
+          <p v-else>You must be logged in to submit availability.</p>
         </div>
-        <p v-else-if="availabilityLoading">Načítání dostupnosti...</p>
-        <p v-else-if="availabilityError" class="text-error">Chyba načítání dostupnosti: {{ availabilityError }}</p>
+        <p v-else-if="availabilityLoading">Loading availability...</p>
+        <p v-else-if="availabilityError" class="text-error">Error loading availability: {{ availabilityError }}</p>
       </section>
 
     </div>

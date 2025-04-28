@@ -25,7 +25,7 @@
         <v-select
             v-model="formData.user_id"
             :items="assignableUserOptions"
-            label="Select user to assign"
+            label="Select user to assign (or leave empty)"
             item-title="username"
             item-value="id"
             id="characterAssignUser"
@@ -33,12 +33,12 @@
             variant="outlined"
             clearable
             hide-details
-            :disabled="!isOwner || !assignableUsers || assignableUsers.length === 0"
+            :disabled="!isOwner"
             >
             <template v-slot:no-data>
                 <v-list-item>
                 <v-list-item-title>
-                    No users available in world campaigns.
+                    No other users in campaigns to assign.
                 </v-list-item-title>
                 </v-list-item>
             </template>

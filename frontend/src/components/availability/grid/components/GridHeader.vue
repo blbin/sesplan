@@ -1,7 +1,7 @@
 <template>
   <thead>
     <tr>
-      <th class="time-header">Čas</th>
+      <th class="time-header">Time</th>
       <th v-for="day in days" :key="day.date" class="day-header">
         {{ day.label }}
       </th>

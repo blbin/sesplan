@@ -133,6 +133,8 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
       assignableUsers.value = [];
       try {
           assignableUsers.value = await worldsApi.getCampaignUsersInWorld(worldId);
+          // Log the fetched users
+          console.log(`[useEntityManagement:character] Fetched assignable users data:`, JSON.parse(JSON.stringify(assignableUsers.value))); 
           console.log(`[useEntityManagement:character] Fetched ${assignableUsers.value.length} assignable users.`);
       } catch (err: any) {
           console.error(`[useEntityManagement:character] Fetch Assignable Users Error:`, err);

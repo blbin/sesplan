@@ -1,15 +1,15 @@
 <template>
   <v-card variant="outlined">
-    <v-card-title>Správa slotů</v-card-title>
+    <v-card-title>Slot Management</v-card-title>
     <v-card-text>
       <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-        Zde můžete přidávat, upravovat a mazat časové sloty pro zadávání dostupnosti.
+        Here you can add, edit, and delete time slots for availability submissions.
       </v-alert>
 
-      <v-btn color="primary" @click="openAddDialog" class="mb-4">Přidat slot</v-btn>
+      <v-btn color="primary" @click="openAddDialog" class="mb-4">Add slot</v-btn>
 
       <v-list v-if="existingSlots.length > 0" density="compact" bg-color="grey-lighten-4" rounded>
-        <v-list-subheader>Existující sloty</v-list-subheader>
+        <v-list-subheader>Existing slots</v-list-subheader>
         <v-list-item 
           v-for="slot in existingSlots" 
           :key="slot.id"
@@ -23,7 +23,7 @@
         </v-list-item>
       </v-list>
       <v-alert v-else type="info" variant="tonal" class="mt-3">
-        Žádné sloty zatím nebyly vytvořeny. Vytvořte první slot pomocí tlačítka výše.
+        No slots have been created yet. Create your first slot using the button above.
       </v-alert>
 
       <v-alert v-if="operationError" type="error" density="compact" class="mt-4">
@@ -37,13 +37,13 @@
     <!-- Add/Edit Dialog -->
     <v-dialog v-model="dialogOpen" max-width="600px">
       <v-card :loading="saving" :disabled="saving">
-        <v-card-title>{{ editingSlot ? 'Upravit' : 'Přidat' }} slot</v-card-title>
+        <v-card-title>{{ editingSlot ? 'Edit' : 'Add' }} slot</v-card-title>
         <v-card-text>
           <v-form ref="slotForm" @submit.prevent="saveSlot">
             <v-row>
               <v-col cols="12" sm="6">
                 <v-text-field
-                  label="Začátek slotu (Od)"
+                  label="Slot start (From)"
                   v-model="formData.slot_from"
                   type="datetime-local"
                   :rules="[rules.required, rules.dateTimeOrder]"
@@ -52,7 +52,7 @@
               </v-col>
               <v-col cols="12" sm="6">
                 <v-text-field
-                  label="Konec slotu (Do)"
+                  label="Slot end (To)"
                   v-model="formData.slot_to"
                   type="datetime-local"
                   :rules="[rules.required, rules.dateTimeOrder]"
@@ -61,7 +61,7 @@
               </v-col>
             </v-row>
             <v-textarea 
-              label="Poznámka (volitelné)" 
+              label="Note (optional)" 
               v-model="formData.note"
               rows="2"
             ></v-textarea>
@@ -70,8 +70,8 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="closeDialog">Zrušit</v-btn>
-          <v-btn color="primary" @click="saveSlot" :loading="saving">Uložit</v-btn>
+          <v-btn text @click="closeDialog">Cancel</v-btn>
+          <v-btn color="primary" @click="saveSlot" :loading="saving">Save</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -79,12 +79,12 @@
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="confirmDeleteDialogOpen" max-width="400px">
       <v-card>
-        <v-card-title>Smazat slot?</v-card-title>
-        <v-card-text>Opravdu chcete smazat tento časový slot? Tato akce je nevratná a odstraní všechny zadané dostupnosti uživatelů.</v-card-text>
+        <v-card-title>Delete slot?</v-card-title>
+        <v-card-text>Are you sure you want to delete this time slot? This action is irreversible and will remove all user availability submissions.</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="confirmDeleteDialogOpen = false">Zrušit</v-btn>
-          <v-btn color="error" @click="executeDelete" :loading="deleting">Smazat</v-btn>
+          <v-btn text @click="confirmDeleteDialogOpen = false">Cancel</v-btn>
+          <v-btn color="error" @click="executeDelete" :loading="deleting">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -124,21 +124,21 @@ const formData = reactive({
 });
 
 const rules = {
-  required: (value: string) => !!value || 'Toto pole je povinné.',
+  required: (value: string) => !!value || 'This field is required.',
   dateTimeOrder: () => {
     if (formData.slot_from && formData.slot_to) {
       // Convert local datetime strings to Date objects for comparison
       const fromDate = new Date(formData.slot_from);
       const toDate = new Date(formData.slot_to);
       if (isValid(fromDate) && isValid(toDate) && fromDate >= toDate) {
-        return 'Čas "Od" musí být dříve než čas "Do".';
+        return 'Time "From" must be earlier than time "To".';
       }
     }
     return true;
   }
 };
 
-// Zobrazí zprávu o úspěchu
+// Show success message
 const showSuccessMessage = (message: string) => {
   operationSuccess.value = message;
   setTimeout(() => {
@@ -146,7 +146,7 @@ const showSuccessMessage = (message: string) => {
   }, 5000);
 };
 
-// Zobrazí chybovou zprávu
+// Show error message
 const showErrorMessage = (message: string) => {
   operationError.value = message;
   setTimeout(() => {
@@ -154,27 +154,27 @@ const showErrorMessage = (message: string) => {
   }, 7000);
 };
 
-// Formátování datumu pro zobrazení
+// Date formatting for display
 const formatDateTime = (dateString: string | undefined | null): string => {
   if (!dateString) return '';
   try {
     const date = parseISO(dateString);
-    return format(date, 'dd.MM.yyyy HH:mm'); // Formát pro zobrazení
+    return format(date, 'dd.MM.yyyy HH:mm'); // Format for display
   } catch {
     console.warn(`Failed to format date: ${dateString}`);
     return '';
   }
 };
 
-// Převod lokálního data na ISO string (pro backend)
+// Convert local date to ISO string (for backend)
 const toISOString = (localDateTimeString: string): string | null => {
   if (!localDateTimeString) return null;
   try {
-    // Převedeme string z input type="datetime-local" na Date objekt
+    // Convert string from input type="datetime-local" to Date object
     const localDate = new Date(localDateTimeString);
-    if (!isValid(localDate)) throw new Error('Neplatné datum');
+    if (!isValid(localDate)) throw new Error('Invalid date');
     
-    // Převádíme na ISO string (lokální čas vyjádřený jako ISO)
+    // Convert to ISO string (local time expressed as ISO)
     return localDate.toISOString();
   } catch (e) {
     console.error('Error converting to ISO string:', e);
@@ -182,14 +182,14 @@ const toISOString = (localDateTimeString: string): string | null => {
   }
 };
 
-// Převod ISO stringu na lokální formát pro datetime-local input
+// Convert ISO string to local format for datetime-local input
 const fromISOString = (isoString: string | undefined | null): string => {
   if (!isoString) return '';
   try {
     const date = parseISO(isoString);
-    if (!isValid(date)) throw new Error('Neplatné ISO datum');
+    if (!isValid(date)) throw new Error('Invalid ISO date');
     
-    // Formát pro input type="datetime-local"
+    // Format for input type="datetime-local"
     return format(date, "yyyy-MM-dd'T'HH:mm");
   } catch (e) {
     console.error('Error converting from ISO string:', e);
@@ -236,7 +236,7 @@ const saveSlot = async () => {
     const toISO = toISOString(formData.slot_to);
 
     if (!fromISO || !toISO) {
-      throw new Error("Neplatný formát data nebo času.");
+      throw new Error("Invalid date or time format.");
     }
 
     if (editingSlot.value) {
@@ -246,7 +246,7 @@ const saveSlot = async () => {
         note: formData.note || null 
       };
       await availabilityApi.updateSlot(props.sessionId, editingSlot.value.id, updateData);
-      showSuccessMessage('Slot byl úspěšně aktualizován.');
+      showSuccessMessage('Slot successfully updated.');
     } else {
       const createData: SessionSlotCreate = { 
         slot_from: fromISO, 
@@ -254,12 +254,12 @@ const saveSlot = async () => {
         note: formData.note || null 
       };
       await availabilityApi.createSlot(props.sessionId, createData);
-      showSuccessMessage('Nový slot byl úspěšně vytvořen.');
+      showSuccessMessage('New slot successfully created.');
     }
     emit('slots-updated');
     closeDialog();
   } catch (err: any) {
-    formError.value = err.response?.data?.detail || err.message || 'Nepodařilo se uložit slot.';
+    formError.value = err.response?.data?.detail || err.message || 'Failed to save slot.';
     console.error("Save Slot Error:", err);
   } finally {
     saving.value = false;
@@ -276,12 +276,12 @@ const executeDelete = async () => {
   deleting.value = true;
   try {
     await availabilityApi.deleteSlot(props.sessionId, slotToDelete.value.id);
-    showSuccessMessage('Slot byl úspěšně odstraněn.');
+    showSuccessMessage('Slot successfully deleted.');
     emit('slots-updated');
     confirmDeleteDialogOpen.value = false;
     slotToDelete.value = null;
   } catch (err: any) {
-    showErrorMessage(err.response?.data?.detail || err.message || 'Nepodařilo se odstranit slot.');
+    showErrorMessage(err.response?.data?.detail || err.message || 'Failed to delete slot.');
     console.error("Delete Slot Error:", err);
     confirmDeleteDialogOpen.value = false;
   } finally {
@@ -291,5 +291,5 @@ const executeDelete = async () => {
 </script>
 
 <style scoped>
-/* Můžeme přidat nějaké styly, pokud je potřeba */
+/* We can add some styles if needed */
 </style> 

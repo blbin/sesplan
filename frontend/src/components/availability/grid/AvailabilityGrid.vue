@@ -3,8 +3,8 @@
     <v-card-text>
       <v-alert v-if="!isGm" type="info" density="compact" class="mb-4" variant="tonal" border="start">
         <v-icon start icon="mdi-information" class="mr-2"></v-icon>
-        Kliknutím nebo tažením myši v aktivních slotech označte časy, kdy jste dostupní.
-        Opětovným kliknutím/tažením označenou oblast odstraníte.
+        Click or drag in active slots to mark times when you are available.
+        Click/drag again to remove the marked area.
       </v-alert>
 
       <div v-if="days.length" class="availability-grid-container">
@@ -35,7 +35,7 @@
         </table>
       </div>
       <div v-else class="text-center pa-5 text-disabled">
-        Nejsou definovány žádné časové sloty.
+        No time slots are defined.
       </div>
 
       <!-- Zpětná vazba (chyby a úspěchy) -->
