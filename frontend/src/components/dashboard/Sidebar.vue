@@ -13,7 +13,6 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section-header" v-show="!isSidebarCollapsed">DM</div>
-      <hr v-show="!isSidebarCollapsed" class="nav-divider"/>
       <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
         <i class="icon">🌍</i>
         <span v-show="!isSidebarCollapsed">Worlds</span>
