@@ -39,7 +39,7 @@
         <div class="feature-card">
           <div class="icon">🎲</div>
           <h3>Game Tools</h3>
-          <p>Utilize virtual dice, random encounter generators, and other helper tools for smooth gameplay.</p>
+          <p>Generators and other helpers tools for smooth gameplay.</p>
         </div>
       </div>
     </div>
