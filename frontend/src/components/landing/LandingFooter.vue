@@ -30,12 +30,14 @@
 
       <div class="footer-bottom">
         <p class="copyright">
-          &copy; {{ new Date().getFullYear() }} Sesplan. All rights reserved.
+          &copy; {{ new Date().getFullYear() }} Patrik Trejtnar. All rights reserved.
         </p>
+        <!-- 
         <div class="small-links">
           <router-link to="/cookies">Cookies</router-link>
           <router-link to="/sitemap">Sitemap</router-link>
         </div>
+        -->
       </div>
 
       <div class="footer-dice">
