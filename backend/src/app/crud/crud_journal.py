@@ -17,4 +17,13 @@ def update_journal(
     db.add(db_journal)
     db.commit()
     db.refresh(db_journal)
-    return db_journal 
+    return db_journal
+
+def get_multi_by_owner(db: Session, owner_id: int) -> List[models.Journal]:
+    """Get all journals belonging to characters owned by a specific user."""
+    return (
+        db.query(models.Journal)
+        .join(models.Character, models.Journal.character_id == models.Character.id)
+        .filter(models.Character.user_id == owner_id)
+        .all()
+    ) 

@@ -125,6 +125,13 @@ const routes: RouteRecordRaw[] = [
         props: true,
         meta: { requiresAuth: true }
       },
+      // Nová routa pro deníky
+      {
+        path: 'journals',
+        name: 'JournalList',
+        component: () => import('@/views/dashboard/JournalsView.vue'),
+        meta: { requiresAuth: true }
+      },
       // Přidání ukázkové stránky Vuetify
       {
         path: 'vuetify-example',

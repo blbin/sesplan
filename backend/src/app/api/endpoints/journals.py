@@ -9,8 +9,14 @@ from ..dependencies import verify_journal_read_access, verify_journal_write_acce
 
 router = APIRouter(tags=["journals"])
 
-# Removed POST / endpoint (create_journal)
-# Removed GET /by_character/{character_id} endpoint (read_journals_by_character)
+@router.get("/my-journals", response_model=List[schemas.Journal])
+def read_my_journals(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retrieve journals for the current user's characters."""
+    journals = crud.get_multi_by_owner(db=db, owner_id=current_user.id)
+    return journals
 
 @router.get("/{journal_id}", response_model=schemas.Journal)
 def read_journal(

@@ -5,7 +5,7 @@ from .crud_character import get_character, get_characters_by_world, get_characte
 from .crud_campaign_invite import get_invite_by_token, get_invites_by_campaign, create_campaign_invite, accept_campaign_invite, delete_campaign_invite
 from .crud_user_campaign import get_campaign_members, update_campaign_member_role, remove_campaign_member, get_campaign_membership
 # Import Journal CRUD
-from .crud_journal import get_journal, update_journal
+from .crud_journal import get_journal, update_journal, get_multi_by_owner
 # Import JournalEntry CRUD
 from .crud_journal_entry import get_journal_entry, get_entries_by_journal, create_journal_entry, update_journal_entry, delete_journal_entry
 # Import Session CRUD

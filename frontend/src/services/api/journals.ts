@@ -13,4 +13,10 @@ export const getJournalById = async (journalId: number): Promise<Journal> => {
 export const updateJournal = async (journalId: number, journalData: JournalUpdate): Promise<Journal> => {
     const response = await api.put<Journal>(`${BASE_URL}/${journalId}`, journalData);
     return response.data;
+};
+
+// Get journals for the current user's characters
+export const getMyJournals = async (): Promise<Journal[]> => {
+    const response = await api.get<Journal[]>(`${BASE_URL}/my-journals`);
+    return response.data;
 }; 

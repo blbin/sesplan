@@ -24,6 +24,10 @@
         <i class="icon">👤</i>
         <span v-show="!isSidebarCollapsed">Characters</span>
       </router-link>
+      <router-link to="/dashboard/journals" class="nav-item" active-class="active">
+        <i class="icon">📖</i>
+        <span v-show="!isSidebarCollapsed">Journals</span>
+      </router-link>
       <router-link to="/dashboard/vuetify-example" class="nav-item" active-class="active">
         <i class="icon">🎨</i>
         <span v-show="!isSidebarCollapsed">UI Komponenty</span>
