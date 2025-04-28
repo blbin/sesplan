@@ -77,21 +77,23 @@ def read_sessions_by_campaign(
 
 @router.get("/{session_id}", response_model=schemas.Session)
 def read_session(
-    # Use dependency to get session and verify membership
     db_session: models.Session = Depends(get_session_and_verify_membership)
 ):
-    """Get a specific session by ID. Requires membership in the parent campaign."""
+    """Get a specific session by ID, including assigned characters. Requires membership in the parent campaign."""
+    # The dependency already fetches the session with characters due to CRUD changes
+    # The response_model schemas.Session now includes characters
     return db_session
 
 @router.put("/{session_id}", response_model=schemas.Session)
-def update_session(
+async def update_session(
     *, # Enforce keyword-only arguments
-    session_in: schemas.SessionUpdate,
+    session_in: schemas.SessionUpdate, # Now includes optional character_ids
     db: Session = Depends(get_db),
-    # Use dependency to get session and verify GM permission
+    # Dependency is async, endpoint should be async too
     db_session: models.Session = Depends(get_session_and_verify_gm) 
 ):
-    """Update a session. Requires GM role for the parent campaign."""
+    """Update a session, including assigning characters. Requires GM role for the parent campaign."""
+    # CRUD function is sync, FastAPI will run it in a thread pool
     updated_session = crud.update_session(db=db, db_session=db_session, session_in=session_in)
     return updated_session
 

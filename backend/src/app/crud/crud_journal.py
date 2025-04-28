@@ -23,7 +23,7 @@ def get_multi_by_owner(db: Session, owner_id: int) -> List[models.Journal]:
     """Get all journals belonging to characters owned by a specific user."""
     return (
         db.query(models.Journal)
-        .join(models.Character, models.Journal.character_id == models.Character.id)
+        .join(models.Journal.character)
         .filter(models.Character.user_id == owner_id)
         .all()
     ) 

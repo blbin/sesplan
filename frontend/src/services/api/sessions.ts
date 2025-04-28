@@ -1,5 +1,5 @@
 import { api } from '../auth.service';
-import type { Session, SessionCreate, SessionUpdate } from '@/types/session';
+import type { Session, SessionCreate, SessionUpdate } from '../../types/session';
 
 const BASE_URL = '/V1/sessions';
 // CAMPAIGN_BASE_URL is removed as it was unused
@@ -8,12 +8,14 @@ const BASE_URL = '/V1/sessions';
 export const getSessionsByCampaign = async (campaignId: number): Promise<Session[]> => {
     // Use the /by_campaign/{campaign_id} endpoint
     const response = await api.get<Session[]>(`${BASE_URL}/by_campaign/${campaignId}`);
+    // response.data will now include characters based on backend changes
     return response.data;
 };
 
 // Get a specific session by ID
 export const getSessionById = async (sessionId: number): Promise<Session> => {
     const response = await api.get<Session>(`${BASE_URL}/${sessionId}`);
+    // response.data will now include characters based on backend changes
     return response.data;
 };
 
@@ -24,8 +26,10 @@ export const createSession = async (sessionData: SessionCreate): Promise<Session
 };
 
 // Update an existing session
+// SessionUpdate type now includes optional character_ids
 export const updateSession = async (sessionId: number, sessionData: SessionUpdate): Promise<Session> => {
     const response = await api.put<Session>(`${BASE_URL}/${sessionId}`, sessionData);
+    // response.data will be the updated session including characters
     return response.data;
 };
 

@@ -1,7 +1,7 @@
 from .user import User, UserCreate, UserSimple
 from .world import World, WorldCreate, WorldUpdate
 from .campaign import Campaign, CampaignCreate, CampaignUpdate
-from .character import Character, CharacterCreate, CharacterUpdate, CharacterAssignUser
+from .character import Character, CharacterCreate, CharacterUpdate, CharacterAssignUser, CharacterSimple
 from .campaign_invite import CampaignInvite, CampaignInviteCreate, CampaignInviteAcceptResponse
 from .user_campaign import UserCampaignRead, UserCampaignUpdate
 # Import Journal schemas

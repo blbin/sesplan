@@ -5,6 +5,7 @@ import { api } from '../auth.service'; // Importujeme sdílenou instanci z auth.
 import type { World, WorldCreate, WorldUpdate } from '../../types/world';
 // Import Campaign type directly from campaign.ts
 import type { Campaign } from '../../types/campaign';
+import type { CharacterSimple } from '../../types/character'; // Add import for CharacterSimple
 
 // Define UserSimple type for the new function
 export interface UserSimple {
@@ -50,5 +51,11 @@ export const getWorldCampaigns = async (worldId: number): Promise<Campaign[]> =>
 // Get users participating in campaigns within a specific world
 export const getCampaignUsersInWorld = async (worldId: number): Promise<UserSimple[]> => {
     const response = await api.get<UserSimple[]>(`/V1/worlds/${worldId}/campaign_users`);
+    return response.data;
+};
+
+// Get simplified list of all characters in a world
+export const getWorldCharactersSimple = async (worldId: number): Promise<CharacterSimple[]> => {
+    const response = await api.get<CharacterSimple[]>(`/V1/worlds/${worldId}/characters_simple`);
     return response.data;
 };

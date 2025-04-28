@@ -132,6 +132,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/JournalsView.vue'),
         meta: { requiresAuth: true }
       },
+      // Nová routa pro DETAIL deníku
+      {
+        path: 'journals/:journalId',
+        name: 'JournalDetail',
+        component: () => import('@/views/dashboard/JournalDetailView.vue'),
+        props: true, // Pass journalId as prop
+        meta: { requiresAuth: true }
+      },
       // Přidání ukázkové stránky Vuetify
       {
         path: 'vuetify-example',
@@ -153,6 +161,13 @@ const routes: RouteRecordRaw[] = [
     name: 'accept-invite',
     component: () => import('../views/AcceptInviteView.vue'),
     meta: { requiresAuth: true } // User must be logged in to accept
+  },
+  // Přidání routy pro nastavení uživatele
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('../views/SettingsView.vue'),
+    meta: { requiresAuth: true } // Vyžaduje přihlášení
   }
 ]
 

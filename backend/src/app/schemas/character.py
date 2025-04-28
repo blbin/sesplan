@@ -1,40 +1,49 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
-from .journal import Journal
-from .character_tag import CharacterTag
 
-# Base properties
+# Base properties shared by all schemas
 class CharacterBase(BaseModel):
     name: str
     description: Optional[str] = None
+    user_id: Optional[int] = None # Character might not be linked to a user (NPC)
+    world_id: int # Character must belong to a world
 
-# Schema for character creation
+# Properties required for creation
 class CharacterCreate(CharacterBase):
-    world_id: int # Need to specify world when creating character
-    tag_type_ids: Optional[List[int]] = None # Added tag type IDs
+    name: str # Ensure name is required on creation
+    world_id: int # Ensure world is specified
 
-# Schema for character update
+# Properties required for update (all optional)
 class CharacterUpdate(CharacterBase):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    tag_type_ids: Optional[List[int]] = None # Added tag type IDs
-    user_id: Optional[int | None] = Field(default=None) # Allow setting user_id to None explicitly if needed
-    # world_id: Optional[int] = None # Maybe allow moving characters? Not now.
+    name: Optional[str] = None # Override base to make it optional for update
+    world_id: Optional[int] = None # World shouldn't typically change, but allow if needed
 
-# Schema for assigning user to a character
-class CharacterAssignUser(BaseModel):
-    user_id: int | None # Allow assigning or unassigning
-
-# Schema for reading character data
-class Character(CharacterBase):
+# Properties stored in DB but not returned to client directly
+class CharacterInDBBase(CharacterBase):
     id: int
-    world_id: int
-    user_id: Optional[int] = None # User assigned to the character (can be null)
     created_at: datetime
     updated_at: datetime
-    journal: Optional[Journal] = None
-    tags: List[CharacterTag] = []
 
     class Config:
-        from_attributes = True 
+        orm_mode = True # Use orm_mode for older Pydantic or from_attributes=True for v2
+
+# Properties returned to client (can include relationships later if needed)
+class Character(CharacterInDBBase):
+    pass
+
+# Simplified schema for lists or nested objects
+class CharacterSimple(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+# Properties stored in DB (internal use)
+class CharacterInDB(CharacterInDBBase):
+    pass
+
+# Schema for assigning user to a character (missing)
+class CharacterAssignUser(BaseModel):
+    user_id: Optional[int] = None # Allow assigning (int) or unassigning (None)

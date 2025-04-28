@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+from .character import CharacterSimple
 
 # Base properties shared by all schemas
 class SessionBase(BaseModel):
@@ -18,6 +19,7 @@ class SessionCreate(SessionBase):
 class SessionUpdate(SessionBase):
     title: Optional[str] = None # Override base to make it optional for update
     # campaign_id cannot be updated
+    character_ids: Optional[List[int]] = None # Add list of character IDs for assignment
 
 # Properties stored in DB but not returned to client directly
 class SessionInDBBase(SessionBase):
@@ -31,7 +33,7 @@ class SessionInDBBase(SessionBase):
 
 # Properties returned to client (can include relationships later if needed)
 class Session(SessionInDBBase):
-    pass
+    characters: List[CharacterSimple] = [] # Add list of associated characters
 
 # Properties stored in DB (internal use)
 class SessionInDB(SessionInDBBase):

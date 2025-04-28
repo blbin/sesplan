@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.db.session import get_db
-from app.schemas.user import UserCreate, User
-from app.crud import create_user, get_user, get_users, get_user_by_username
+from app.schemas.user import UserCreate, User, UserUpdate
+from app.crud import create_user, get_user, get_users, get_user_by_username, update_user
 from app.models.user import User as UserModel
 from app.core.security import get_current_active_user
 from app.core.limiter import limiter
@@ -37,6 +37,17 @@ def create_user_endpoint(
 def read_users_me(current_user: UserModel = Depends(get_current_active_user)):
     """Get current user"""
     return current_user
+
+
+@router.put("/me", response_model=User)
+def update_user_me(
+    user_in: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user)
+):
+    """Update own user details."""
+    user = update_user(db=db, db_user=current_user, user_in=user_in)
+    return user
 
 
 @router.get("/", response_model=List[User])

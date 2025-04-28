@@ -36,7 +36,64 @@
           <p>{{ session.summary }}</p>
         </section>
 
-        <!-- TODO: Add sections for related entities like characters, journal entries, etc. -->
+        <!-- Assigned Characters Section - Temporarily Hidden -->
+        <!-- 
+        <section class="detail-section">
+          <h2>Assigned Characters</h2>
+          <div v-if="session.characters && session.characters.length > 0" class="character-chips">
+            <v-chip 
+              v-for="character in session.characters" 
+              :key="character.id"
+              color="primary"
+              label
+              class="mr-2 mb-2"
+            >
+              {{ character.name }}
+            </v-chip>
+          </div>
+          <p v-else>No characters assigned to this session yet.</p>
+          
+          <div v-if="isCurrentUserGM" class="mt-4">
+            <h3>Assign Characters</h3>
+            <v-select
+              v-model="selectedCharacterIds"
+              :items="worldCharacters"
+              item-title="name"
+              item-value="id"
+              label="Select characters"
+              multiple
+              chips
+              closable-chips
+              clearable
+              variant="outlined"
+              density="compact"
+            >
+              <template v-slot:no-data>
+                <v-list-item>
+                  <v-list-item-title>
+                    No characters found in this world or loading...
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+            </v-select>
+            
+            <v-btn 
+              @click="saveChanges"
+              :loading="isSaving"
+              :disabled="isSaving" 
+              color="primary"
+              class="mt-3"
+            >
+              Save Character Assignments
+            </v-btn>
+            <p v-if="error" class="text-error mt-2">Error saving: {{ error }}</p> 
+          </div>
+          <p v-else-if="!isCurrentUserGM && session.characters.length === 0">
+          </p>
+        </section>
+        -->
+
+        <!-- TODO: Add sections for related entities like journal entries, etc. -->
 
       </div>
 
@@ -120,7 +177,7 @@ const membershipLoading = ref(false);
 const currentUserId = computed(() => authStore.user?.id);
 const numericSessionId = computed(() => Number(props.sessionId));
 const isCurrentUserGM = computed(() => {
-  return currentUserMembership.value?.role === CampaignRoleEnum.GM;
+  return !!currentUserMembership.value && currentUserMembership.value.role === CampaignRoleEnum.GM;
 });
 
 // --- Methods --- 
@@ -131,8 +188,10 @@ const loadSessionDetail = async () => {
   session.value = null;
   try {
     session.value = await sessionsApi.getSessionById(numericSessionId.value);
-    if (session.value && !currentUserMembership.value && !membershipLoading.value) { 
-         await loadCurrentUserMembership(session.value.campaign_id);
+    if (session.value) {
+      if (!currentUserMembership.value && !membershipLoading.value) { 
+           await loadCurrentUserMembership(session.value.campaign_id);
+      }
     }
   } catch (err: any) {
     error.value = err.message || 'Failed to load session details';
@@ -330,4 +389,10 @@ watch(
 .text-error {
     color: rgb(var(--v-theme-error));
 }
+
+.character-chips {
+  margin-bottom: 1rem; /* Add some space below chips */
+}
+
+/* Add other styles as needed */
 </style> 

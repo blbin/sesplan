@@ -18,6 +18,20 @@ async def get_world_membership(world_id: int, user_id: int, db: Session = Depend
         models.WorldUser.user_id == user_id
     ).first()
 
+# Dependency to verify world membership
+async def verify_world_member(
+    world_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    membership = await get_world_membership(world_id, current_user.id, db)
+    if not membership:
+        # Optionally check if world is public first
+        world = crud.get_world(db, world_id=world_id)
+        if not world or not world.is_public:
+             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a member of this world")
+    return membership # Return membership object if found
+
 @router.post("/", response_model=schemas.World, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.GENERIC_WRITE_LIMIT) # Přidán write limit
 def create_world(
@@ -150,23 +164,21 @@ def read_world_campaigns(
     campaigns = crud.get_campaigns_by_world(db, world_id=world_id, skip=skip, limit=limit)
     return campaigns
 
-# Endpoint to get all characters within a specific world (with pagination)
-@router.get("/{world_id}/characters/", response_model=List[schemas.Character])
-def read_world_characters(
+# Endpoint to get all characters within a specific world (SIMPLE LIST)
+@router.get("/{world_id}/characters_simple", response_model=List[schemas.CharacterSimple])
+@limiter.limit(settings.GENERIC_READ_LIMIT)
+async def read_world_characters_simple(
+    *,
+    request: Request, # Added for limiter
     world_id: int,
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-    # current_user: models.User = Depends(get_current_user) # Re-add if needed
+    # Use dependency to verify membership or public access
+    membership: Optional[models.WorldUser] = Depends(verify_world_member) 
 ):
-    """Retrieve all characters belonging to a specific world with pagination."""
-    # TODO: Verify user has access to this world if necessary (e.g., public world or member)
-    db_world = crud.get_world(db, world_id=world_id)
-    if db_world is None:
-        raise HTTPException(status_code=404, detail="World not found")
-    
-    # Use the correct paginated CRUD function: get_characters_by_world
-    characters = crud.get_characters_by_world(db, world_id=world_id, skip=skip, limit=limit)
+    """Retrieve a simplified list of all characters (id, name) belonging to a specific world. Requires world membership or public world."""
+    # Use the CRUD function that fetches all characters without pagination (with limit)
+    characters = crud.get_all_characters_by_world_simple(db, world_id=world_id)
+    # The response_model will automatically convert models.Character to schemas.CharacterSimple
     return characters
 
 @router.get("/{world_id}/members", response_model=List[schemas.WorldUserRead])

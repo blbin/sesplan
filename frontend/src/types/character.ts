@@ -6,30 +6,31 @@ import type { CharacterTag } from './characterTag'; // Import CharacterTag type
 export interface CharacterBase {
     name: string;
     description: string | null;
+    user_id?: number | null; // Might not be linked (NPC)
+    world_id: number;
 }
 
 export interface CharacterCreate extends CharacterBase {
-    world_id: number;
-    tag_type_ids?: number[]; // Added optional tag type IDs
+    tag_type_ids?: number[]; // IDs of tag types to associate
 }
 
-// All fields are optional for update
-export interface CharacterUpdate {
-    name?: string;
-    description?: string | null;
-    tag_type_ids?: number[]; // Added optional tag type IDs
-    user_id?: number | null; // Add optional user_id for assignment
-    // Cannot change world_id or user_id via update
+export interface CharacterUpdate extends Partial<CharacterBase> {
+    tag_type_ids?: number[]; // Allow updating tags
 }
 
 export interface Character extends CharacterBase {
     id: number;
-    world_id: number;
-    user_id: number; // ID of the user who owns/created the character
-    created_at: string; // ISO Date string
-    updated_at: string; // ISO Date string
-    journal: Journal | null;
-    tags: CharacterTag[]; // Přidáme pole tagů
-    // Optional: Include user details if backend sends them (check API response)
-    // user?: User;
-} 
+    created_at: string; // Assuming ISO string format from backend
+    updated_at: string;
+    journal: Journal | null; // Journal might be loaded optionally
+    tags: CharacterTag[]; // Always expect tags array
+}
+
+export interface CharacterSimple {
+    id: number;
+    name: string;
+}
+
+export interface CharacterAssignUser {
+    user_id: number | null;
+}

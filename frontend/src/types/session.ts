@@ -1,5 +1,6 @@
 // import type { Optional } from './common'; // Assuming Optional exists or handle nullable types directly
 import type { SessionSlot } from './session_slot'; // Added
+import type { CharacterSimple } from './character'; // Import CharacterSimple as type
 
 // Base properties shared by create/update/read
 export interface SessionBase {
@@ -21,6 +22,7 @@ export interface SessionUpdate {
     description?: string | null; // Use standard union type
     summary?: string | null;
     date_time?: string | null;
+    character_ids?: number[]; // Add character IDs for update
 }
 
 // Session object received from API
@@ -30,5 +32,6 @@ export interface Session extends SessionBase {
     created_at: string; // ISO Date string - Belongs here
     updated_at: string; // ISO Date string - Belongs here
     availability_slots?: SessionSlot[]; // Optional relationship data
+    characters: CharacterSimple[]; // Add associated characters
     // Add relationships here later if needed (e.g., characters, entries)
 } 

@@ -4,6 +4,7 @@ from typing import List
 from app.models.user import User
 from app.schemas.user import UserCreate
 from app.core.security import get_password_hash
+from app.schemas.user import UserUpdate
 
 
 def get_user(db: Session, user_id: int):
@@ -36,6 +37,19 @@ def create_user(db: Session, user: UserCreate):
         username=user.username,
         password_hash=hashed_password
     )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def update_user(db: Session, db_user: User, user_in: UserUpdate) -> User:
+    """Update a user."""
+    update_data = user_in.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

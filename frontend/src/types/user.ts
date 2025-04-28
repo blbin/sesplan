@@ -2,6 +2,8 @@ export interface User {
     id: number;
     username: string;
     email: string;
+    first_name?: string | null;
+    last_name?: string | null;
     // Add other relevant fields if needed, e.g., created_at
 }
 
@@ -17,4 +19,10 @@ export interface UserCreate {
 export interface UserSimple {
   id: number;
   username: string;
+} 
+
+export interface UserUpdate {
+  first_name?: string | null;
+  last_name?: string | null;
+  // Add other fields that can be updated
 } 

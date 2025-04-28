@@ -9,12 +9,26 @@ def get_character(db: Session, character_id: int) -> Optional[models.Character]:
     return db.query(models.Character).filter(models.Character.id == character_id).first()
 
 def get_characters_by_world(db: Session, world_id: int, skip: int = 0, limit: int = 100) -> List[models.Character]:
-    """Get all characters belonging to a specific world."""
+    """Get characters belonging to a specific world (with pagination)."""
     return (
         db.query(models.Character)
         .filter(models.Character.world_id == world_id)
+        .order_by(models.Character.name) # Add ordering
         .offset(skip)
         .limit(limit)
+        .all()
+    )
+
+def get_all_characters_by_world_simple(
+    db: Session, world_id: int, skip: int = 0, limit: int = 1000
+) -> List[models.Character]:
+    """Get all characters belonging to a specific world (for selection lists)."""
+    return (
+        db.query(models.Character)
+        .filter(models.Character.world_id == world_id)
+        .order_by(models.Character.name)
+        .offset(skip)
+        .limit(limit) # Apply limit for safety
         .all()
     )
 
@@ -81,8 +95,7 @@ def create_character(db: Session, character_in: CharacterCreate, user_id: int):
         raise e
 
     db.refresh(db_character)
-    # Ensure relationships are loaded if needed by the response schema
-    # db.refresh(db_journal) 
+    db.refresh(db_journal)
     
     return db_character
 
