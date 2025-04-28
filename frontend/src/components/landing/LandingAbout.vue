@@ -15,6 +15,7 @@
             such as cities, NPCs, events, and character journal summaries. This simplifies game preparation
             and allows GMs to focus more on the story and fun itself.
           </p>
+          <!--
           <div class="stats">
             <div class="stat-item">
               <div class="stat-number">1000+</div>
@@ -29,6 +30,7 @@
               <div class="stat-label">Campaigns</div>
             </div>
           </div>
+          -->
         </div>
         <div class="about-image">
           <div class="about-placeholder">
@@ -88,30 +90,6 @@ p {
   color: #4a5568;
   line-height: 1.7;
   margin-bottom: 20px;
-}
-
-.stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 40px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.stat-item {
-  flex-basis: 120px;
-}
-
-.stat-number {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #7851a9;
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  color: #64748b;
-  font-size: 0.9rem;
 }
 
 .about-image {

@@ -2,7 +2,7 @@
   <section class="hero">
     <div class="container">
       <div class="hero-content">
-        <h1>Plan RPG games simply and effectively</h1>
+        <h1>Sesplan - Your tabletopRPG session planning space 🌌</h1>
         <p>Optimize your game with a modern tool for Game Masters and players</p>
         <div class="feature-points">
           <div class="feature-point">
