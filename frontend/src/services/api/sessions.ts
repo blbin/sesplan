@@ -19,6 +19,12 @@ export const getSessionById = async (sessionId: number): Promise<Session> => {
     return response.data;
 };
 
+// Get all sessions for the current user across their campaigns
+export const getMySessions = async (): Promise<Session[]> => {
+    const response = await api.get<Session[]>(`${BASE_URL}/my-sessions`);
+    return response.data;
+};
+
 // Create a new session
 export const createSession = async (sessionData: SessionCreate): Promise<Session> => {
     const response = await api.post<Session>(`${BASE_URL}/`, sessionData);

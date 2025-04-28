@@ -110,6 +110,13 @@ const routes: RouteRecordRaw[] = [
         props: true, // Pass campaignId and sessionId as props
         meta: { requiresAuth: true },
       },
+      // Nová routa pro seznam sessions
+      {
+        path: 'sessions',
+        name: 'SessionList',
+        component: () => import('@/views/dashboard/SessionListView.vue'),
+        meta: { requiresAuth: true }
+      },
       // Nová routa pro postavy
       {
         path: 'characters',
@@ -138,13 +145,6 @@ const routes: RouteRecordRaw[] = [
         name: 'JournalDetail',
         component: () => import('@/views/dashboard/JournalDetailView.vue'),
         props: true, // Pass journalId as prop
-        meta: { requiresAuth: true }
-      },
-      // Přidání ukázkové stránky Vuetify
-      {
-        path: 'vuetify-example',
-        name: 'VuetifyExample',
-        component: () => import('../views/VuetifyExample.vue'),
         meta: { requiresAuth: true }
       },
       // Přesunutá routa pro nastavení uživatele

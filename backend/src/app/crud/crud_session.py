@@ -34,6 +34,33 @@ def get_sessions_by_campaign(
         .all()
     )
 
+def get_sessions_for_user(
+    db: Session, user_id: int, skip: int = 0, limit: int = 100
+) -> List[models.Session]:
+    """Get all sessions for campaigns the user is a member of, including campaign details."""
+    # Find campaign IDs the user is a member of
+    user_campaign_ids = (
+        db.query(models.UserCampaign.campaign_id)
+        .filter(models.UserCampaign.user_id == user_id)
+        .subquery()
+    )
+
+    # Query sessions belonging to those campaigns
+    return (
+        db.query(models.Session)
+        .options(
+            joinedload(models.Session.campaign), # Eager load campaign details
+            joinedload(models.Session.character_associations).joinedload( # Eager load characters
+                models.SessionCharacter.character
+            )
+        )
+        .filter(models.Session.campaign_id.in_(user_campaign_ids))
+        .order_by(models.Session.date_time.desc().nullslast(), models.Session.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
 def create_session(db: Session, session_in: schemas.SessionCreate) -> models.Session:
     """Create a new session. Assumes campaign_id is valid and ownership check happened elsewhere."""
     # TODO: Check if campaign_id exists?

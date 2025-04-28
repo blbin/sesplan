@@ -1,6 +1,7 @@
 // import type { Optional } from './common'; // Assuming Optional exists or handle nullable types directly
 import type { SessionSlot } from './session_slot'; // Added
 import type { CharacterSimple } from './character'; // Import CharacterSimple as type
+import type { Campaign } from './campaign'; // Import Campaign type
 
 // Base properties shared by create/update/read
 export interface SessionBase {
@@ -33,5 +34,6 @@ export interface Session extends SessionBase {
     updated_at: string; // ISO Date string - Belongs here
     availability_slots?: SessionSlot[]; // Optional relationship data
     characters: CharacterSimple[]; // Add associated characters
+    campaign?: Campaign; // Add optional campaign relationship
     // Add relationships here later if needed (e.g., characters, entries)
 } 

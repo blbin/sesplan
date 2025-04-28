@@ -75,6 +75,19 @@ def read_sessions_by_campaign(
     )
     return sessions
 
+@router.get("/my-sessions", response_model=List[schemas.Session])
+def read_my_sessions(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retrieve all sessions across campaigns the current user is a member of."""
+    sessions = crud.get_sessions_for_user(
+        db, user_id=current_user.id, skip=skip, limit=limit
+    )
+    return sessions
+
 @router.get("/{session_id}", response_model=schemas.Session)
 def read_session(
     db_session: models.Session = Depends(get_session_and_verify_membership)

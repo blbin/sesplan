@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from .character import CharacterSimple
+from .campaign import Campaign # Import Campaign schema
 
 # Base properties shared by all schemas
 class SessionBase(BaseModel):
@@ -34,6 +35,7 @@ class SessionInDBBase(SessionBase):
 # Properties returned to client (can include relationships later if needed)
 class Session(SessionInDBBase):
     characters: List[CharacterSimple] = [] # Add list of associated characters
+    campaign: Optional[Campaign] = None # Add campaign relationship
 
 # Properties stored in DB (internal use)
 class SessionInDB(SessionInDBBase):
