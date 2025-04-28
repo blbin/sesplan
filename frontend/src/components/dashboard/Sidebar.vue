@@ -12,6 +12,8 @@
       </button>
     </div>
     <nav class="sidebar-nav">
+      <div class="nav-section-header" v-show="!isSidebarCollapsed">DM</div>
+      <hr v-show="!isSidebarCollapsed" class="nav-divider"/>
       <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
         <i class="icon">🌍</i>
         <span v-show="!isSidebarCollapsed">Worlds</span>
@@ -20,6 +22,8 @@
         <i class="icon">🗺️</i>
         <span v-show="!isSidebarCollapsed">Campaigns</span>
       </router-link>
+      <hr class="nav-divider"/>
+      <div class="nav-section-header" v-show="!isSidebarCollapsed">Player</div>
       <router-link to="/dashboard/sessions" class="nav-item" active-class="active">
         <i class="icon">📅</i>
         <span v-show="!isSidebarCollapsed">Sessions</span>
@@ -131,6 +135,21 @@ export default defineComponent({
   padding: 20px 0;
 }
 
+.nav-section-header {
+  padding: 10px 20px 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nav-divider {
+  margin: 5px 20px;
+  border: none;
+  border-top: 1px solid #e9ecef;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -165,6 +184,11 @@ export default defineComponent({
 
 .sidebar.collapsed .icon {
   margin-right: 0;
+}
+
+.sidebar.collapsed .nav-section-header,
+.sidebar.collapsed .nav-divider {
+  display: none;
 }
 
 /* Responsive Design */
