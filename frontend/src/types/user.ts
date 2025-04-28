@@ -26,3 +26,8 @@ export interface UserUpdate {
   last_name?: string | null;
   // Add other fields that can be updated
 } 
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+} 

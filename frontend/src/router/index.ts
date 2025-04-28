@@ -147,6 +147,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/VuetifyExample.vue'),
         meta: { requiresAuth: true }
       },
+      // Přesunutá routa pro nastavení uživatele
+      {
+        path: 'settings', // Relativní cesta k /dashboard
+        name: 'settings',
+        component: () => import('../views/SettingsView.vue'),
+        meta: { requiresAuth: true } // Vyžaduje přihlášení
+      }
     ]
   },
   {
@@ -163,12 +170,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true } // User must be logged in to accept
   },
   // Přidání routy pro nastavení uživatele
-  {
-    path: '/settings',
-    name: 'settings',
-    component: () => import('../views/SettingsView.vue'),
-    meta: { requiresAuth: true } // Vyžaduje přihlášení
-  }
+  // {
+  //   path: '/settings',
+  //   name: 'settings',
+  //   component: () => import('../views/SettingsView.vue'),
+  //   meta: { requiresAuth: true } // Vyžaduje přihlášení
+  // }
 ]
 
 const router = createRouter({

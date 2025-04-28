@@ -29,8 +29,7 @@
         </div>
         <div class="user-name">{{ username || 'User' }}</div>
         <div class="dropdown-menu" v-show="isDropdownOpen">
-          <div class="dropdown-item">Profile</div>
-          <div class="dropdown-item">Settings</div>
+          <div class="dropdown-item" @click="goToSettings">Settings</div>
           <div class="dropdown-item" @click="handleLogout">Logout</div>
         </div>
       </div>
@@ -69,6 +68,11 @@ export default defineComponent({
       router.push({ name: 'login' });
     };
     
+    const goToSettings = () => {
+      router.push({ name: 'settings' });
+      isDropdownOpen.value = false;
+    };
+    
     const closeDropdown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.user-profile')) {
@@ -85,6 +89,7 @@ export default defineComponent({
       toggleDropdown,
       handleLogout,
       username,
+      goToSettings,
     };
   },
   emits: ['toggle-sidebar']

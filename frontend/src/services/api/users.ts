@@ -1,5 +1,5 @@
 import { api } from '../auth.service';
-import type { User, UserUpdate } from '@/types/user'; // Přidán import UserUpdate
+import type { User, UserUpdate, ChangePasswordPayload } from '@/types/user'; // Přidán import ChangePasswordPayload
 
 const BASE_URL = '/V1/users';
 const ME_URL = '/V1/users/me'; // URL pro aktuálního uživatele
@@ -20,6 +20,15 @@ export const getUserMe = async (): Promise<User> => {
 export const updateUserMe = async (userData: UserUpdate): Promise<User> => {
     const response = await api.put<User>(ME_URL, userData);
     return response.data;
+};
+
+/**
+ * Changes the currently logged-in user's password.
+ * Requires authentication.
+ */
+export const changePassword = async (payload: ChangePasswordPayload): Promise<void> => {
+    // Předpokládáme endpoint /me/change-password
+    await api.put(`${ME_URL}/change-password`, payload);
 };
 
 /**
