@@ -164,6 +164,24 @@ def read_world_campaigns(
     campaigns = crud.get_campaigns_by_world(db, world_id=world_id, skip=skip, limit=limit)
     return campaigns
 
+# Endpoint to get all characters within a specific world (PAGINATED, FULL DATA)
+@router.get("/{world_id}/characters/", response_model=List[schemas.Character])
+@limiter.limit(settings.GENERIC_READ_LIMIT)
+async def read_world_characters(
+    *,
+    request: Request,
+    world_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    membership: Optional[models.WorldUser] = Depends(verify_world_member)
+):
+    """Retrieve characters belonging to a specific world with pagination. Requires world membership or public world."""
+    # Dependency verify_world_member already checks access
+    # Use the paginated CRUD function
+    characters = crud.get_characters_by_world(db, world_id=world_id, skip=skip, limit=limit)
+    return characters
+
 # Endpoint to get all characters within a specific world (SIMPLE LIST)
 @router.get("/{world_id}/characters_simple", response_model=List[schemas.CharacterSimple])
 @limiter.limit(settings.GENERIC_READ_LIMIT)

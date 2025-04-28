@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from .. import models # Importujeme models pro použití v options
 from ..models import World, WorldUser, Journal # Import Journal model
 from ..schemas import CharacterCreate, CharacterUpdate
@@ -9,11 +9,15 @@ def get_character(db: Session, character_id: int) -> Optional[models.Character]:
     return db.query(models.Character).filter(models.Character.id == character_id).first()
 
 def get_characters_by_world(db: Session, world_id: int, skip: int = 0, limit: int = 100) -> List[models.Character]:
-    """Get characters belonging to a specific world (with pagination)."""
+    """Get characters belonging to a specific world (with pagination), including tags."""
     return (
         db.query(models.Character)
+        .options(
+            selectinload(models.Character.tags) # Eagerly load tags
+            .joinedload(models.CharacterTag.tag_type) # Also load the tag type name
+        )
         .filter(models.Character.world_id == world_id)
-        .order_by(models.Character.name) # Add ordering
+        .order_by(models.Character.name)
         .offset(skip)
         .limit(limit)
         .all()
@@ -43,8 +47,11 @@ def get_characters_by_user(db: Session, user_id: int, skip: int = 0, limit: int 
     )
 
 def create_character(db: Session, character_in: CharacterCreate, user_id: int):
-    """Create a new character, its associated journal, and assign initial tags."""
-    # Check if user is a member of the world (assuming WorldUser model exists)
+    """Create a new character, its associated journal, and assign initial tags.
+    The character's user_id will be NULL by default.
+    The provided user_id is only used to verify world membership.
+    """
+    # Check if user (creator) is a member of the world
     world_membership = (
         db.query(WorldUser)
         .filter(
@@ -56,12 +63,12 @@ def create_character(db: Session, character_in: CharacterCreate, user_id: int):
     if not world_membership:
         return None # Indicate failure: user not in world
 
-    # Prepare character data, excluding tag_type_ids for model init
     character_data = character_in.dict(exclude_unset=True)
-    tag_type_ids = character_data.pop('tag_type_ids', None) # Extract and remove tag_ids
+    tag_type_ids = character_data.pop('tag_type_ids', None)
 
-    # Create Character instance
-    db_character = models.Character(**character_data, user_id=user_id)
+    # Create Character instance WITHOUT assigning the creator's user_id
+    # The user_id field in the model should default to None/NULL
+    db_character = models.Character(**character_data)
     
     # Create associated Journal instance
     default_journal_name = f"{character_in.name}'s Journal"

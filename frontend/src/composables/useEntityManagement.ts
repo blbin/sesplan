@@ -96,8 +96,9 @@ export function useEntityManagement<E extends Entity, TT extends TagType>(
     error.value = undefined;
     items.value = [];
     try {
-      // Assuming the response type matches E[] - Explicitly cast
       items.value = await entityApi.getAll(worldId) as E[];
+      // Log fetched items AFTER assignment to check structure
+      console.log(`[useEntityManagement:${entityType}] Fetched items data:`, JSON.parse(JSON.stringify(items.value))); 
       console.log(`[useEntityManagement:${entityType}] Fetched ${items.value.length} items.`);
     } catch (err: any) {
       console.error(`[useEntityManagement:${entityType}] Fetch Items Error:`, err);

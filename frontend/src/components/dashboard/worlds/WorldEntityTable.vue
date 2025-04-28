@@ -123,8 +123,7 @@
 
       <!-- Item Slot for Assigned User (Characters only) -->
       <template v-if="entityType === 'character'" v-slot:item.assigned_user="{ item }">
-        <!-- Always display the name -->
-        <span>{{ getUserDisplayName((item as any).user_id) }}</span>
+        <span>{{ findUserDisplayForItem(item) }}</span>
       </template>
 
       <!-- Item Slot for Actions (Edit/Delete) -->
@@ -294,11 +293,21 @@ const getTagTypeIdKey = (type: EntityType): string => {
   }
 };
 
-// --- User Assignment Helpers (Characters only) ---
-const getUserDisplayName = (userId: number | null): string => {
-    if (userId === null || props.entityType !== 'character') return '-'; // Display dash for unassigned or wrong type
+// Helper function to find username or provide fallback text
+const findUserDisplayForItem = (item: any): string => {
+  const userId = item?.user_id; // Safely access user_id
+  if (userId === null || userId === undefined) {
+      return ''; // Return empty string if not assigned
+  }
+  
+  // Try to find the user in the assignableUsers list
     const user = assignableUsers.value.find(u => u.id === userId);
-    return user ? user.username : `User ID: ${userId}`;
+  if (user) {
+      return user.username; // Return username if found
+  }
+  
+  // Fallback if user is not found in the list (should ideally not happen if assignableUsers is up-to-date)
+  return `User ID: ${userId}`;
 };
 
 // --- Event Handlers ---
