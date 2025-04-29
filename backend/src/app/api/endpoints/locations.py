@@ -34,30 +34,35 @@ async def create_location(
     return location
 
 @router.get("/{location_id}", response_model=schemas.Location)
-def read_location(
+async def read_location(
     *,
     db: Session = Depends(get_db),
     location_id: int,
-    # current_user: models.User = Depends(get_current_user) # Maybe needed later for access control
+    current_user: models.User = Depends(get_current_user)
 ):
-    """Get a specific location by ID."""
+    """Get a specific location by ID. Requires world membership."""
     db_location = crud.get_location(db, location_id=location_id)
     if db_location is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Location not found")
-    # TODO: Add permission check? Maybe only world members can see locations?
+    
+    # Check if the user is a member of the world this location belongs to
+    dependencies.check_world_membership(db=db, world_id=db_location.world_id, user_id=current_user.id)
+    
     return db_location
 
 @router.get("/", response_model=List[schemas.Location])
-def read_locations_by_world(
+async def read_locations_by_world(
     *,
     db: Session = Depends(get_db),
     world_id: int = Query(..., description="Filter locations by world ID"),
     skip: int = 0,
     limit: int = 100,
-    # current_user: models.User = Depends(get_current_user) # Maybe needed later for access control
+    current_user: models.User = Depends(get_current_user)
 ):
-    """Retrieve locations belonging to a specific world."""
-    # TODO: Add permission check? Maybe only world members can see locations?
+    """Retrieve locations belonging to a specific world. Requires world membership."""
+    # Check if the user is a member of the world they are trying to read locations from
+    dependencies.check_world_membership(db=db, world_id=world_id, user_id=current_user.id)
+    
     locations = crud.get_locations_by_world(db, world_id=world_id, skip=skip, limit=limit)
     return locations
 
