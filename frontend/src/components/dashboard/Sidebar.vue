@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar" :class="{ 'collapsed': isSidebarCollapsed }">
     <div class="sidebar-header">
-      <router-link to="/dashboard" class="logo-link">
+      <router-link :to="{ name: 'dashboard-home' }" class="logo-link">
         <div class="logo">
           <div class="logo-placeholder">SP</div>
           <h2 v-show="!isSidebarCollapsed">Sesplan</h2>
@@ -14,25 +14,25 @@
     <nav class="sidebar-nav">
       <div class="nav-section-header" v-show="!isSidebarCollapsed">GameMaster</div>
       <hr v-show="!isSidebarCollapsed" class="nav-divider"/>
-      <router-link to="/dashboard/worlds" class="nav-item" active-class="active">
+      <router-link :to="{ name: 'dashboard-worlds' }" class="nav-item" active-class="active">
         <i class="icon">🌍</i>
         <span v-show="!isSidebarCollapsed">Worlds</span>
       </router-link>
-      <router-link to="/dashboard/campaigns" class="nav-item" active-class="active">
+      <router-link :to="{ name: 'CampaignList' }" class="nav-item" active-class="active">
         <i class="icon">🗺️</i>
         <span v-show="!isSidebarCollapsed">Campaigns</span>
       </router-link>
       <hr class="nav-divider"/>
       <div class="nav-section-header" v-show="!isSidebarCollapsed">Player</div>
-      <router-link to="/dashboard/sessions" class="nav-item" active-class="active">
+      <router-link :to="{ name: 'SessionList' }" class="nav-item" active-class="active">
         <i class="icon">📅</i>
         <span v-show="!isSidebarCollapsed">Sessions</span>
       </router-link>
-      <router-link to="/dashboard/characters" class="nav-item" active-class="active">
+      <router-link :to="{ name: 'CharacterList' }" class="nav-item" active-class="active">
         <i class="icon">👤</i>
         <span v-show="!isSidebarCollapsed">Characters</span>
       </router-link>
-      <router-link to="/dashboard/journals" class="nav-item" active-class="active">
+      <router-link :to="{ name: 'JournalList' }" class="nav-item" active-class="active">
         <i class="icon">📖</i>
         <span v-show="!isSidebarCollapsed">Journals</span>
       </router-link>
