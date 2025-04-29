@@ -18,7 +18,7 @@
         <li v-for="campaign in campaigns" :key="campaign.id" class="item-list-item">
           <div class="item-info">
             <h2>
-              <router-link :to="`/dashboard/campaigns/${campaign.id}`" class="item-link">
+              <router-link :to="`/d/campaigns/${campaign.id}`" class="item-link">
                 {{ campaign.name }}
               </router-link>
             </h2>
