@@ -2,6 +2,7 @@ import secrets
 import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from ..models import CampaignInvite, Campaign, UserCampaign, User
 from ..models.user_campaign import CampaignRoleEnum
@@ -71,11 +72,16 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
     if existing_membership:
         return False, "User is already a member of this campaign.", invite.campaign_id, existing_membership.role.value
 
-    # Fetch campaign to get world_id and fetch user for character name
-    db_campaign = db.query(Campaign).filter(Campaign.id == invite.campaign_id).first()
+    # Fetch campaign (eager load world) and user
+    db_campaign = (
+        db.query(Campaign)
+        .options(joinedload(Campaign.world)) # Eager load the world relationship
+        .filter(Campaign.id == invite.campaign_id)
+        .first()
+    )
     current_user = db.query(User).filter(User.id == user_id).first()
 
-    if not db_campaign:
+    if not db_campaign or not db_campaign.world: # Check if world was loaded
         # This should not happen if invite is valid, but check for safety
         return False, "Campaign associated with invite not found.", None, None
     if not current_user:
@@ -92,9 +98,11 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
         db.add(user_campaign_entry)
 
         # Create a default character for the user
+        character_description = f"Character created upon joining campaign '{db_campaign.name}' in world '{db_campaign.world.name}'."
         character_data = schemas.CharacterCreate(
             name=f"{current_user.username}'s Character", # Use username for default name
-            world_id=db_campaign.world_id
+            world_id=db_campaign.world_id,
+            description=character_description # Add the description
         )
         # create_character user_id argument is only for permission check, not assignment
         created_character = crud.character.create_character(db=db, character_in=character_data, user_id=user_id)
