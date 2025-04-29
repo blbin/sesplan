@@ -7,7 +7,7 @@
     <div v-else-if="location" class="location-content">
       <header class="view-header">
         <h1>{{ location.name }}</h1>
-        <router-link v-if="backToWorldRoute.params.worldId" :to="backToWorldRoute" class="btn btn-secondary">
+        <router-link v-if="backToWorldRoute.params?.worldId" :to="backToWorldRoute" class="btn btn-secondary">
           Back to World
         </router-link>
         <button @click="openEditModal" class="btn btn-primary">Edit Location</button>
@@ -55,7 +55,8 @@
         
         <p v-if="location.parent_location_id" class="mt-4">
           <strong>Parent Location:</strong> 
-          ID: {{ location.parent_location_id }}
+          <span v-if="parentLocationName">{{ parentLocationName }} (ID: {{ location.parent_location_id }})</span>
+          <span v-else>ID: {{ location.parent_location_id }}</span>
         </p>
         <p><strong>World ID:</strong> {{ worldId }}</p>
         <p><strong>Created:</strong> {{ formatDate(location.created_at) }}</p>
@@ -106,10 +107,12 @@
             <button @click="closeEditModal" class="close-btn">&times;</button>
           </div>
           <div class="modal-body">
+            <div v-if="locationsLoading">Loading available parent locations...</div>
+            <div v-else-if="locationsError">{{ locationsError }}</div>
             <CreateLocationForm
-              v-if="numericWorldId" 
+              v-else-if="numericWorldId && !locationsLoading" 
               :worldId="numericWorldId" 
-              :locations="[]" 
+              :locations="worldLocations" 
               :locationToEdit="location"
               @saved="handleLocationSaved"
               @cancel="closeEditModal"
@@ -226,8 +229,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import type { Location, LocationUpdate } from '@/types/location';
 import type { LocationTagType } from '@/types/locationTagType';
 import * as locationsApi from '@/services/api/locations';
@@ -250,121 +252,181 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const route = useRoute();
     const location = ref<Location | null>(null);
     const loading = ref(true);
     const error = ref<string | null>(null);
+    const worldId = ref<number | null>(null);
     const showEditModal = ref(false);
-    const md = new MarkdownIt();
-
-    const routeWorldId = computed(() => route.params.worldId as string | undefined);
-    const numericWorldId = computed(() => routeWorldId.value ? Number(routeWorldId.value) : null);
-    const fromTab = computed(() => route.query.fromTab as string | undefined);
-
-    // State for tag editing dialog
     const showTagEditDialog = ref(false);
     const availableTagTypes = ref<LocationTagType[]>([]);
     const tagTypesLoading = ref(false);
     const tagTypesError = ref<string | null>(null);
-    const selectedTagTypeIds = ref<number[]>([]); 
-    const isSavingTags = ref(false);
+    const selectedTagTypeIds = ref<number[]>([]);
     const tagSyncError = ref<string | null>(null);
-
-    // State for tag type management
+    const isSavingTags = ref(false);
+    
+    // Pro Add/Edit/Delete Tag Type Modal
     const showTagTypeDialog = ref(false);
     const editingTagType = ref<LocationTagType | null>(null);
     const tagTypeName = ref('');
-    const isSavingTagType = ref(false);
     const tagTypeDialogError = ref<string | null>(null);
-
-    // State for delete confirmation
+    const isSavingTagType = ref(false);
     const showDeleteTagTypeConfirm = ref(false);
     const tagTypeToDelete = ref<LocationTagType | null>(null);
     const isDeletingTagType = ref(false);
     const deleteTagTypeError = ref<string | null>(null);
 
-    // Inline Description Editing State
+    // Nový stav pro seznam lokací
+    const worldLocations = ref<Location[]>([]);
+    const locationsLoading = ref(false);
+    const locationsError = ref<string | null>(null);
+
+    // Stav pro editaci popisu
     const isEditingDescription = ref(false);
     const editableDescription = ref('');
     const isSavingDescription = ref(false);
     const saveDescriptionError = ref<string | null>(null);
+    const md = new MarkdownIt();
 
-    // Computed property for rendering description
-    const renderedDescription = computed(() => {
-      return md.render(location.value?.description || '*No description provided.*');
-    });
+    const numericLocationId = computed(() => props.locationId);
+    const numericWorldId = computed(() => worldId.value);
 
-    // Computed to check if description actually changed
     const isDescriptionChanged = computed(() => {
-      const currentDesc = location.value?.description || '';
-      const editedDesc = editableDescription.value.trim();
-      return currentDesc !== editedDesc;
+      const currentDesc = location.value?.description ?? '';
+      return currentDesc !== editableDescription.value;
     });
 
-    // Dynamická cesta zpět
+    const renderedDescription = computed(() => {
+      return location.value?.description ? md.render(location.value.description) : '<p><em>No description provided.</em></p>';
+    });
+    
     const backToWorldRoute = computed(() => {
-      const routeParams: { name: string; params: { worldId: string }; query?: { tab?: string } } = {
-        name: 'dashboard-world-detail',
-        params: { worldId: routeWorldId.value! },
-      };
-      if (fromTab.value) {
-        routeParams.query = { tab: fromTab.value };
-      }
-      return routeParams;
+      return worldId.value ? { name: 'WorldDetail', params: { worldId: worldId.value } } : { name: 'Dashboard' };
     });
 
-    const fetchLocation = async () => {
+    const parentLocationName = computed(() => {
+      if (!location.value?.parent_location_id || worldLocations.value.length === 0) {
+        return null;
+      }
+      const parent = worldLocations.value.find(loc => loc.id === location.value!.parent_location_id);
+      return parent ? parent.name : null;
+    });
+
+    const fetchLocationDetails = async () => {
       loading.value = true;
       error.value = null;
-      location.value = null;
       try {
-        location.value = await locationsApi.getLocation(props.locationId);
-        editableDescription.value = location.value?.description || '';
-        if (numericWorldId.value) {
-          await fetchTagTypes(numericWorldId.value);
-        }
+        const data = await locationsApi.getLocation(numericLocationId.value);
+        location.value = data;
+        worldId.value = data.world_id; 
+        selectedTagTypeIds.value = data.tags?.map(tag => tag.location_tag_type_id) || [];
+        editableDescription.value = data.description || '';
       } catch (err: any) {
-        console.error("Error fetching location:", err);
+        console.error('Error fetching location details:', err);
         error.value = err.response?.data?.detail || err.message || 'Failed to load location details.';
+        location.value = null;
+        worldId.value = null;
       } finally {
         loading.value = false;
       }
     };
 
-    const fetchTagTypes = async (id: number) => {
-      if (!id) return;
+    const fetchWorldLocations = async (targetWorldId: number) => {
+      if (!targetWorldId) return;
+      locationsLoading.value = true;
+      locationsError.value = null;
+      try {
+        worldLocations.value = await locationsApi.getLocationsByWorld(targetWorldId);
+      } catch (err: any) {
+        console.error('Error fetching world locations:', err);
+        locationsError.value = err.message || 'Failed to load locations list for parent selection.';
+        worldLocations.value = [];
+      } finally {
+        locationsLoading.value = false;
+      }
+    };
+
+    const fetchTagTypes = async (targetWorldId: number) => {
+      if (!targetWorldId) return;
       tagTypesLoading.value = true;
       tagTypesError.value = null;
       try {
-        availableTagTypes.value = await locationTagTypeApi.getLocationTagTypes(id);
+        availableTagTypes.value = await locationTagTypeApi.getLocationTagTypes(targetWorldId);
       } catch (err: any) {
-        console.error("Error fetching tag types:", err);
-        tagTypesError.value = err.response?.data?.detail || err.message || 'Failed to load tag types.';
+        console.error('Error fetching location tag types:', err);
+        tagTypesError.value = err.message || 'Failed to load tag types.';
+        availableTagTypes.value = [];
       } finally {
         tagTypesLoading.value = false;
       }
     };
 
-    // Location edit functions
+    const loadInitialData = async () => {
+      await fetchLocationDetails();
+      if (worldId.value) {
+        await Promise.all([
+          fetchWorldLocations(worldId.value),
+          fetchTagTypes(worldId.value)
+        ]);
+      }
+    };
+
+    onMounted(loadInitialData);
+
+    watch(() => props.locationId, loadInitialData);
+
     const openEditModal = () => {
+      if (!locationsLoading.value && locationsError.value && worldId.value) {
+         fetchWorldLocations(worldId.value); 
+      }
       showEditModal.value = true;
     };
 
     const closeEditModal = () => {
       showEditModal.value = false;
     };
-
-    const handleLocationSaved = (updatedLocation: Location) => {
-      location.value = updatedLocation;
+    
+    const handleLocationSaved = async (savedLocation: Location) => {
+      location.value = savedLocation;
+      editableDescription.value = savedLocation.description || '';
+      if(worldId.value) {
+        await fetchWorldLocations(worldId.value);
+      }
       closeEditModal();
     };
 
-    // Tag assignment functions
+    const startEditingDescription = () => {
+      editableDescription.value = location.value?.description || '';
+      isEditingDescription.value = true;
+    };
+
+    const cancelDescriptionEdit = () => {
+      isEditingDescription.value = false;
+      saveDescriptionError.value = null;
+    };
+
+    const saveDescription = async () => {
+      if (!location.value || !isDescriptionChanged.value) return;
+      isSavingDescription.value = true;
+      saveDescriptionError.value = null;
+      try {
+        const updateData: LocationUpdate = { description: editableDescription.value };
+        const updatedLocation = await locationsApi.updateLocation(location.value.id, updateData);
+        location.value.description = updatedLocation.description;
+        isEditingDescription.value = false;
+      } catch (err: any) {
+        console.error("Error saving description:", err);
+        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description';
+      } finally {
+        isSavingDescription.value = false;
+      }
+    };
+
     const openTagEditDialog = () => {
-      if (!location.value || !numericWorldId.value) return;
+      if (!location.value) return;
       selectedTagTypeIds.value = location.value.tags?.map(t => t.location_tag_type_id) || [];
-      if (availableTagTypes.value.length === 0 || tagTypesError.value) {
-        fetchTagTypes(numericWorldId.value);
+      if (worldId.value && (availableTagTypes.value.length === 0 || tagTypesError.value)) {
+        fetchTagTypes(worldId.value);
       }
       tagSyncError.value = null;
       showTagEditDialog.value = true;
@@ -378,7 +440,7 @@ export default defineComponent({
       if (!location.value) return;
       isSavingTags.value = true;
       tagSyncError.value = null;
-
+      
       const originalTagTypeIds = location.value.tags?.map(t => t.location_tag_type_id) || [];
       const currentTagTypeIds = new Set(selectedTagTypeIds.value);
       const originalTagTypeIdsSet = new Set(originalTagTypeIds);
@@ -387,25 +449,24 @@ export default defineComponent({
       const tagsToRemove = originalTagTypeIds.filter(id => !currentTagTypeIds.has(id));
 
       const addPromises = tagsToAdd.map(tagTypeId => 
-        locationsApi.addTagToLocation(props.locationId, tagTypeId)
+        locationsApi.addTagToLocation(location.value!.id, tagTypeId)
       );
       const removePromises = tagsToRemove.map(tagTypeId => 
-        locationsApi.removeTagFromLocation(props.locationId, tagTypeId)
+        locationsApi.removeTagFromLocation(location.value!.id, tagTypeId)
       );
 
       try {
         await Promise.all([...addPromises, ...removePromises]);
+        await fetchLocationDetails();
         closeTagEditDialog();
-        fetchLocation();
       } catch (err: any) {
         console.error("Error syncing tags:", err);
-        tagSyncError.value = `Failed to sync tags: ${err.message || 'Unknown error'}`;
+        tagSyncError.value = err.response?.data?.detail || err.message || 'Failed to sync tags';
       } finally {
         isSavingTags.value = false;
       }
     };
 
-    // Tag type management functions
     const openAddTagTypeDialog = () => {
       editingTagType.value = null;
       tagTypeName.value = '';
@@ -422,33 +483,28 @@ export default defineComponent({
 
     const closeTagTypeDialog = () => {
       showTagTypeDialog.value = false;
-      editingTagType.value = null;
-      tagTypeName.value = '';
-      tagTypeDialogError.value = null;
     };
 
     const saveTagType = async () => {
-      if (!tagTypeName.value || !numericWorldId.value) return;
+      if (!tagTypeName.value || !worldId.value) return;
       isSavingTagType.value = true;
       tagTypeDialogError.value = null;
-
       try {
         if (editingTagType.value) {
-          await locationTagTypeApi.updateLocationTagType(numericWorldId.value, editingTagType.value.id, { name: tagTypeName.value });
+          await locationTagTypeApi.updateLocationTagType(worldId.value, editingTagType.value.id, { name: tagTypeName.value });
         } else {
-          await locationTagTypeApi.createLocationTagType(numericWorldId.value, { name: tagTypeName.value });
+          await locationTagTypeApi.createLocationTagType(worldId.value, { name: tagTypeName.value });
         }
-        await fetchTagTypes(numericWorldId.value);
+        await fetchTagTypes(worldId.value);
         closeTagTypeDialog();
       } catch (err: any) {
         console.error("Error saving tag type:", err);
-        tagTypeDialogError.value = err.response?.data?.detail || err.message || 'Failed to save tag type.';
+        tagTypeDialogError.value = err.response?.data?.detail || err.message || 'Failed to save tag type';
       } finally {
         isSavingTagType.value = false;
       }
     };
 
-    // Delete tag type functions
     const confirmDeleteTagType = (tagType: LocationTagType) => {
       tagTypeToDelete.value = tagType;
       deleteTagTypeError.value = null;
@@ -461,91 +517,49 @@ export default defineComponent({
     };
 
     const executeDeleteTagType = async () => {
-      if (!tagTypeToDelete.value || !numericWorldId.value) return;
+      if (!tagTypeToDelete.value || !worldId.value) return;
       isDeletingTagType.value = true;
       deleteTagTypeError.value = null;
       try {
-        await locationTagTypeApi.deleteLocationTagType(numericWorldId.value, tagTypeToDelete.value.id);
-        await fetchTagTypes(numericWorldId.value);
+        await locationTagTypeApi.deleteLocationTagType(worldId.value, tagTypeToDelete.value.id);
+        await fetchTagTypes(worldId.value);
+        await fetchLocationDetails();
         cancelDeleteTagType();
       } catch (err: any) {
         console.error("Error deleting tag type:", err);
-        deleteTagTypeError.value = err.response?.data?.detail || err.message || 'Failed to delete tag type.';
+        deleteTagTypeError.value = err.response?.data?.detail || err.message || 'Failed to delete tag type';
       } finally {
         isDeletingTagType.value = false;
       }
     };
 
-    // Inline Description Editing Functions
-    const startEditingDescription = () => {
-      editableDescription.value = location.value?.description || '';
-      isEditingDescription.value = true;
-      saveDescriptionError.value = null;
-    };
-
-    const cancelDescriptionEdit = () => {
-      isEditingDescription.value = false;
-    };
-
-    const saveDescription = async () => {
-      if (!location.value || !isDescriptionChanged.value) return;
-
-      isSavingDescription.value = true;
-      saveDescriptionError.value = null;
-      const newDescription = editableDescription.value.trim() === '' ? null : editableDescription.value;
-      
-      try {
-        const updatePayload: LocationUpdate = { 
-          description: newDescription
-        };
-        const updatedLocation = await locationsApi.updateLocation(props.locationId, updatePayload);
-        
-        // Update local state
-        location.value = updatedLocation;
-        isEditingDescription.value = false;
-        
-      } catch (err: any) {
-        console.error("Error saving description:", err);
-        saveDescriptionError.value = err.response?.data?.detail || err.message || 'Failed to save description.';
-      } finally {
-        isSavingDescription.value = false;
-      }
-    };
-
-    onMounted(() => {
-      fetchLocation();
-    });
-
     return {
       location,
       loading,
       error,
-      renderedDescription,
-      formatDate,
-      worldId: props.locationId,
-      routeWorldId,
+      worldId,
       numericWorldId,
-      fromTab,
-      backToWorldRoute,
+      formatDate,
       showEditModal,
       openEditModal,
       closeEditModal,
       handleLocationSaved,
+      backToWorldRoute,
       showTagEditDialog,
+      openTagEditDialog,
+      closeTagEditDialog,
       availableTagTypes,
       tagTypesLoading,
       tagTypesError,
       selectedTagTypeIds,
-      isSavingTags,
-      tagSyncError,
-      openTagEditDialog,
-      closeTagEditDialog,
       saveTags,
+      tagSyncError,
+      isSavingTags,
       showTagTypeDialog,
       editingTagType,
       tagTypeName,
-      isSavingTagType,
       tagTypeDialogError,
+      isSavingTagType,
       openAddTagTypeDialog,
       openEditTagTypeDialog,
       closeTagTypeDialog,
@@ -557,14 +571,19 @@ export default defineComponent({
       confirmDeleteTagType,
       cancelDeleteTagType,
       executeDeleteTagType,
+      worldLocations,
+      locationsLoading,
+      locationsError,
       isEditingDescription,
       editableDescription,
       isSavingDescription,
       saveDescriptionError,
+      isDescriptionChanged,
+      renderedDescription,
       startEditingDescription,
       cancelDescriptionEdit,
       saveDescription,
-      isDescriptionChanged,
+      parentLocationName,
     };
   }
 });
