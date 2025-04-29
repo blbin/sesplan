@@ -9,7 +9,9 @@ from .crud_character import (
     update_character, 
     delete_character, 
     get_all_characters_in_world,
-    get_all_characters_by_world_simple
+    get_all_characters_by_world_simple,
+    assign_user_to_character,
+    create_character_for_user
 )
 from .crud_campaign_invite import get_invite_by_token, get_invites_by_campaign, create_campaign_invite, accept_campaign_invite, delete_campaign_invite
 from .crud_user_campaign import get_campaign_members, update_campaign_member_role, remove_campaign_member, get_campaign_membership

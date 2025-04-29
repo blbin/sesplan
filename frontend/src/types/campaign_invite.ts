@@ -21,4 +21,5 @@ export interface CampaignInviteAcceptResponse {
     message: string;
     campaign_id: number;
     role: string; // Role might be an enum later
+    character_id?: number | null; // Add optional character ID
 } 

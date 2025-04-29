@@ -7,8 +7,7 @@ from ... import crud, models, schemas
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 # Import helper function and RoleEnum
-from ...crud.crud_world_user import get_world_membership_with_role
-from ...models.world_user import RoleEnum
+from ...models.world_user import RoleEnum, WorldUser
 
 router = APIRouter()
 
@@ -29,7 +28,14 @@ def check_character_permission(
         return True
         
     # 2. Check world membership and role
-    membership = get_world_membership_with_role(db, world_id=character.world_id, user_id=user.id)
+    membership = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == character.world_id,
+            WorldUser.user_id == user.id
+        )
+        .first()
+    )
     
     if membership and roles_allowed and membership.role in roles_allowed:
         return True
@@ -134,7 +140,14 @@ def update_character(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     # Check if the user is Owner/Admin for full update rights
-    membership = get_world_membership_with_role(db, world_id=db_character.world_id, user_id=current_user.id)
+    membership = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == db_character.world_id,
+            WorldUser.user_id == current_user.id
+        )
+        .first()
+    )
     is_world_manager = membership and membership.role in [RoleEnum.OWNER, RoleEnum.ADMIN]
 
     # Prepare data for update, respecting permissions
@@ -210,7 +223,14 @@ def assign_user_to_character(
 
     # --- Authorization Check --- 
     # Check if the current user is Owner or Admin of the world
-    membership = get_world_membership_with_role(db, world_id=db_character.world_id, user_id=current_user.id)
+    membership = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == db_character.world_id,
+            WorldUser.user_id == current_user.id
+        )
+        .first()
+    )
     if not membership or membership.role not in [RoleEnum.OWNER, RoleEnum.ADMIN]:
         raise HTTPException(status_code=403, detail="Only world Owner or Admin can assign characters")
 

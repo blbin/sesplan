@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from .. import models # Importujeme models pro použití v options
 from ..models import World, WorldUser, Journal # Import Journal model
 from ..schemas import CharacterCreate, CharacterUpdate
+from .. import schemas 
 from typing import List, Optional, Dict, Any
 
 def get_character(db: Session, character_id: int) -> Optional[models.Character]:
@@ -177,4 +178,56 @@ def assign_user_to_character(db: Session, db_character: models.Character, user_i
     except Exception as e:
         db.rollback()
         raise e
+    return db_character 
+
+def create_character_for_user(db: Session, character_in: schemas.CharacterCreate, owner_user_id: int) -> Optional[models.Character]:
+    """Creates a new character and assigns it to a specific user, bypassing world membership check.
+       Also creates the associated journal.
+    """
+    # Basic check if world exists (optional but good practice)
+    world_exists = db.query(World).filter(World.id == character_in.world_id).first()
+    if not world_exists:
+        print(f"Attempted to create character in non-existent world: {character_in.world_id}")
+        return None
+    
+    # Basic check if user exists (optional but good practice)
+    owner_exists = db.query(models.User).filter(models.User.id == owner_user_id).first()
+    if not owner_exists:
+        print(f"Attempted to assign character to non-existent user: {owner_user_id}")
+        return None
+
+    character_data = character_in.model_dump(exclude_unset=True) # Use model_dump for Pydantic v2
+    # Remove fields that might be in schema but not in model directly for creation
+    tag_type_ids = character_data.pop('tag_type_ids', None) # Handle potential tags if needed, though unlikely for this context
+
+    # Create Character instance and directly assign owner_user_id
+    db_character = models.Character(
+        **character_data, 
+        user_id=owner_user_id # Assign the owner directly
+    )
+    
+    # Create associated Journal instance
+    default_journal_name = f"{character_in.name}'s Journal"
+    db_journal = Journal(name=default_journal_name, character=db_character)
+    
+    db.add(db_character)
+    db.add(db_journal)
+
+    # Handle potential tags if necessary (unlikely for invite context)
+    if tag_type_ids:
+        for tag_type_id in tag_type_ids:
+            db_tag = models.CharacterTag(character_tag_type_id=tag_type_id)
+            db_character.tags.append(db_tag)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating character for user {owner_user_id}: {e}")
+        # Consider logging the error properly
+        return None # Return None on commit error
+
+    db.refresh(db_character)
+    db.refresh(db_journal) # Refresh journal as well
+    
     return db_character 

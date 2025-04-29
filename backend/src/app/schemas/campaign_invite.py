@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 # Base properties (not directly used for create/update but good practice)
@@ -30,4 +30,5 @@ class CampaignInvite(CampaignInviteBase):
 class CampaignInviteAcceptResponse(BaseModel):
     message: str
     campaign_id: int
-    role: str 
+    role: str
+    character_id: Optional[int] = None 

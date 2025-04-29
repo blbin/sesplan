@@ -1,160 +1,107 @@
 <template>
-  <div class="accept-invite-view">
-    <div v-if="loading" class="status-message">Processing invite...</div>
-    <div v-else-if="error" class="error-message">
-      <h2>Error Accepting Invite</h2>
-      <p>{{ error }}</p>
-      <router-link to="/dashboard" class="btn btn-primary">Go to Dashboard</router-link>
+  <v-container class="fill-height d-flex align-center justify-center">
+    <v-card v-if="loading || message || error" class="pa-5 text-center" width="400">
+      <v-progress-circular
+        v-if="loading"
+        indeterminate
+        color="primary"
+        size="64"
+      ></v-progress-circular>
+      <div v-if="message" class="mt-4 text-h6 text-success">{{ message }}</div>
+      <div v-if="error" class="mt-4 text-h6 text-error">{{ error }}</div>
+      <v-card-text v-if="loading" class="mt-2">
+        Accepting invitation...
+      </v-card-text>
+      <v-card-actions v-if="error" class="justify-center mt-4">
+        <v-btn color="primary" @click="goToDashboard">Go to Dashboard</v-btn>
+      </v-card-actions>
+    </v-card>
+    <!-- Optionally, show something if neither loading, message nor error -->
+    <div v-else>
+      Preparing to accept invite...
     </div>
-    <div v-else-if="successMessage" class="success-message">
-      <h2>Invite Accepted!</h2>
-      <p>{{ successMessage }}</p>
-      <p>Redirecting you to the campaign...</p>
-      <!-- Optional: Button to redirect manually if needed -->
-      <!-- <router-link :to="`/dashboard/campaigns/${campaignId}`" class="btn btn-primary">Go to Campaign</router-link> -->
-    </div>
-    <div v-else class="status-message">Initializing...</div> <!-- Initial state -->
-  </div>
+  </v-container>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import * as campaignInvitesApi from '@/services/api/campaignInvites';
-import { useAuthStore } from '@/store/auth.store';
+import { acceptCampaignInvite } from '@/services/api/campaignInvites';
 
-export default defineComponent({
-  name: 'AcceptInviteView',
-  setup() {
-    const route = useRoute();
-    const router = useRouter();
-    const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 
-    const loading = ref(false);
-    const error = ref<string | null>(null);
-    const successMessage = ref<string | null>(null);
-    const campaignId = ref<number | null>(null);
+const loading = ref(true);
+const message = ref<string | null>(null);
+const error = ref<string | null>(null);
+const token = ref<string | null>(null);
 
-    const processInvite = async () => {
-      const token = route.params.token as string;
-
-      if (!token) {
-        error.value = 'Invite token is missing.';
-        return;
-      }
-
-      // Ensure user is logged in - router guard should handle redirect if not
-      if (!authStore.isLoggedIn) {
-         // Router guard should have redirected to login. If we get here, something is wrong
-         // or the guard logic needs adjustment for this specific case.
-         error.value = "You must be logged in to accept an invite. Redirecting to login...";
-         // Optional: force redirect if guard didn't catch it
-         // router.push({ name: 'login', query: { redirect: route.fullPath } });
-         // Or simply display the message, assuming guard handles it.
-         return;
-      }
-
-      loading.value = true;
-      error.value = null;
-      successMessage.value = null;
-      campaignId.value = null;
-
-      try {
-        const response = await campaignInvitesApi.acceptCampaignInvite(token);
-        successMessage.value = response.message;
-        campaignId.value = response.campaign_id;
-
-        // Redirect after a short delay
-        setTimeout(() => {
-          if (campaignId.value) {
-            router.push({ name: 'dashboard-campaign-detail', params: { campaignId: campaignId.value } });
-          }
-        }, 2000); // 2 seconds delay
-
-      } catch (err: any) {
-        error.value = `Failed to accept invite: ${err.response?.data?.detail || err.message || 'Unknown error'}`;
-        console.error("Accept Invite Error:", err);
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    onMounted(() => {
-      // Process invite as soon as the component mounts
-      processInvite();
-    });
-
-    return {
-      loading,
-      error,
-      successMessage,
-      campaignId,
-    };
-  },
+onMounted(async () => {
+  const routeToken = route.params.token;
+  if (typeof routeToken === 'string') {
+    token.value = routeToken;
+    await handleAcceptInvite();
+  } else {
+    error.value = 'Invalid invitation token.';
+    loading.value = false;
+  }
 });
+
+async function handleAcceptInvite() {
+  if (!token.value) {
+    error.value = 'Invitation token is missing.';
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  message.value = null;
+  error.value = null;
+
+  try {
+    const response = await acceptCampaignInvite(token.value);
+    message.value = response.message; // Show success message briefly
+
+    // Wait a bit for user to see message, then redirect
+    setTimeout(() => {
+      if (response.character_id) {
+        // Redirect to the character detail page
+        router.push({ 
+          name: 'CharacterDetail', 
+          params: { characterId: response.character_id }
+        });
+      } else {
+        // If character_id is missing (shouldn't happen on success, but fallback)
+        // Redirect to the campaign page or dashboard
+        console.warn('Character ID missing after invite acceptance, redirecting to campaign.');
+        if (response.campaign_id) {
+          router.push({ name: 'CampaignDetail', params: { campaignId: response.campaign_id } });
+        } else {
+          router.push({ name: 'dashboard' }); // Fallback to dashboard
+        }
+      }
+    }, 1500); // Delay for 1.5 seconds
+
+  } catch (err: any) {
+    console.error("Error accepting invite:", err);
+    const errorMessage = err.response?.data?.detail || 'Failed to accept invitation. Please try again later.';
+    error.value = errorMessage;
+  } finally {
+    // Keep loading true until redirect happens or only set to false on error?
+    // Let's set loading false only on error, otherwise user sees success msg until redirect.
+    if (error.value) {
+      loading.value = false; 
+    }
+    // If success, loading spinner is replaced by success message until redirect happens.
+  }
+}
+
+function goToDashboard() {
+  router.push({ name: 'dashboard' });
+}
+
 </script>
 
 <style scoped>
-.accept-invite-view {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh; /* Take up most of the viewport height */
-  padding: 2rem;
-  text-align: center;
-}
-
-.status-message,
-.error-message,
-.success-message {
-  padding: 2rem;
-  border-radius: 0.5rem;
-  max-width: 500px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.status-message {
-    color: #6c757d;
-}
-
-.error-message {
-  color: #721c24;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-}
-
-.success-message {
-  color: #155724;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-}
-
-h2 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-p {
-  margin-bottom: 1.5rem;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 0.3rem;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  margin-top: 1rem;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-}
-.btn-primary:hover {
-  background-color: #0056b3;
-}
+/* Add any specific styles if needed */
 </style> 

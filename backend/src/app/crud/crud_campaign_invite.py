@@ -9,6 +9,7 @@ from ..models.user_campaign import CampaignRoleEnum
 from ..schemas import CampaignInviteCreate
 from .. import crud
 from .. import schemas
+from ..models.world_user import RoleEnum as WorldRoleEnum
 
 def _generate_unique_token(db: Session):
     """Generates a unique token for campaign invites."""
@@ -50,7 +51,7 @@ def create_campaign_invite(db: Session, campaign_id: int, invite_in: CampaignInv
 def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
     """
     Attempts to accept a campaign invite for a user.
-    Returns tuple (success: bool, message: str, campaign_id: Optional[int], role: Optional[str])
+    Returns tuple (success: bool, message: str, campaign_id: Optional[int], role: Optional[str], character_id: Optional[int])
     Handles checking expiry, uses, existing membership, adding the user,
     and creating a default character for the user in the campaign's world.
     """
@@ -58,11 +59,11 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
 
     # Check if expired
     if invite.expires_at and invite.expires_at < now:
-        return False, "Invite has expired.", None, None
+        return False, "Invite has expired.", None, None, None
 
     # Check if max uses reached
     if invite.max_uses is not None and invite.uses >= invite.max_uses:
-        return False, "Invite has reached its maximum number of uses.", None, None
+        return False, "Invite has reached its maximum number of uses.", None, None, None
 
     # Check if user is already in the campaign
     existing_membership = db.query(UserCampaign).filter(
@@ -70,7 +71,7 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
         UserCampaign.campaign_id == invite.campaign_id
     ).first()
     if existing_membership:
-        return False, "User is already a member of this campaign.", invite.campaign_id, existing_membership.role.value
+        return False, "User is already a member of this campaign.", invite.campaign_id, existing_membership.role.value, None
 
     # Fetch campaign (eager load world) and user
     db_campaign = (
@@ -83,10 +84,10 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
 
     if not db_campaign or not db_campaign.world: # Check if world was loaded
         # This should not happen if invite is valid, but check for safety
-        return False, "Campaign associated with invite not found.", None, None
+        return False, "Campaign associated with invite not found.", None, None, None
     if not current_user:
         # This should not happen if user_id is valid, but check for safety
-        return False, "User not found.", None, None
+        return False, "User not found.", None, None, None
 
     # Add user to campaign with PLAYER role
     try:
@@ -104,24 +105,20 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
             world_id=db_campaign.world_id,
             description=character_description # Add the description
         )
-        # create_character user_id argument is only for permission check, not assignment
-        created_character = crud.character.create_character(db=db, character_in=character_data, user_id=user_id)
-        if not created_character:
-             # Rollback if character creation fails for some reason
-             db.rollback()
-             return False, "Failed to create default character.", None, None
-
-        # --- New Step: Assign the user to the created character --- 
-        assigned_character = crud.character.assign_user_to_character(
-            db=db,
-            db_character=created_character,
-            user_id=user_id
+        # Call the new function specific for this use case
+        created_character = crud.create_character_for_user(
+            db=db, 
+            character_in=character_data, 
+            owner_user_id=user_id
         )
-        if not assigned_character:
-            # Rollback if assignment fails
-            db.rollback()
-            return False, "Failed to assign user to default character.", None, None
-        # --- End New Step ---
+
+        if not created_character:
+             # Rollback is handled within create_character_for_user on its errors
+             # We just need to return the failure signal
+             # Note: The original message "Failed to create default character." might now be 
+             #       caused by db commit errors inside the new function, or non-existent world/user.
+             #       We could potentially return a more specific error if the new function provided one.
+             return False, "Failed to create default character.", None, None, None
 
         # Increment invite uses
         invite.uses += 1
@@ -132,16 +129,17 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
         # db.refresh(invite) # Not strictly needed here
         # db.refresh(created_character) # Optionally refresh if needed later
 
-        return True, "Successfully joined campaign and created default character.", invite.campaign_id, CampaignRoleEnum.PLAYER.value
+        # Return success with the new character ID
+        return True, "Successfully joined campaign and created default character.", invite.campaign_id, CampaignRoleEnum.PLAYER.value, created_character.id
     except IntegrityError:
         db.rollback()
         # This might happen in a race condition if user tries to accept twice quickly
         # or if there's another DB constraint issue.
-        return False, "Failed to join campaign due to a database error.", None, None
+        return False, "Failed to join campaign due to a database error.", None, None, None
     except Exception as e:
         db.rollback()
         # Log the exception e
-        return False, f"An unexpected error occurred: {e}", None, None
+        return False, f"An unexpected error occurred: {e}", None, None, None
 
 def delete_campaign_invite(db: Session, invite_id: int):
     """Deletes a campaign invite by its ID. Returns the deleted invite or None."""

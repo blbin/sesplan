@@ -65,7 +65,10 @@ def accept_invite(
     if not invite:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
 
-    success, message, campaign_id, role = crud.accept_campaign_invite(db=db, invite=invite, user_id=current_user.id)
+    # Unpack the new return value including character_id
+    success, message, campaign_id, role, character_id = crud.accept_campaign_invite(
+        db=db, invite=invite, user_id=current_user.id
+    )
 
     if not success:
         # Handle different failure reasons appropriately
@@ -76,7 +79,10 @@ def accept_invite(
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message)
 
-    return schemas.CampaignInviteAcceptResponse(message=message, campaign_id=campaign_id, role=role)
+    # Include character_id in the response
+    return schemas.CampaignInviteAcceptResponse(
+        message=message, campaign_id=campaign_id, role=role, character_id=character_id
+    )
 
 # Tento endpoint bude mít také prefix /invites
 @invite_router.delete("/{invite_id}", response_model=schemas.CampaignInvite)

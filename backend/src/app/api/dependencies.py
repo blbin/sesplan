@@ -9,7 +9,6 @@ from app.auth.auth import get_current_user
 from app.models.user_campaign import CampaignRoleEnum
 # Import pro ověření vlastníka světa
 from app.models.world_user import RoleEnum as WorldRoleEnum, WorldUser 
-from app.crud.crud_world_user import get_world_membership_with_role # Import our function
 
 # Helper function to check campaign membership/role (GM)
 async def verify_gm_permission(campaign_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -161,8 +160,15 @@ async def get_journal_and_verify_permission(
         # Should not happen if journal exists, but good practice
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character for this journal not found")
 
-    # Get world membership (if any)
-    world_membership = get_world_membership_with_role(db, world_id=db_character.world_id, user_id=current_user.id)
+    # Get world membership (if any) - replaced function call with direct query
+    world_membership = (
+        db.query(WorldUser)
+        .filter(
+            WorldUser.world_id == db_character.world_id,
+            WorldUser.user_id == current_user.id
+        )
+        .first()
+    )
 
     return db_journal, db_character, world_membership
 
