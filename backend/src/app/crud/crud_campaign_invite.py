@@ -3,9 +3,11 @@ import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from ..models import CampaignInvite, Campaign, UserCampaign
+from ..models import CampaignInvite, Campaign, UserCampaign, User
 from ..models.user_campaign import CampaignRoleEnum
 from ..schemas import CampaignInviteCreate
+from .. import crud
+from .. import schemas
 
 def _generate_unique_token(db: Session):
     """Generates a unique token for campaign invites."""
@@ -48,7 +50,8 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
     """
     Attempts to accept a campaign invite for a user.
     Returns tuple (success: bool, message: str, campaign_id: Optional[int], role: Optional[str])
-    Handles checking expiry, uses, existing membership, and adding the user.
+    Handles checking expiry, uses, existing membership, adding the user,
+    and creating a default character for the user in the campaign's world.
     """
     now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -68,6 +71,17 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
     if existing_membership:
         return False, "User is already a member of this campaign.", invite.campaign_id, existing_membership.role.value
 
+    # Fetch campaign to get world_id and fetch user for character name
+    db_campaign = db.query(Campaign).filter(Campaign.id == invite.campaign_id).first()
+    current_user = db.query(User).filter(User.id == user_id).first()
+
+    if not db_campaign:
+        # This should not happen if invite is valid, but check for safety
+        return False, "Campaign associated with invite not found.", None, None
+    if not current_user:
+        # This should not happen if user_id is valid, but check for safety
+        return False, "User not found.", None, None
+
     # Add user to campaign with PLAYER role
     try:
         user_campaign_entry = UserCampaign(
@@ -77,6 +91,30 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
         )
         db.add(user_campaign_entry)
 
+        # Create a default character for the user
+        character_data = schemas.CharacterCreate(
+            name=f"{current_user.username}'s Character", # Use username for default name
+            world_id=db_campaign.world_id
+        )
+        # create_character user_id argument is only for permission check, not assignment
+        created_character = crud.character.create_character(db=db, character_in=character_data, user_id=user_id)
+        if not created_character:
+             # Rollback if character creation fails for some reason
+             db.rollback()
+             return False, "Failed to create default character.", None, None
+
+        # --- New Step: Assign the user to the created character --- 
+        assigned_character = crud.character.assign_user_to_character(
+            db=db,
+            db_character=created_character,
+            user_id=user_id
+        )
+        if not assigned_character:
+            # Rollback if assignment fails
+            db.rollback()
+            return False, "Failed to assign user to default character.", None, None
+        # --- End New Step ---
+
         # Increment invite uses
         invite.uses += 1
         db.add(invite)
@@ -84,8 +122,9 @@ def accept_campaign_invite(db: Session, invite: CampaignInvite, user_id: int):
         db.commit()
         # db.refresh(user_campaign_entry) # Not strictly needed here
         # db.refresh(invite) # Not strictly needed here
+        # db.refresh(created_character) # Optionally refresh if needed later
 
-        return True, "Successfully joined campaign.", invite.campaign_id, CampaignRoleEnum.PLAYER.value
+        return True, "Successfully joined campaign and created default character.", invite.campaign_id, CampaignRoleEnum.PLAYER.value
     except IntegrityError:
         db.rollback()
         # This might happen in a race condition if user tries to accept twice quickly
