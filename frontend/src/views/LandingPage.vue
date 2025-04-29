@@ -27,6 +27,19 @@ export default defineComponent({
     LandingAbout,
     LandingContact,
     LandingFooter
+  },
+  mounted() {
+    document.title = 'Sesplan | Streamline Your RPG Campaign Planning';
+
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Sesplan is the ultimate online tool for planning and organizing your tabletop RPG campaigns. Manage worlds, sessions, characters, and collaborate with your players easily.');
+    } else {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      metaDescription.setAttribute('content', 'Sesplan is the ultimate online tool for planning and organizing your tabletop RPG campaigns. Manage worlds, sessions, characters, and collaborate with your players easily.');
+      document.head.appendChild(metaDescription);
+    }
   }
 });
 </script>
