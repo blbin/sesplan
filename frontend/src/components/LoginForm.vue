@@ -45,14 +45,13 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth.store';
 
 export default defineComponent({
   name: 'LoginForm',
   setup() {
     const router = useRouter();
-    const route = useRoute();
     const authStore = useAuthStore();
     const username = ref('');
     const password = ref('');
@@ -102,13 +101,7 @@ export default defineComponent({
         success.value = true;
         message.value = 'Login successful! Redirecting...';
 
-        const redirectPath = route.query.redirect as string;
-
-        if (redirectPath && redirectPath.startsWith('/')) {
-          router.push(redirectPath);
-        } else {
-          router.push('/dashboard');
-        }
+        router.push({ name: 'dashboard' });
       } catch (error: any) {
         success.value = false;
         console.error("Login component error catcher:", error);

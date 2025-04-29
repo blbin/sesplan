@@ -174,6 +174,7 @@ export default defineComponent({
       error.value = null;
       isSubmitting.value = true;
       let savedLocationId: number | null = null;
+      let savedLocation: Location | null = null;
       
       try {
         if (isEditing && props.locationToEdit) {
@@ -182,8 +183,8 @@ export default defineComponent({
             description: formData.description || null,
             parent_location_id: formData.parent_location_id
           };
-          const updatedLocation = await locationsApi.updateLocation(props.locationToEdit.id, updateData);
-          savedLocationId = updatedLocation.id;
+          savedLocation = await locationsApi.updateLocation(props.locationToEdit.id, updateData);
+          savedLocationId = savedLocation.id;
         } else {
           const createData: LocationCreate = {
             name: formData.name,
@@ -191,15 +192,16 @@ export default defineComponent({
             parent_location_id: formData.parent_location_id,
             world_id: props.worldId
           };
-          const newLocation = await locationsApi.createLocation(createData);
-          savedLocationId = newLocation.id;
+          savedLocation = await locationsApi.createLocation(createData);
+          savedLocationId = savedLocation.id;
         }
 
         if (savedLocationId) {
           await syncTags(savedLocationId);
+          savedLocation = await locationsApi.getLocation(savedLocationId);
         }
         
-        emit('saved');
+        emit('saved', savedLocation);
       } catch (err: any) {
         console.error('Error saving location:', err);
         error.value = err.response?.data?.detail || err.message || 'Failed to save location';

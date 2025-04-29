@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     meta: { guestOnly: true } // Přidáme meta pro přesměrování přihlášených
   },
   {
-    path: '/dashboard',
+    path: '/d',
     name: 'dashboard',
     component: () => import('../views/DashboardView.vue'),
     meta: { requiresAuth: true }, // Tato trasa vyžaduje přihlášení
