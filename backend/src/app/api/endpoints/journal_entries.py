@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List, Tuple, Optional
 
 from ... import crud, models, schemas
+# Import RoleEnum directly
+from ...models.world_user import RoleEnum 
 from ...db.session import get_db
 from ...auth.auth import get_current_user
 # Import new dependencies
@@ -34,7 +36,8 @@ async def create_journal_entry(
         
         # Check permissions: Assigned user OR World Owner/Admin
         is_assigned_user = db_character.user_id == current_user.id
-        is_world_manager = world_membership and world_membership.role in [models.WorldRoleEnum.OWNER, models.WorldRoleEnum.ADMIN]
+        # Use the correctly imported RoleEnum
+        is_world_manager = world_membership and world_membership.role in [RoleEnum.OWNER, RoleEnum.ADMIN]
 
         if not (is_assigned_user or is_world_manager):
              raise HTTPException(

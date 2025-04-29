@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from .character_tag import CharacterTag
+from .journal import Journal
 
 # Base properties shared by all schemas
 class CharacterBase(BaseModel):
@@ -32,6 +33,7 @@ class CharacterInDBBase(CharacterBase):
 # Properties returned to client (can include relationships later if needed)
 class Character(CharacterInDBBase):
     tags: List[CharacterTag] = []
+    journal: Optional[Journal] = None
 
 # Simplified schema for lists or nested objects
 class CharacterSimple(BaseModel):
