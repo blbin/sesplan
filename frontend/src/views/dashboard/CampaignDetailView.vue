@@ -5,6 +5,13 @@
       :campaign="campaign"
       :loading="loading"
       :error="error"
+      :is-current-user-g-m="isCurrentUserGM"
+      :is-editing-name="isEditingName" 
+      v-model:edited-name="editedName" 
+      :is-saving-name="isSavingName"
+      @start-editing-name="startEditingName"
+      @cancel-editing-name="cancelEditingName"
+      @save-name="saveName"
     />
 
     <!-- Display content only when not loading initial data and no critical error -->
@@ -187,7 +194,14 @@ const {
   membersError,
   isCurrentUserGM,
   owner,
-  reloadMembers // Function to reload members
+  reloadMembers, // Function to reload members
+  // Name Editing State & Functions
+  isEditingName,
+  editedName, 
+  isSavingName,
+  startEditingName,
+  cancelEditingName,
+  saveName
 } = useCampaignDetail(campaignId);
 
 const currentUserId = computed(() => authStore.user?.id);

@@ -20,6 +20,11 @@ export function useCampaignDetail(campaignId: Ref<number | null>) {
   const membersLoading = ref(false);
   const membersError = ref<string | undefined>(undefined);
 
+  // Name Editing State
+  const isEditingName = ref(false);
+  const editedName = ref('');
+  const isSavingName = ref(false);
+
   const authStore = useAuthStore();
   const currentUserId = computed(() => authStore.user?.id);
 
@@ -113,6 +118,41 @@ export function useCampaignDetail(campaignId: Ref<number | null>) {
       }
   };
 
+  // --- Name Editing Functions ---
+  const startEditingName = () => {
+    if (!campaign.value || !isCurrentUserGM.value) return; // Only GM can edit
+    editedName.value = campaign.value.name;
+    isEditingName.value = true;
+  };
+
+  const cancelEditingName = () => {
+    isEditingName.value = false;
+  };
+
+  const saveName = async () => {
+    if (!campaign.value || !editedName.value.trim() || editedName.value === campaign.value.name || !isCurrentUserGM.value) {
+      isEditingName.value = false;
+      return;
+    }
+
+    isSavingName.value = true;
+    try {
+      // Assume updateCampaign only needs the fields being changed
+      const updatedCampaignData = await campaignsApi.updateCampaign(campaign.value.id, { name: editedName.value.trim() });
+      // Update the local campaign state
+      campaign.value = { ...campaign.value, ...updatedCampaignData };
+      isEditingName.value = false;
+      console.log("[useCampaignDetail] Campaign name saved successfully.");
+    } catch (err: any) {
+      console.error("[useCampaignDetail] Failed to save campaign name:", err);
+      // Consider adding user-facing error feedback here (e.g., via an event or state)
+      // error.value = `Failed to save name: ${err.message || 'Unknown error'}`; // Avoid overwriting the main load error
+      alert(`Failed to save name: ${err.response?.data?.detail || err.message || 'Unknown error'}`); // Simple alert for now
+    } finally {
+      isSavingName.value = false;
+    }
+  };
+
   return {
     campaign,
     world,
@@ -125,6 +165,13 @@ export function useCampaignDetail(campaignId: Ref<number | null>) {
     isCurrentUserGM,
     owner,
     loadCampaignData, // Expose main loading function if needed elsewhere
-    reloadMembers // Expose member reload function
+    reloadMembers, // Expose member reload function
+    // Name Editing
+    isEditingName,
+    editedName,
+    isSavingName,
+    startEditingName,
+    cancelEditingName,
+    saveName
   };
 } 

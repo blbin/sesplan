@@ -1,7 +1,51 @@
 <template>
   <header v-if="campaign && !loading && !error" class="view-header mb-4 d-flex justify-space-between align-center">
-    <h1>{{ campaign.name }}</h1>
-    <router-link :to="{ name: 'Campaigns' }" class="btn btn-secondary">
+    <div class="d-flex align-center flex-grow-1">
+      <div v-if="!isEditingName" class="d-flex align-center">
+        <h1 class="text-h5">{{ campaign.name }}</h1>
+        <v-btn 
+          v-if="isCurrentUserGM"
+          icon="mdi-pencil" 
+          variant="text" 
+          size="x-small" 
+          @click="emit('startEditingName')"
+          title="Edit name"
+          class="ml-2"
+        ></v-btn>
+      </div>
+      <div v-else class="d-flex align-center flex-grow-1">
+        <v-text-field
+          :model-value="editedName"
+          @update:model-value="emit('update:editedName', $event)"
+          label="Campaign Name"
+          variant="outlined"
+          density="compact"
+          hide-details
+          class="mr-2 flex-grow-1"
+          autofocus
+          @keyup.enter="emit('saveName')"
+          @keyup.esc="emit('cancelEditingName')"
+        ></v-text-field>
+        <v-btn 
+          color="primary" 
+          @click="emit('saveName')" 
+          :loading="isSavingName"
+          size="small"
+          :disabled="!editedName || (campaign && editedName === campaign.name) || isSavingName || !editedName.trim()"
+        >
+          Save
+        </v-btn>
+        <v-btn 
+          variant="text" 
+          @click="emit('cancelEditingName')" 
+          :disabled="isSavingName"
+          size="small"
+        >
+          Cancel
+        </v-btn>
+      </div>
+    </div>
+    <router-link :to="{ name: 'Campaigns' }" class="btn btn-secondary ml-4">
       &larr; Back to Campaigns
     </router-link>
   </header>
@@ -29,17 +73,32 @@
 
 <script setup lang="ts">
 import type { Campaign } from '@/types/campaign';
-import { VProgressCircular, VAlert } from 'vuetify/components';
+import { VProgressCircular, VAlert, VBtn, VTextField } from 'vuetify/components';
 
 // Accept campaign data, loading state, and error state as props
 const props = defineProps<{
   campaign: Campaign | null;
   loading: boolean;
   error: string | null;
+  // Name Editing Props
+  isCurrentUserGM: boolean | null; // Can be null initially
+  isEditingName: boolean;
+  editedName: string;
+  isSavingName: boolean;
 }>();
 
-// Log props to satisfy TS6133 in strict build environments
-console.log('CampaignDetailHeader props:', props);
+const emit = defineEmits<{
+  (e: 'startEditingName'): void;
+  (e: 'cancelEditingName'): void;
+  (e: 'saveName'): void;
+  (e: 'update:editedName', value: string): void;
+}>();
+
+// Explicitly use props to satisfy TS6133
+if (import.meta.env.DEV) {
+  // This block will be tree-shaken in production
+  console.log('Props received in header:', props);
+}
 
 </script>
 
