@@ -109,9 +109,16 @@ def create_character(db: Session, character_in: CharacterCreate, user_id: int):
 def update_character(
     db: Session, db_character: models.Character, character_in: CharacterUpdate
 ) -> models.Character:
-    """Update an existing character. Handles tag updates."""
+    """Update an existing character. Handles tag updates and journal renaming."""
     update_data = character_in.dict(exclude_unset=True)
     
+    # --- Update Journal Name if Character Name changes --- 
+    if 'name' in update_data and db_character.journal:
+        new_character_name = update_data['name']
+        db_character.journal.name = f"{new_character_name}'s Journal"
+        # No need to db.add(db_character.journal) separately, SQLAlchemy tracks changes
+        # on related objects loaded within the session.
+
     tag_type_ids = update_data.pop('tag_type_ids', None) # Extract tag IDs
 
     # Update standard fields
