@@ -19,6 +19,7 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
+import { useDisplay } from 'vuetify';
 import Sidebar from '../components/dashboard/Sidebar.vue';
 import DashboardHeader from '../components/dashboard/DashboardHeader.vue';
 
@@ -29,7 +30,8 @@ export default defineComponent({
     DashboardHeader,
   },
   setup() {
-    const isSidebarCollapsed = ref(false);
+    const { mobile } = useDisplay();
+    const isSidebarCollapsed = ref(mobile.value);
 
     const toggleSidebar = () => {
       isSidebarCollapsed.value = !isSidebarCollapsed.value;
