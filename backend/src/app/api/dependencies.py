@@ -289,7 +289,7 @@ async def verify_character_permission(
         .filter(
             WorldUser.world_id == character.world_id,
             WorldUser.user_id == current_user.id,
-            WorldUser.role.in_([WorldRoleEnum.OWNER, WorldRoleEnum.GM])
+            WorldUser.role.in_([WorldRoleEnum.OWNER, WorldRoleEnum.ADMIN])
         )
         .first()
     )

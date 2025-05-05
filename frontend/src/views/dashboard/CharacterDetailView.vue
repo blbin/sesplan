@@ -570,7 +570,18 @@ export default defineComponent({
             fetchCharacterDetails(); // Refresh character to show updated tags
         } catch (err: any) {
             console.error("Error syncing character tags:", err);
-            tagSyncError.value = `Failed to save tags: ${err.message || 'Unknown error'}`;
+            let errorMessage = 'Unknown error';
+            if (err.response) {
+              // If the server responded with an error
+              errorMessage = `Server responded with status ${err.response.status}: ${err.response.data?.detail || err.message}`;
+            } else if (err.request) {
+              // If the request was made but no response was received (Network Error)
+              errorMessage = 'Network Error: Could not connect to the server. Please check if the backend is running and accessible.';
+            } else {
+              // Something else happened in setting up the request
+              errorMessage = err.message;
+            }
+            tagSyncError.value = `Failed to save tags: ${errorMessage}`;
         } finally {
             isSavingTags.value = false;
         }
