@@ -222,8 +222,5 @@ Aplikace je navržena pro nasazení pomocí Docker kontejnerů.
 
 Adresář `scripts/` obsahuje pomocné skripty pro usnadnění vývoje:
 - `generate_migration.ps1`: Automatizuje generování Alembic migrací (popsáno výše).
-- (Případně další skripty)
 
 ---
-
-*Tento README soubor by měl být udržován aktuální s vývojem projektu.*
