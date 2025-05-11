@@ -17,14 +17,15 @@
             <li><a @click="scrollTo('registration-login')">2. Registration and Login</a></li>
             <li><a @click="scrollTo('dashboard-overview')">3. Dashboard Overview</a></li>
             <li><a @click="scrollTo('managing-worlds')">4. Creating and Managing Worlds</a></li>
-            <li><a @click="scrollTo('managing-campaigns')">5. Creating and Managing Campaigns</a></li>
-            <li><a @click="scrollTo('managing-characters')">6. Managing Characters</a></li>
-            <li><a @click="scrollTo('managing-sessions')">7. Planning and Managing Sessions</a></li>
-            <li><a @click="scrollTo('detailing-locations')">8. Detailing Locations</a></li>
-            <li><a @click="scrollTo('cataloging-items')">9. Cataloging Items</a></li>
-            <li><a @click="scrollTo('tracking-organizations')">10. Tracking Organizations</a></li>
-            <li><a @click="scrollTo('writing-journals')">11. Writing Journals & Notes</a></li>
-            <li><a @click="scrollTo('user-settings')">12. User Account Settings</a></li>
+            <li><a @click="scrollTo('campaigns')">5. Creating and Managing Campaigns</a></li>
+            <li><a @click="scrollTo('characters')">6. Managing Characters</a></li>
+            <li><a @click="scrollTo('sessions')">7. Planning and Managing Sessions</a></li>
+            <li><a @click="scrollTo('locations')">8. Detailing Locations</a></li>
+            <li><a @click="scrollTo('items')">9. Cataloging Items</a></li>
+            <li><a @click="scrollTo('organizations')">10. Tracking Organizations</a></li>
+            <li><a @click="scrollTo('journals')">11. Writing Journals & Notes</a></li>
+            <li><a @click="scrollTo('settings')">12. User Account Settings</a></li>
+            <li><a @click="scrollTo('markdown-editor')">13. Note on Markdown Editor</a></li>
           </ul>
         </v-card>
 
@@ -737,6 +738,32 @@
           </ul>
           <p>
             If you require assistance with actions not available through the interface, please refer to any support channels provided for the Sesplan application.
+          </p>
+        </section>
+
+        <v-divider class="my-10"></v-divider>
+
+        <section id="markdown-editor-section"> 
+          <h3 id="markdown-editor" class="text-h5 mt-6 mb-3">13. A Note on the Markdown Editor</h3>
+          <p>
+            Throughout the Sesplan application, you will encounter <strong>Markdown editors</strong> for various text fields, such as descriptions for worlds, characters, items, campaign details, location descriptions, and journal entries. 
+            Markdown is a lightweight markup language with plain-text-formatting syntax. It allows you to add formatting elements to plaintext text documents.
+          </p>
+          <p>
+            Common formatting options you can use include:
+          </p>
+          <ul class="manual-list">
+            <li><code># Heading 1</code>, <code>## Heading 2</code>, etc. for section titles.</li>
+            <li><code>*italic*</code> or <code>_italic_</code> for <em>italicized text</em>.</li>
+            <li><code>**bold**</code> or <code>__bold__</code> for <strong>bold text</strong>.</li>
+            <li><code>- Unordered list item</code> or <code>* Unordered list item</code> for bullet points.</li>
+            <li><code>1. Ordered list item</code> for numbered lists.</li>
+            <li><code>[Link text](https://example.com)</code> for creating hyperlinks.</li>
+            <li><code>`inline code`</code> for short code snippets or technical terms.</li>
+            <li><code>```block code```</code> for longer code examples.</li>
+          </ul>
+          <p>
+            Familiarizing yourself with basic Markdown syntax will help you create well-formatted and readable content within Sesplan. Most editors also provide a toolbar with common formatting options for ease of use.
           </p>
         </section>
         
