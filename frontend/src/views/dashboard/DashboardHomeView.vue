@@ -1,10 +1,13 @@
 <template>
   <div>
-    <h1>Vítejte v Sesplanu!</h1>
-    <p>Aplikace je ve verzi 0.1.x.</p>
+    <h1>Welcome to Sesplan!</h1>
+    <p>The application is in version 0.1.x.</p>
     <p>
-      Pro zpětnou vazbu, nápady nebo hlášení chyb se připojte na náš
+      For feedback, ideas, or bug reports, please join our
       <a href="https://discord.gg/qckebehtuV" target="_blank" rel="noopener noreferrer">Discord server</a>.
+    </p>
+    <p class="mt-4">
+      Need help getting started? Check out our <router-link :to="{ name: 'manual' }">User Manual</router-link>!
     </p>
   </div>
 </template>
@@ -68,5 +71,9 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+.mt-4 {
+  margin-top: 1.5rem; /* Add some space above the manual link */
 }
 </style> 

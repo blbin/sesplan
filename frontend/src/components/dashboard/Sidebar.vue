@@ -36,7 +36,21 @@
         <i class="icon">📖</i>
         <span v-show="!isSidebarCollapsed">Journals</span>
       </router-link>
+      <hr class="nav-divider"/>
     </nav>
+    <div class="sidebar-footer" v-show="!isSidebarCollapsed">
+      <hr class="nav-divider"/>
+      <router-link :to="{ name: 'manual' }" class="nav-item nav-item-footer" active-class="active">
+        <i class="icon">❓</i>
+        <span>User Manual</span>
+      </router-link>
+    </div>
+    <div class="sidebar-footer-collapsed" v-show="isSidebarCollapsed">
+      <hr class="nav-divider"/>
+      <router-link :to="{ name: 'manual' }" class="nav-item nav-item-footer" active-class="active">
+        <i class="icon">❓</i>
+      </router-link>
+    </div>
   </aside>
 </template>
 
@@ -133,6 +147,8 @@ export default defineComponent({
 .sidebar-nav {
   flex: 1;
   padding: 20px 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .nav-section-header {
@@ -189,6 +205,24 @@ export default defineComponent({
 .sidebar.collapsed .nav-section-header,
 .sidebar.collapsed .nav-divider {
   display: none;
+}
+
+.sidebar-footer {
+  padding: 0 0 10px 0;
+  margin-top: auto;
+}
+
+.sidebar-footer-collapsed {
+  padding: 0 0 10px 0;
+  margin-top: auto;
+}
+
+.sidebar.collapsed .nav-item span {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-footer-collapsed .nav-item-footer {
+  justify-content: center;
 }
 
 /* Responsive Design */

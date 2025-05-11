@@ -38,6 +38,10 @@
           <span v-if="isLoading" class="spinner"></span>
           <span v-else>Login</span>
         </button>
+
+        <div class="register-link">
+          Don't have an account? <router-link to="/register">Register</router-link>
+        </div>
       </form>
     </div>
   </div>
@@ -215,6 +219,23 @@ input:focus {
 .login-button:disabled {
   background-color: #a0aec0;
   cursor: not-allowed;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+.register-link a {
+  color: #4299e1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
 }
 
 .alert {

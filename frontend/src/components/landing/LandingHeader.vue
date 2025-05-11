@@ -11,6 +11,7 @@
             <li><a href="#features">Features</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Contact</a></li>
+            <li><router-link to="/manual">User Manual</router-link></li>
           </ul>
         </nav>
         <div class="auth-buttons desktop-auth">
@@ -35,6 +36,7 @@
         <li><a href="#features" @click="closeMenu">Features</a></li>
         <li><a href="#about" @click="closeMenu">About</a></li>
         <li><a href="#contact" @click="closeMenu">Contact</a></li>
+        <li><router-link to="/manual" @click="closeMenu">User Manual</router-link></li>
       </ul>
     </nav>
   </div>
@@ -124,14 +126,14 @@ export default defineComponent({
   padding: 0;
 }
 
-.nav-desktop a {
+.nav-desktop a, .nav-desktop .router-link-active, .nav-desktop .router-link-exact-active {
   font-weight: 500;
   color: #4a5568;
   text-decoration: none;
   transition: color 0.3s;
 }
 
-.nav-desktop a:hover {
+.nav-desktop a:hover, .nav-desktop .router-link-active:hover, .nav-desktop .router-link-exact-active:hover {
   color: #7851a9;
 }
 
@@ -245,7 +247,7 @@ export default defineComponent({
   margin-bottom: 15px;
 }
 
-.nav-mobile a {
+.nav-mobile a, .nav-mobile .router-link-active, .nav-mobile .router-link-exact-active {
   display: block;
   font-size: 1.1rem;
   color: #4a5568;

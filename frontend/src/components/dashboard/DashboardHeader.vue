@@ -30,6 +30,7 @@
         <div class="user-name">{{ username || 'User' }}</div>
         <div class="dropdown-menu" v-show="isDropdownOpen">
           <div class="dropdown-item" @click="goToSettings">Settings</div>
+          <div class="dropdown-item" @click="goToManual">User Manual</div>
           <div class="dropdown-item" @click="handleLogout">Logout</div>
         </div>
       </div>
@@ -72,6 +73,11 @@ export default defineComponent({
       router.push({ name: 'settings' });
       isDropdownOpen.value = false;
     };
+
+    const goToManual = () => {
+      router.push({ name: 'manual' }); // Assuming 'manual' is the route name
+      isDropdownOpen.value = false;
+    };
     
     const closeDropdown = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -90,6 +96,7 @@ export default defineComponent({
       handleLogout,
       username,
       goToSettings,
+      goToManual,
     };
   },
   emits: ['toggle-sidebar']
@@ -225,8 +232,12 @@ export default defineComponent({
   color: #7851a9;
 }
 
+.dropdown-item:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0; /* Add subtle divider between items */
+}
+
 .dropdown-item:last-child {
-  border-top: 1px solid #e9ecef;
+  /* border-top: 1px solid #e9ecef; */ /* Remove top border if using bottom border for all */
   color: #e53e3e;
 }
 

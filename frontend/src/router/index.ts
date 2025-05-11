@@ -162,6 +162,13 @@ const routes: RouteRecordRaw[] = [
     component: LandingPage
     // meta: { guestOnly: true } // Landing page může být dostupná všem
   },
+  // Nová routa pro uživatelskou příručku
+  {
+    path: '/manual',
+    name: 'manual',
+    component: () => import('../views/manual/ManualView.vue') // Lazy loading
+    // Tato routa je veřejná, nevyžaduje meta tagy pro autentizaci
+  },
   // Add route for accepting invites
   {
     path: '/invite/:token',

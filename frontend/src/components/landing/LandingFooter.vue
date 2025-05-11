@@ -15,6 +15,7 @@
             <li><a href="#about">About Us</a></li>
             <li><router-link to="/privacy">Privacy Policy</router-link></li>
             <li><router-link to="/terms">Terms of Use</router-link></li>
+            <li><router-link to="/manual">User Manual</router-link></li>
           </ul>
         </div>
 
