@@ -31,7 +31,7 @@
         <v-divider class="mb-10"></v-divider>
 
         <section id="introduction">
-          <h2 class="text-h5 font-weight-medium mb-4">1. Introduction</h2>
+          <h2 class="text-h4 mt-6 mb-3">1. Introduction</h2>
           <p>Sesplan is a comprehensive application designed to streamline the planning and management of your tabletop role-playing game (RPG) campaigns. It provides tools for Game Masters (GMs) and players to organize game worlds, create detailed characters, plan sessions, track plotlines, and collaborate effectively.</p>
           <p>Our goal is to provide an intuitive and powerful platform so you can focus more on storytelling and less on administrative tasks.</p>
         </section>
@@ -39,7 +39,7 @@
         <v-divider class="my-10"></v-divider>
 
         <section id="registration-login">
-          <h2 class="text-h5 font-weight-medium mb-4">2. Registration and Login</h2>
+          <h2 class="text-h4 mt-6 mb-3">2. Registration and Login</h2>
           <p>To access the full features of Sesplan, you must first create an account and log in.</p>
           
           <h3 class="text-h6 font-weight-medium mt-6 mb-3">2.1. Registration</h3>
@@ -70,7 +70,7 @@
         <v-divider class="my-10"></v-divider>
 
         <section id="dashboard-overview">
-          <h2 class="text-h5 font-weight-medium mb-4">3. Dashboard Overview</h2>
+          <h2 class="text-h4 mt-6 mb-3">3. Dashboard Overview</h2>
           <p>Upon successful login, you will be directed to your main Dashboard. The Dashboard serves as your primary workspace within Sesplan.</p>
           <p>The main components of the Dashboard interface are:</p>
           <ul class="manual-list">
@@ -98,7 +98,7 @@
         <v-divider class="my-10"></v-divider>
 
         <section id="managing-worlds">
-          <h2 class="text-h5 font-weight-medium mb-4">4. Creating and Managing Worlds</h2>
+          <h2 class="text-h4 mt-6 mb-3">4. Creating and Managing Worlds</h2>
           <p>In Sesplan, "Worlds" are the foundational containers for your RPG settings. Each world is a distinct universe where your stories unfold, holding all related information such as lore, locations, characters, items, and the campaigns that take place within it.</p>
           
           <h3 class="text-h6 font-weight-medium mt-6 mb-3">4.1. Accessing the Worlds Section</h3>
