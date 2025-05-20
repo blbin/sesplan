@@ -1,4 +1,4 @@
-from .crud_user import get_user, get_user_by_username, get_users, create_user, get_users_by_ids, update_user
+from .crud_user import get_user, get_user_by_username, get_users, create_user, get_users_by_ids, update_user, get_user_by_email, update_password
 from .crud_world import get_world, get_worlds_by_owner, create_world, update_world, delete_world
 from .crud_campaign import get_campaign, get_campaigns_by_world, get_campaigns_by_owner, create_campaign, update_campaign, delete_campaign
 from .crud_character import (
@@ -49,3 +49,6 @@ from .crud_organization_tag import add_tag_to_organization, remove_tag_from_orga
 from .crud_session_slot import get_slot, get_slots_by_session, create_session_slot, update_session_slot, delete_session_slot
 # Import UserAvailability CRUD (Added)
 from .crud_user_availability import get_user_availability, get_availabilities_by_slot, get_all_availabilities_by_session, set_user_availability, delete_user_availability
+
+# Import PasswordResetToken CRUD
+from .crud_password_reset_token import create_password_reset_token, get_password_reset_token_by_token, get_active_password_reset_token_by_user, delete_password_reset_token, delete_all_password_reset_tokens_for_user

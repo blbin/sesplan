@@ -43,9 +43,28 @@ def create_user(db: Session, user: UserCreate):
     return db_user
 
 
+def update_password(db: Session, *, user: User, new_password_hash: str) -> User:
+    """Update user's password."""
+    user.password_hash = new_password_hash
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def get_user_by_email(db: Session, *, email: str) -> User | None:
+    """Get a user by email"""
+    return db.query(User).filter(User.email == email).first()
+
+
 def update_user(db: Session, db_user: User, user_in: UserUpdate) -> User:
     """Update a user."""
+    # Ensure email is not part of the update_data if it's None or not set
+    # as User model might have it as non-nullable.
+    # However, UserUpdate schema might allow it to be optional.
     update_data = user_in.model_dump(exclude_unset=True)
+    if 'email' in update_data and update_data['email'] is None:
+        del update_data['email']
 
     for key, value in update_data.items():
         setattr(db_user, key, value)

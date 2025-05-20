@@ -22,6 +22,7 @@ from .session import Session
 from .session_character import SessionCharacter
 from .session_slot import SessionSlot
 from .user import User
+from .password_reset_token import PasswordResetToken
 from .user_availability import UserAvailability
 from .user_campaign import UserCampaign
 from .world import World

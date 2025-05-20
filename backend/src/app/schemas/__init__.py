@@ -40,3 +40,6 @@ from .world_user import WorldUserRead, WorldUserCreate, WorldUserUpdate
 from .session_slot import SessionSlot, SessionSlotCreate, SessionSlotUpdate
 # Import UserAvailability schemas
 from .user_availability import UserAvailability, UserAvailabilityCreateUpdate
+
+# Import PasswordReset schemas
+from .password_reset import PasswordResetRequest, PasswordReset
